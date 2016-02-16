@@ -1,0 +1,848 @@
+#include <stdio.h>
+#include <math.h>
+
+#include <visp/vpDebug.h>
+
+
+#include "ctParticle.h"
+//#include <ct_tracking/global_parameters.h>
+
+/*!
+
+  Default constructor.
+
+*/
+ctParticle::ctParticle() :
+    u(0), v(0), size(0), angle(0), u_pred(0), v_pred(0), size_pred(0), angle_pred(0), distance(0), weight(0), wght_cumul(0), nb_part_out(0), inside(true)
+{
+    //vpTRACE("Call the constructor of particle");
+}
+
+/*!
+
+  Destructor.
+
+*/
+ctParticle::~ctParticle()
+{
+  //vpTRACE("Call the destructor of particle");
+}
+
+void ctParticle::initLogPolarHist(int nr, int nw, int height, int width)
+{
+logPolarHist.init(nr,nw,height,width);
+}
+	
+/*!
+\param measure : delta theta (tangage), delta phi (roulis)
+*/
+void ctParticle::compensate_attitude(const vpCameraParameters &cam, const vpColVector & measure)
+{
+	double x, y;
+    //vpPixelMeterConversion::convertPointWithDistortion(cam,point1,x,y);
+	double r2 = 1.+cam.get_kdu()*(vpMath::sqr((u - cam.get_u0())/(double)cam.get_px()) +  vpMath::sqr((v-cam.get_v0())/(double)cam.get_py()));
+	x = (u - cam.get_u0())*r2/(double)cam.get_px() ;
+	y = (v - cam.get_v0())*r2/(double)cam.get_py() ;
+	//!Compute new metric position 
+    x = tan(atan(x) + measure[1]);
+    y = tan(atan(y) + measure[0]);
+    //vpMeterPixelConversion::convertPointWithDistortion(cam,x,y,point2);
+	r2 = 1.+cam.get_kud()*(x*x+y*y);
+    u_pred = cam.get_u0() + cam.get_px()*x*r2;
+    v_pred = cam.get_v0() + cam.get_py()*y*r2;
+
+	//!Copy other parameters
+	angle_pred = angle;
+	size_pred = size;
+}
+
+/*!
+
+Add Gaussian noise to coordinates.
+
+*/
+void ctParticle::addGNoise(float sigma, float mean)
+{
+    vpTRACE("WARNING : deprecated : use addGNoise(vpGaussRand GRand) instead");
+    vpGaussRand GRand (sigma, mean);//Pas terrible de le cr�er � chaque fois, mieux vaut le mettre ailleurs ?
+
+    u = u + GRand() ;
+    v = v + GRand();
+}
+
+/*!
+
+Add Gaussian noise to coordinates.
+
+*/
+void ctParticle::addGNoise(vpGaussRand & GRand)
+{
+    u = u + GRand() ;
+    v = v + GRand();
+}
+
+
+/*!
+
+Add Gaussian noise to pred coordinates.
+
+*/
+void ctParticle::addGNoisePred(vpGaussRand &GRanduv, vpGaussRand &GRandangle, vpGaussRand &GRandz)
+{
+    u_pred = u_pred + GRanduv();
+    v_pred = v_pred + GRanduv();
+    angle_pred = angle_pred + GRandangle();
+    double z = (sqrt(size_pred) + GRandz());
+    size_pred = z*z;
+}
+
+
+
+//!---------------------- Prediction --------------------------
+
+void ctParticle::pred_GNoise(vpGaussRand &GRanduv, vpGaussRand &GRandangle, vpGaussRand &GRandz)
+{
+    u_pred = u + GRanduv();
+    v_pred = v + GRanduv();
+    angle_pred = angle + GRandangle();
+    double z = (sqrt(size) + GRandz());
+    size_pred = z*z;
+}
+
+/*!
+
+  Set u_pred, v_pred, angle_pred, and size_pred as u, v, angle, size + random step
+  warning : Predicted particle center can be outside the image !!
+
+*/
+void ctParticle::pred_rdmUStep(const float & StepMax, const float & angleMax, const float & scaleMax)
+{
+    // 	vpTRACE("WARNING : predicted position can be outside the image");
+    double RdmStep; float curr_pred = 0;
+
+    RdmStep = (double)rand()/((double)RAND_MAX + 1);// Nombre al�atoire entre 0 et 1
+    curr_pred = (u + (RdmStep -0.5)*2*StepMax);
+    if (curr_pred < 0)
+        curr_pred = 0;
+    else if (curr_pred > 640)
+        curr_pred = 640-1;
+    u_pred= curr_pred;// Pr�diction u
+
+    RdmStep = (double)rand()/((double)RAND_MAX + 1);//Nombre al�atoire entre 0 et 1
+    curr_pred = (int)(v + (RdmStep -0.5)*2*StepMax);
+    if (curr_pred < 0)
+        curr_pred = 0;
+    else if (curr_pred > 480)
+        curr_pred = 480-1;
+    v_pred = curr_pred;// Pr�diction v
+
+    RdmStep = (double)rand()/((double)RAND_MAX + 1);//Nombre al�atoire entre 0 et 1
+    angle_pred = angle + (RdmStep -0.5)*2*angleMax;// Pr�diction de l'angle
+
+    RdmStep = (double)rand()/((double)RAND_MAX + 1);//Nombre al�atoire entre 0 et 1
+    curr_pred = size + (RdmStep -0.5)*2*scaleMax;
+    curr_pred = (sqrt(size) + (RdmStep -0.5)*2*scaleMax)*(sqrt(size) + (RdmStep -0.5)*2*scaleMax);
+    // 	if (curr_pred < 3)
+    // 	curr_pred = 3;
+    size_pred = curr_pred;// Pr�diction de la taille
+}
+
+void ctParticle::pred_CsteVel(const vpColVector &vel, vpGaussRand &GRanduv,vpGaussRand &GRandangle,vpGaussRand &GRandz,float dt)
+{
+    u_pred = u + vel[0] + GRanduv();
+    v_pred = v + vel[1] + GRanduv();
+    angle_pred = angle + vel[2] + GRandangle();
+    double z = (sqrt(size) + vel[3] + GRandz());
+    size_pred = z*z;
+    if (size_pred < 10)// Aire minimale
+        size_pred = 10;
+}
+
+
+/*!
+
+  Compute prediction with velocity vel
+
+*/
+void ctParticle::pred_vel(double * vel)
+{
+    /*float sigma_uv = SIGMA_RECTUV;
+    float sigma_angle = SIGMA_RECTANGLE;
+    float sigma_size = SIGMA_RECTSIZE;*/
+    float sigma_uv = 0;
+    float sigma_angle =0;
+    float sigma_size = 0;
+
+    // Gaussian
+    vpGaussRand GRand_uv (sigma_uv, 0);
+    vpGaussRand GRand_angle (sigma_angle, 0);
+    vpGaussRand GRand_size (sigma_size, 0);
+
+    double noise_u, noise_v, noise_size;
+    float curr_pred_u, curr_pred_v;
+    //
+
+    float size_pred_curr = 0;
+
+    //! Prediction of u
+    noise_u = GRand_uv();
+    curr_pred_u = u + vel[0] + noise_u;
+    u_pred = curr_pred_u;
+
+    //! Prediction of v
+    noise_v = GRand_uv();
+    curr_pred_v = v + vel[1] + noise_v;
+    v_pred = curr_pred_v;
+
+    //! Prediction of angle
+    angle_pred = angle + vel[2] + GRand_angle();
+
+    //! Prediction of size
+    // 		size_pred_curr = (2*sqrt(state[3]) - sqrt(state[3]- vel_size)) * (2*sqrt(state[3]) - sqrt(state[3] - vel_size));
+
+    //S' = (sqrt(S)+v+noise)�
+    noise_size = GRand_size();
+
+    size_pred_curr = (sqrt(size) + noise_size)*(sqrt(size) + noise_size);	//N'utilise pas la vitesse...
+    // 	size_pred_curr = (sqrt(size) * vel[3])*(sqrt(size) * vel[3]) + noise_size ;
+
+
+    // 		size_pred_curr = (sqrt(prcl.get_size()) + vel_size + noise_size)*(sqrt(prcl.get_size()) + vel_size + noise_size);
+
+    if (size_pred_curr < 5)// Aire minimale
+        size_pred_curr = 5;
+    size_pred = size_pred_curr;
+    // 		state_pred[3] = size_pred_curr + GRand_size()*GRand_size();
+}
+
+
+
+
+
+/*!
+
+  Compute distance measure between prediction and given coordinates
+
+*/
+void ctParticle::computeDrift(float u_ref, float v_ref)
+{
+    distance = sqrt((u_pred-u_ref)*(u_pred-u_ref) + (v_pred-v_ref)*(v_pred-v_ref));
+}
+
+
+
+//!************************************************************************************************************
+//!----------------------------------------------------------------------------
+//!--------------------- Comparison with a reference object -------------------
+//!----------------------------------------------------------------------------
+//!************************************************************************************************************
+	
+
+	//!--*************** With list of points ***************---
+	//!
+	
+//!----------------------  Color !!!  ------------------------
+	
+	
+/*!
+	Compute "distance" between particle and reference object in terms of color histograms
+	WARNING ! Utilise les valeurs pr�dites !!
+	\param Icolor : Image in which the histogram of our predicted particle will be computed
+	\param object_ref : object whose histogram will be compared to the one corresponding to our predicted particle : Its hist must have been already computed !
+	\param weights : true for weighted histograms, false otherwise
+
+*/
+/*float ctParticle::compute_histDist(const vpImage<vpRGBa> & Icolor, const ctObject<vpRGBa> & object_ref, std::list<ctPoint<vpRGBa> > &points2, bool weights)
+{
+	if ((!this->get_rect_pred(object_ref.get_ratiohw()).is_inside(Icolor))&&(DEBUG_LEVEL1))
+		vpTRACE("WARNING ! predicted particle is outside the image");
+	
+	unsigned nb_pts = object_ref.transform_points(this->get_rect_pred(object_ref.get_ratiohw()), points2, Icolor);
+	if (nb_pts < points2.size()){
+		inside = false;
+		return 1;
+	}
+	else
+		return object_ref.hist_dist(points2, weights);
+}
+*/
+//!---------------------------------------------------------------------------------------------------
+//!------------------------------- Gray scale -------------------------------------------------------
+
+/*!
+	Compute "distance" between particle and reference object in terms of color histograms
+	WARNING ! Utilise les valeurs pr�dites !!
+	\param Igray : Image in which the histogram of our predicted particle will be computed
+	\param object_ref : object whose histogram will be compared to the one corresponding to our predicted particle : Its hist must have been already computed !
+	\param weights : true for weighted histograms, false otherwise
+	
+	\return : Bhattacharyya distance
+
+*/
+/*float ctParticle::compute_histDist(const vpImage<unsigned char> & Igray, const ctObject<unsigned char> & object_ref, std::list<ctPoint<unsigned char> > &points2, bool weights)
+{
+	if ((!this->get_rect_pred(object_ref.get_ratiohw()).is_inside(Igray))&&(DEBUG_LEVEL1))
+		vpTRACE("WARNING ! predicted particle is outside the image");
+// 	return object_ref.hist_dist(this->get_rect_pred(object_ref.get_ratiohw()), points2, Igray, weights);
+	
+	unsigned nb_pts = object_ref.transform_points(this->get_rect_pred(object_ref.get_ratiohw()), points2, Igray);
+	if (nb_pts < points2.size()){
+		inside = false;
+		return 1.;
+	}
+	else
+		return object_ref.hist_dist(points2, weights);
+}*/
+
+void ctParticle::buildFrom(vpImage<unsigned char> &Iseg)
+{
+	apViews gen;
+	vpImagePoint pI;
+	double ang;
+	int surface;
+	gen.computePosOriMean2(Iseg, pI, ang, surface);
+	u = pI.get_u();
+	v = pI.get_v();
+	std::cout << " uinit " << u << " vinit " << v << std::endl;
+    size = (float)surface;
+    angle = (float)ang;
+}
+/*void apParticle::initViews(std::vector< std::vector<vpImage<unsigned char>*>*> Views, vpMatrix &hierarchy, vpMatrix &dataTemp0, vpMatrix &dataTemp1)
+{
+	views = Views;
+    hrchy = hierarchy;
+    dataT0 = dataTemp0;
+    dataT1 = dataTemp1;
+}*/
+
+void
+ctParticle::resize(const vpImage<unsigned char>& _I, vpImage<unsigned char>&  Io, double scale)
+{
+
+    //unsigned int cScale = 2;
+    vpImage<unsigned char>* I = new vpImage<unsigned char>((int)_I.getHeight() * scale, (int)_I.getWidth() * scale);
+    IplImage* vpI0 = cvCreateImageHeader(cvSize(_I.getWidth(), _I.getHeight()), IPL_DEPTH_8U, 1);
+    vpI0->imageData = (char*)(_I.bitmap);
+    IplImage* vpI = cvCreateImage(cvSize((int)_I.getWidth() * scale, (int)_I.getHeight() * scale), IPL_DEPTH_8U, 1);
+    cvResize(vpI0, vpI, CV_INTER_NN);
+    vpImageConvert::convert(vpI, *I);
+    cvReleaseImage(&vpI);
+    vpI0->imageData = NULL;
+    cvReleaseImageHeader(&vpI0);
+    //vpImageIo::writePNG(*I, "iscaled3.png");
+    //std::cout << " height " << (int)(0.5*((int)I->getWidth()-(int)Io.getHeight())) << " width " << (int)(0.5*(I->getWidth())) << std::endl;
+    if(scale>1){
+        for (int i = 0;i<Io.getHeight();i++)
+        {
+            for(int j = 0;j<Io.getWidth();j++)
+            {
+                Io[i][j] = (*I)[i+(int)(0.5*(I->getHeight()-Io.getHeight()))][j+(int)(0.5*(I->getWidth()-Io.getWidth()))];
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0;i<Io.getHeight();i++)
+        {
+            for(int j = 0;j<Io.getWidth();j++)
+            {
+                //std::cout << " height " << i+(int)(0.5*((int)I->getWidth()-(int)Io.getHeight())) << " width " <<j+(int)(0.5*((int)I->getWidth()-(int)Io.getWidth()))<< std::endl;
+                if(i+(int)(0.5*((int)I->getHeight()-(int)Io.getHeight()))>0 && j+(int)(0.5*((int)I->getWidth()-(int)Io.getWidth()))>0 && i+(int)(0.5*((int)I->getHeight()-(int)Io.getHeight()))<(int)I->getHeight() && j+(int)(0.5*((int)I->getWidth()-(int)Io.getWidth()))<(int)I->getWidth())
+                {Io[i][j] = (*I)[i+(int)(0.5*((int)I->getHeight()-(int)Io.getHeight()))][j+(int)(0.5*((int)I->getWidth()-(int)Io.getWidth()))];}
+                else
+                {Io[i][j] = 100;}
+            }
+        }
+    }
+    delete I;
+
+
+}
+
+
+double ctParticle::computeSimError(vpImage<vpRGBa> *I, vpImage<unsigned char> &IView, const vpImagePoint cog, const int surface, const double orientation,bool weights)
+{
+    apViews gen;
+    double sim;
+    double Ang = -(double)angle_pred+orientation;
+    vpImage<unsigned char> IViewS(IView.getHeight(),IView.getWidth());
+    double scale;
+    scale = sqrt(size/surface);
+    /*if (scale<0.3)
+{
+scale = 0.3;
+}
+if (scale>3)
+{
+scale = 3;
+}*/
+    //scale = 1.3;
+    vpImagePoint pI;
+    pI.set_u(u_pred);
+    pI.set_v(v_pred);
+    /*pI.set_u(u_pred-(cog.get_u()-(int)I->getWidth()/2));
+pI.set_v(v_pred-(cog.get_v()-(int)I->getHeight()/2));*/
+    resize(IView,IViewS,scale);
+    //std::cout << " scale " << size << " " < << std::endl;
+    //vpImageIo::writePNG(IViewS, "iscaled2.png");
+    //sim = gen.computeSimilarityPosRot(I,&IViewS,pI,Ang);
+    sim = gen.computeSimilarityPosRotScale(I,&IViewS,pI,Ang);
+    //std::cout <<" orientation "<< orientation << " angle " << angle_pred << " u " << u_pred << " v " << v_pred << std::endl;
+    //std::cout << " sim " << sim << std::endl;
+    //getchar();
+    return sim;
+}
+
+double ctParticle::computeSimError(vpImage<vpRGBa> *I,  std::vector<vpImage<unsigned char>*> ModelViewSc, const vpImagePoint cog, const int surface, const double orientation,bool weights)
+{
+    apViews gen;
+    double sim;
+    double Ang = -(double)angle_pred+orientation;
+    vpImage<unsigned char> IViewS;
+    double scale;
+    scale = sqrt(size/surface);
+    int nscales =  ModelViewSc.size()-1;
+    int nmax;
+    for (int n = 0; n < nscales; n++)
+    {
+        if (n<floor(nscales/2))
+        {
+            if (abs(scale - (0.3+0.7*n/floor(nscales/2)))<(0.35/floor(nscales/2)))
+            {
+                nmax = n;
+            }
+        }
+        else
+        {
+            if (abs(scale - (1+4*(n-floor(nscales/2))/floor(nscales/2)))<(2/floor(nscales/2)))
+            {
+                nmax = n;
+            }
+        }
+    }
+
+    /*if (scale<0.3)
+{
+scale = 0.3;
+}
+if (scale>3)
+{
+scale = 3;
+}*/
+//scale = 1.3;
+vpImagePoint pI;
+pI.set_u(u_pred);
+pI.set_v(v_pred);
+/*pI.set_u(u_pred-(cog.get_u()-(int)I->getWidth()/2));
+pI.set_v(v_pred-(cog.get_v()-(int)I->getHeight()/2));*/
+//resize(IView,IViewS,scale);
+IViewS = *(ModelViewSc[nmax+1]);
+//vpImageIo::writePNG(IViewS, "iscaled2.png");
+//sim = gen.computeSimilarityPosRot(I,&IViewS,pI,Ang);
+sim = gen.computeSimilarityPosRotScale(I,&IViewS,pI,Ang);
+//std::cout <<" orientation "<< orientation << " angle " << angle_pred << " u " << u_pred << " v " << v_pred << std::endl;
+//std::cout << " sim " << sim << std::endl;
+//getchar();
+return sim;
+}
+
+double ctParticle::computeSimErrorSC(std::vector<double> &logPolarHistIseg,  const vpImagePoint cog,  std::vector<vpImage<unsigned char>*> ModelViewSc, const int surface, const double orientation,bool weights)
+{
+apViews gen;
+apLogPolarHist lgPHist;
+double sim;
+double Ang = -(double)angle_pred+orientation;
+vpImage<unsigned char> IViewS;
+vpImage<unsigned char> IViewSRot;
+double scale;
+std::vector<apContourPoint*> CP;
+apContourPoint* cp;
+scale = sqrt(size/surface);
+std::vector<double> logPolarHistIview;
+int nscales =  ModelViewSc.size()-1;
+int nmax;
+for (int n = 0; n < nscales; n++)
+{
+	if (n<floor(nscales/2))
+	{
+		if (abs(scale - (0.3+0.7*n/floor(nscales/2)))<(0.35/floor(nscales/2)))
+		{
+			nmax = n;
+		}
+	}
+	else
+	{
+		if (abs(scale - (1+4*(n-floor(nscales/2))/floor(nscales/2)))<(2/floor(nscales/2)))
+		{
+			nmax = n;
+		}
+	}
+}
+
+/*if (scale<0.3)
+{
+scale = 0.3;
+}
+if (scale>3)
+{
+scale = 3;
+}*/
+//scale = 1.3;
+vpImagePoint pI;
+pI.set_u(u_pred);
+pI.set_v(v_pred);
+/*pI.set_u(u_pred-(cog.get_u()-(int)I->getWidth()/2));
+pI.set_v(v_pred-(cog.get_v()-(int)I->getHeight()/2));*/
+//resize(IView,IViewS,scale);
+IViewS = *(ModelViewSc[nmax+1]);
+
+gen.rotateView(IViewS,IViewSRot,Ang);
+vpImageIo::writePNG(IViewSRot, "irot.png");
+std::vector<double> xx;
+std::vector<double> yy;
+for (int y = 0; y < IViewSRot.getHeight(); y++)
+  for (int x = 0; x < IViewSRot.getWidth(); x++) {
+	  if(((IViewSRot)[y][x]!=100) && x!=(int)IViewSRot.getWidth()/2)
+	  {
+	  cp = new apContourPoint;
+	  cp->set_u(x);
+	  cp->set_v(y);
+	  cp->set_ori((IViewSRot)[y][x]);
+	  CP.push_back(cp);
+	  xx.push_back(x);
+	  yy.push_back(y);
+	  }
+  }
+int nr = 30;
+int nw = 50;
+int height=512;
+int width=512;
+
+//logPolarHistIview = lgPHist.RunCenterRot(CP,cog,pI,Ang,nr,nw,height,width);
+logPolarHistIview = lgPHist.RunCenter(xx,yy,cog,nr,nw);
+//vpImageIo::writePNG(IViewS, "iscaled2.png");
+//sim = gen.computeSimilarityPosRot(I,&IViewS,pI,Ang);
+sim = gen.computeSimilaritySC(logPolarHistIseg,logPolarHistIview);
+//std::cout <<" orientation "<< orientation << " angle " << angle_pred << " u " << u_pred << " v " << v_pred << std::endl;
+//std::cout << " sim " << sim << std::endl;
+//getchar();
+return sim;
+}
+
+double ctParticle::computeSimErrorSC(std::vector<double> &logPolarHistIseg,  const vpImagePoint cog, std::vector<std::vector<apContourPoint*>> &ContourPointsSc, const int surface, const double orientation,bool weights)
+{
+apViews gen;
+double sim;
+double Ang = -(double)angle_pred+orientation;
+std::vector<apContourPoint*> CP;
+double scale;
+scale = sqrt(size/surface);
+std::vector<double> logPolarHistIview;
+int nscales =  ContourPointsSc.size()-1;
+int nmax;
+for (int n = 0; n < nscales; n++)
+{
+	if (n<floor(nscales/2))
+	{
+		if (abs(scale - (0.3+0.7*n/floor(nscales/2)))<(0.35/floor(nscales/2)))
+		{
+			nmax = n;
+		}
+	}
+	else
+	{
+		if (abs(scale - (1+4*(n-floor(nscales/2))/floor(nscales/2)))<(2/floor(nscales/2)))
+		{
+			nmax = n;
+		}
+	}
+}
+
+/*if (scale<0.3)
+{
+scale = 0.3;
+}
+if (scale>3)
+{
+scale = 3;
+}*/
+//scale = 1.3;
+vpImagePoint pI;
+pI.set_u(u_pred);
+pI.set_v(v_pred);
+/*pI.set_u(u_pred-(cog.get_u()-(int)I->getWidth()/2));
+pI.set_v(v_pred-(cog.get_v()-(int)I->getHeight()/2));*/
+//resize(IView,IViewS,scale);
+double t0 = vpTime::measureTimeMs();
+CP = ContourPointsSc[nmax+1];
+logPolarHistIview = logPolarHist.RunCenterRotOpt(CP,cog,pI,Ang);
+double t1 = vpTime::measureTimeMs();
+//std::cout << "RunHist "<< t1-t0 << std::endl;
+//getchar();
+//vpImageIo::writePNG(IViewS, "iscaled2.png");
+//sim = gen.computeSimilarityPosRot(I,&IViewS,pI,Ang);
+t0 = vpTime::measureTimeMs();
+sim = gen.computeSimilaritySC(logPolarHistIseg,logPolarHistIview);
+t1 = vpTime::measureTimeMs();
+//std::cout << "RunSim "<< t1-t0 << std::endl;
+//std::cout <<" orientation "<< orientation << " angle " << angle_pred << " u " << u_pred << " v " << v_pred << std::endl;
+//std::cout << " sim " << sim << std::endl;
+//getchar();
+return sim;
+}
+
+
+double ctParticle::computeSimErrorSCOpt(std::vector<double> &logPolarHistIseg,  const vpImagePoint cog, double angleIseg, std::vector<std::vector<double>> &logPolarHistV, const int surface, const double orientation,bool weights)
+{
+apViews gen;
+double sim;
+double Ang = -(double)angle_pred+orientation;
+std::vector<apContourPoint*> CP;
+double scale;
+scale = sqrt(size_pred/surface);
+std::vector<double> logPolarHistIview;
+std::vector<double> logPolarHistItemp;
+int nscales =  10;
+int nmax;
+for (int n = 0; n < nscales; n++)
+{
+	if (n<floor(nscales/2))
+	{
+		if (abs(scale - (0.3+0.7*n/floor(nscales/2)))<(0.35/floor(nscales/2)))
+		{
+			nmax = n;
+		}
+	}
+	else
+	{
+		if (abs(scale - (1+4*(n-floor(nscales/2))/floor(nscales/2)))<(2/floor(nscales/2)))
+		{
+			nmax = n;
+		}
+	}
+}
+int nang;
+int nx;
+int ny;
+/*if (scale<0.3)
+{
+scale = 0.3;
+}
+if (scale>3)
+{
+scale = 3;
+}*/
+//scale = 1.3;
+vpImagePoint pI;
+pI.set_u(u_pred);
+pI.set_v(v_pred);
+//nang = floor(((Ang+M_PI/2)/M_PI)*sample_theta);
+
+
+//double theta = atan2((v_pred - cog.get_v()),(u_pred - cog.get_u())) + orientation;
+double theta = orientation  + ( - atan2((v_pred - cog.get_v()),(u_pred - cog.get_u())) );
+double rho = sqrt((u_pred - cog.get_u())*(u_pred - cog.get_u()) + (v_pred - cog.get_v())*(v_pred - cog.get_v()));
+double xx = rho*cos(theta);
+double yy = rho*sin(theta);
+
+//std::cout << " v_pred "<< cog.get_v() << " u_pred " << cog.get_u() << std::endl;
+
+
+/*nx = floor(((u_pred-cog.get_u()+2*sig_uv)/(4*sig_uv))*sample_x);
+ny = floor(((v_pred-cog.get_v()+2*sig_uv)/(4*sig_uv))*sample_y);*/
+
+nx = floor(((xx+2*sig_uv)/(4*sig_uv))*(sample_x-1));
+ny = floor(((yy+2*sig_uv)/(4*sig_uv))*(sample_y-1));
+
+int perm = floor(-Ang/(2*M_PI/nw));
+
+//std::cout << " perm "<< perm << std::endl;
+
+
+/*pI.set_u(u_pred-(cog.get_u()-(int)I->getWidth()/2));
+pI.set_v(v_pred-(cog.get_v()-(int)I->getHeight()/2));*/
+//resize(IView,IViewS,scale);
+double t0 = vpTime::measureTimeMs();
+
+//std::cout << " xx "<< xx << " yy " << yy << " rho " << rho << " theta " << theta << " nx " << nx << " ny " << ny  <<  " sig " << sample_x << " nmax " << nmax << " u " << nmax*sample_x*sample_y + nx*sample_y + ny +1 << " Ang " << Ang << " cogu " << cog.get_u() << " cogv " << cog.get_v() << std::endl;
+//logPolarHistIview = logPolarHistV[ nmax*sample_x*sample_y*sample_theta + nx*sample_y*sample_theta + ny*(sample_theta)+nang +1];
+if(nmax*sample_x*sample_y + nx*sample_y + ny +1<1)
+	logPolarHistItemp = logPolarHistV[1];
+else
+logPolarHistItemp = logPolarHistV[ nmax*sample_x*sample_y + nx*sample_y + ny +1];
+
+
+/*logPolarHistIview.resize(logPolarHistItemp.size());
+for (int kk =0; kk<logPolarHistItemp.size()-1; kk++)
+{
+	if(kk>=perm && kk-perm<logPolarHistItemp.size())
+		logPolarHistIview[kk] = logPolarHistItemp[kk-perm];
+	else if(kk<perm)
+		logPolarHistIview[kk]=logPolarHistItemp[logPolarHistItemp.size()-1-kk+perm];
+	else if(kk-perm>=logPolarHistItemp.size())
+		logPolarHistIview[kk] = logPolarHistItemp[kk-perm-logPolarHistItemp.size()];
+
+
+}*/
+
+//vpImageIo::writePNG(IViewS, "iscaled2.png");
+//sim = gen.computeSimilarityPosRot(I,&IViewS,pI,Ang);
+sim = gen.computeSimilaritySCPerm(logPolarHistIseg,logPolarHistItemp, perm, nr, nw);
+//double t1 = vpTime::measureTimeMs();
+//std::cout  << " sim " << sim << " rho " << rho << std::endl;
+//getchar();
+//std::cout << "RunSim "<< t1-t0 << std::endl;
+//std::cout <<" orientation "<< orientation << " angle " << angle_pred << " u " << u_pred << " v " << v_pred << std::endl;
+//std::cout << " sim " << sim << std::endl;
+//getchar();
+return sim;
+}
+
+
+double ctParticle::computeSimErrorCP(vpImage<vpRGBa> *I, std::vector<apContourPoint*> &ContourPoints, const int surface, const double orientation,bool weights)
+{
+apViews gen;
+double sim;
+double Ang = -(double)angle_pred+orientation;
+//vpImage<unsigned char> IViewS(IView.getHeight(),IView.getWidth());
+double scale;
+scale = (size_pred/surface);
+if (scale<0.3)
+{
+scale = 0.3;
+}
+/*if (scale>3)
+{
+scale = 3;
+}*/
+//scale = 1.3;
+vpImagePoint pI;
+pI.set_u(u_pred);
+pI.set_v(v_pred);
+sim = gen.computeSimilarityCP(I,ContourPoints,pI,Ang,muD,lambdaO);
+return sim;
+}
+
+double ctParticle::computeSimErrorCPV(vpImage<vpRGBa> *I,  std::vector<std::vector<apContourPoint*>> &ContourPointsSc, const int surface, const double orientation,bool weights)
+{
+apViews gen;
+double sim;
+double Ang = -(double)angle_pred+orientation;
+std::vector<apContourPoint*> CP;
+double scale;
+scale = sqrt(size_pred/surface);
+int nscales =  ContourPointsSc.size()-1;
+int nmax0 = floor(nscales/2);
+int nmax = nmax0;
+
+/*for (int n = 0; n < nscales; n++)
+{
+	if (n<nmax0 && scale < 1)
+	{
+		if (abs(scale - (0.3+0.7*n/nmax0))<(0.35/nmax0))
+		{
+			nmax = n;
+		}
+	}
+	else if (n>=nmax0 && scale > 1)
+	{
+		if (abs(scale - (1+4*(n-nmax0)/nmax0))<(2/nmax0))
+		{
+			nmax = n;
+		}
+	}
+}*/
+
+
+/*if (scale<0.3)
+{
+scale = 0.3;
+}
+if (scale>3)
+{
+scale = 3;
+}*/
+//scale = 1.3;
+/*vpImagePoint pI;
+pI.set_u(u_pred);
+pI.set_v(v_pred);*/
+/*pI.set_u(u_pred-(cog.get_u()-(int)I->getWidth()/2));
+pI.set_v(v_pred-(cog.get_v()-(int)I->getHeight()/2));*/
+//resize(IView,IViewS,scale);
+CP = ContourPointsSc[nmax+1];
+//double t1 = vpTime::measureTimeMs();
+
+//sim = gen.computeSimilarityCP(I,CP,pI,Ang,muD,lambdaO);
+
+//std::cout << "Run sim "<< sim << std::endl;
+
+
+//sim = gen.computeSimilarityCPOpt(I,CP,pI,Ang,muD,lambdaO);
+
+sim = gen.computeSimilarityCPSOpt(I,CP,(int)u_pred,(int)v_pred,Ang,scale,muD,lambdaO);
+
+return sim;
+}
+
+double ctParticle::computeSimErrorSeg(vpImage<vpRGBa> *I, vpImage<vpRGBa> *Iseg, vpImage<unsigned char> &IView, const int surface, const double orientation,bool weights)
+{
+apViews gen;
+double sim;
+double Ang = -(double)angle_pred+orientation;
+vpImage<unsigned char> IViewS(IView.getHeight(),IView.getWidth());
+double scale;
+scale = size/surface;
+if (scale<0.3)
+{
+scale = 0.3;
+}
+if (scale>3)
+{
+scale = 3;
+}
+//scale = 1.3;
+vpImagePoint pI;
+pI.set_u(u_pred);
+pI.set_v(v_pred);
+resize(IView,IViewS,scale);
+//std::cout << " scale " << scale << std::endl;
+//vpImageIo::writePNG(IViewS, "iscaled2.png");
+//sim = gen.computeSimilarityPosRot(I,&IViewS,pI,Ang);
+sim = gen.computeSimilarityPosRotScaleSeg(I,Iseg,&IViewS,pI,Ang);
+//std::cout <<" orientation "<< orientation << " angle " << angle_pred << " u " << u_pred << " v " << v_pred << std::endl;
+//std::cout << " sim " << sim << std::endl;
+//getchar();
+return sim;
+}
+
+
+double ctParticle::computeSimErrorC(vpImage<vpRGBa> *I, vpImage<unsigned char> &IView, const vpImagePoint cog, const int surface, const double orientation,bool weights)
+{
+apViews gen;
+double sim;
+int scale;
+vpImage<unsigned char> IViewS;
+double Ang = -(double)angle_pred+orientation;
+vpImagePoint pI;
+pI.set_u(u_pred-(cog.get_u()-(int)I->getWidth()/2));
+pI.set_v(v_pred-(cog.get_v()-(int)I->getHeight()/2));
+resize(IView,IViewS,scale);
+sim = gen.computeSimilarityPosRot(I,&IView,pI,Ang);
+//std::cout <<" orientation "<< orientation << " angle " << angle_pred << " u " << u_pred << " v " << v_pred << std::endl;
+//std::cout << " sim " << sim << std::endl;
+//getchar();
+return sim;
+}
+
+void ctParticle::reWeight(vpImage<unsigned char> &Iseg)
+{
+apViews gen;
+vpImagePoint pI;
+double ang;
+int surface;
+gen.computePosOri(Iseg, pI, ang, surface);
+u = pI.get_u();
+v = pI.get_v();
+size = (float)surface;
+angle = (float)ang;
+}

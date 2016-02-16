@@ -1,0 +1,1 @@
+mex minE.cpp mrf.cpp ICM.cpp GCoptimization.cpp graph.cpp maxflow.cpp MaxProdBP.cpp LinkedBlockList.cpp regions-maxprod.cpp TRW-S.cpp BP-S.cpp

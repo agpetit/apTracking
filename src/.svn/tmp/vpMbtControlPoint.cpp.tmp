@@ -1,0 +1,1489 @@
+/*
+ * vpMbtControlPoint.cpp
+ *
+ *  Created on: March 10, 2011
+ *      Author: Antoine Petit
+ */
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+/*!
+ \file vpMbtMeLine.cpp
+ \brief Make the complete tracking of an object by using its CAD model.
+*/
+
+#include "vpMbtControlPoint.h"
+#include <visp/vpTrackingException.h>
+#include <visp/vpFeatureBuilder.h>
+#include <visp/vpRobust.h>
+
+//! Normalize an angle between -Pi and Pi
+static void
+normalizeAngle(double &delta)
+{
+  while (delta > M_PI) { delta -= M_PI ; }
+  while (delta < -M_PI) { delta += M_PI ; }
+}
+
+
+/*!
+  Basic constructor that calls the constructor of the class vpMeTracker.
+*/
+vpMbtControlPoint::vpMbtControlPoint():vpPointsTracker()
+{
+  sign = 1;
+  theta_1 = M_PI/2;
+
+  icpoint=NULL;
+  cpoint=NULL;
+  //cpointo=NULL;
+  //norm=NULL;
+  //grad=NULL;
+  profile=NULL;
+  norm.resize(3);
+  theta=0;
+  /*for(int j =0;j<8;j++)
+	  {profile1[j]=0;
+	  profile1[j+13]=0;
+	  }
+  profile1[8]=1.33;
+  profile1[9]=12.2;
+  profile1[10]=36.5;
+  profile1[11]=12.2;
+  profile1[12]=1.33;*/
+  profile1[0]=0;
+  profile1[1]=0;
+  profile1[2]=0;
+  profile1[3]=1.33;
+  profile1[4]=12.2;
+  profile1[5]=36.5;
+  profile1[6]=12.2;
+  profile1[7]=1.33;
+  profile1[8]=0;
+  profile1[9]=0;
+  profile1[10]=0;
+
+  isSilhouette = false;
+  invnormal = false;
+}
+
+/*!
+  Basic destructor.
+*/
+vpMbtControlPoint::~vpMbtControlPoint()
+{
+  list.resize(0);
+
+  if (icpoint != NULL) delete icpoint ;
+  if (cpoint != NULL) delete cpoint ;
+  //if (cpointo != NULL) delete cpointo ;
+ // if (norm != NULL) delete norm ;
+  //if (grad != NULL) delete grad ;
+  if (profile != NULL) delete profile ;
+
+}
+
+
+
+/*!
+  Build a 3D plane thanks the 3D coordinate of the control point and the normal vector to the surface
+
+  \param plane : The vpPlane instance used to store the computed plane equation.
+*/
+void
+vpMbtControlPoint::buildPlane(vpPoint &pointn, vpColVector &normal,vpPlane &plane)
+{
+  //Equation of the plane is given by:
+  double A = normal[0];
+  double B = normal[1];
+  double C = normal[2];
+  //double D=-(A*(double)cpoint->get_oX()+B*(double)cpoint->get_oY()+C*(double)cpoint->get_oZ());
+  double D=-(A*(double)pointn.get_oX()+B*pointn.get_oY()+C*(double)pointn.get_oZ());
+
+  /*if (D==0)
+  {
+	  std::cout<<" "<<A<<" "<<B<<" "<<C<<" "<<(double)cpoint->get_oX()<<" "<<(double)cpoint->get_oY()<<" "<<(double)cpoint->get_oZ()<<std::endl;
+  }*/
+  double normp =  sqrt(A*A+B*B+C*C) ;
+  plane.setA(A/normp) ;
+  plane.setB(B/normp) ;
+  plane.setC(C/normp) ;
+  plane.setD(D/normp) ;
+}
+
+
+/*!
+*/
+vpFeatureLine
+vpMbtControlPoint::getFeatureLine()
+{
+	return featureline;
+}
+
+
+void
+vpMbtControlPoint::buildFeatureLine()
+{
+  vpPlane plane;
+  //buildPlane(plane);
+  featureline.buildFrom(rho,theta,plane.getA(),plane.getB(),plane.getC(),plane.getD());
+}
+
+void
+vpMbtControlPoint::buildPLine(vpHomogeneousMatrix &oMc)
+{
+  vpPlane plane;
+  vpPlane plane1;
+  vpPlane plane2;
+  buildPlane(*cpoint,norm,plane);
+  vpRotationMatrix R;
+  oMc.extract(R);
+
+  vpColVector norm2;
+  vpColVector V(3);
+  vpColVector Vo(3);
+  V[0]=((cpoint->get_oX()/cpoint->get_oZ())+1)*cpoint->get_oZ()-cpoint->get_oX();
+  V[1]=((cpoint->get_oY()/cpoint->get_oZ())-cos(theta)/sin(theta))*cpoint->get_oZ()-cpoint->get_oY();
+  V[2]=(-plane.getD()-V[0]*plane.getA()-V[1]*plane.getB())/plane.getC()-cpoint->get_oZ();
+  //V[1]=(-rho*(plane.getA()+plane.getD())-plane.getC()*cos(theta))/(rho*plane.getB()+plane.getC()*sin(theta));
+  //V[2]=(cos(theta)+V[1]*sin(theta))/rho;
+  Vo=R*V;
+  norm2=vpColVector::cross(Vo,normw);
+  buildPlane(cpointo,norm2,plane2);
+  buildPlane(cpointo,normw,plane1);
+  //std::cout<< " norm1 "<< normw[0] <<" "<< normw[1]<<" " << normw[2] << " "<<  "norm2 "<< norm2[0] <<" " << norm2[1]<< " " << norm2[2] << std::endl;
+
+  line.setWorldCoordinates(plane1.getA(),plane1.getB(),plane1.getC(),plane1.getD(),plane2.getA(),plane2.getB(),plane2.getC(),plane2.getD());
+}
+
+
+void
+vpMbtControlPoint::buildPoint(int n, int m, double &Z, double orient, vpColVector &normo, vpHomogeneousMatrix &cMo)
+{
+icpoint =new vpImagePoint;
+cpoint = new vpPoint;
+//cpointo = new vpPoint;
+vpColVector pc;
+vpColVector po;
+vpRotationMatrix R;
+vpHomogeneousMatrix oMc;
+oMc=cMo.inverse();
+//oMc.extract(R);
+cMo.extract(R);
+theta=orient;
+double px = cam->get_px();
+double py = cam->get_py();
+int jc = cam->get_u0();
+int ic = cam->get_v0();
+icpoint->set_i(n);
+icpoint->set_j(m);
+double x,y;
+x=(m-jc)/px;
+y=(n-ic)/py;
+rho=x*cos(theta)+y*sin(theta);
+//std::cout<<" theta 0 "<< (180/M_PI)*theta <<std::endl;
+/*cpoint->set_X(x*Z);
+cpoint->set_Y(y*Z);
+cpoint->set_Z(Z);*/
+cpoint->setWorldCoordinates(x*Z,y*Z,Z);
+cpoint->changeFrame(oMc);
+//cpoint->print();
+cpointo.setWorldCoordinates(cpoint->get_X(),cpoint->get_Y(),cpoint->get_Z());
+normw=normo;
+norm=R*normo;
+//norm=normo;
+//buildFeatueLine();
+buildPLine(oMc);
+//getchar();
+}
+
+void
+vpMbtControlPoint::buildSilhouettePoint(int n, int m, double &Z, double orient, vpColVector &normo, vpHomogeneousMatrix &cMo)
+{
+icpoint =new vpImagePoint;
+cpoint = new vpPoint;
+//cpointo = new vpPoint;
+//vpColVector pc;
+//vpColVector po;
+vpRotationMatrix R;
+vpHomogeneousMatrix oMc;
+oMc=cMo.inverse();
+//oMc.extract(R);
+cMo.extract(R);
+theta=orient;
+double px = cam->get_px();
+double py = cam->get_py();
+int jc = cam->get_u0();
+int ic = cam->get_v0();
+icpoint->set_i(n);
+icpoint->set_j(m);
+xs=(m-jc)/px;
+ys=(n-ic)/py;
+Zs=Z;
+nxs = cos(theta);
+nys = sin(theta);
+double x,y;
+x=(m-jc)/px;
+y=(n-ic)/py;
+cpoint->setWorldCoordinates(x*Z,y*Z,Z);
+cpoint->changeFrame(oMc);
+//cpoint->print();
+cpointo.setWorldCoordinates(cpoint->get_X(),cpoint->get_Y(),cpoint->get_Z());
+normw=normo;
+norm=R*normo;
+//norm=normo;
+//buildFeatueLine();
+buildPLine(oMc);
+}
+
+
+void
+vpMbtControlPoint::update(const vpHomogeneousMatrix &_cMo)
+{
+vpColVector P(3);
+vpColVector p(3);
+cpointo.changeFrame(_cMo);
+cpointo.projection();
+double px = cam->get_px() ;
+double py = cam->get_py() ;
+double uc = cam->get_u0() ;
+double vc = cam->get_v0() ;
+double u,v;
+v=py*cpointo.get_y()+vc;
+u=px*cpointo.get_x()+uc;
+icpoint->set_uv(u,v);
+}
+
+void
+vpMbtControlPoint::updateSilhouettePoint(const vpHomogeneousMatrix &_cMo)
+{
+    cpointo.changeFrame(_cMo);
+    cpointo.projection();
+    double px = cam->get_px() ;
+    double py = cam->get_py() ;
+    double uc = cam->get_u0() ;
+    double vc = cam->get_v0() ;
+    double u,v;
+    v=py*cpointo.get_y()+vc;
+    u=px*cpointo.get_x()+uc;
+    icpoint->set_uv(u,v);
+    xs=cpointo.get_x();
+    ys=cpointo.get_y();
+    Zs=cpointo.get_Z();
+
+    line.changeFrame(_cMo);
+    line.projection();
+    vpFeatureBuilder::create(featureline,line);
+    //std::cout << "theta0 " << (double)theta << std::endl;
+    double theta0 = theta;
+    theta = featureline.getTheta();
+    //std::cout << " theta1 " << (double)theta << std::endl;
+    if(abs(theta0-theta)<M_PI/2){
+        nxs = cos(theta);
+        nys = sin(theta);}
+    else{
+        nxs = -cos(theta);
+        nys = -sin(theta);
+    }
+}
+
+void
+vpMbtControlPoint::setMovingEdge(vpMe *_me)
+{
+  me = _me ;
+  vpPointsTracker::setMe(me);
+/*  if (meline != NULL)
+  {
+    meline->setMe(me) ;
+  }*/
+}
+
+void
+vpMbtControlPoint::setCameraParameters(vpCameraParameters *_cam)
+{
+  cam = _cam ;
+/*  if (meline != NULL)
+  {
+    meline->setMe(me) ;
+  }*/
+}
+
+
+/*!
+  Initialization of the tracking. The line is defined thanks to the
+  coordinates of two points corresponding to the extremities and its (\f$\rho \: \theta\f$) parameters.
+  
+  Remeber the equation of a line : \f$ i \; cos(\theta) + j \; sin(\theta) - \rho = 0 \f$
+
+  \param I : Image in which the line appears.
+  \param ip1 : Coordinates of the first point.
+  \param ip2 : Coordinates of the second point.
+  \param rho : The \f$\rho\f$ parameter
+  \param theta : The \f$\theta\f$ parameter
+*/
+void
+vpMbtControlPoint::initControlPoint(const vpImage<unsigned char>& I, double cvlt)
+{
+
+  try
+  {
+      list.clear();
+      list.resize(1);
+      double delta = theta;
+ 
+      vpPointSite &s = list.front();
+ 
+ 	    //std::cout<<" theta 2 "<<theta*180/M_PI<<std::endl;
+ 
+ 	  s.init((double)icpoint->get_i(), (double)icpoint->get_j(), delta, cvlt, sign);
+ 	  //s.track(I,me,0);
+  }
+  catch(...)
+  {
+//    vpERROR_TRACE("Error caught") ;
+    throw ;
+  }
+  vpCDEBUG(1) <<" end vpMeLine::initTracking()"<<std::endl ;
+}
+
+void
+vpMbtControlPoint::detectSilhouette(const vpImage<unsigned char>& I, double cvlt)
+{
+
+  try
+  {
+	  double delta = theta;
+
+	  vpPointSite s;
+	  vpImagePoint pbg;
+	  int k=0;
+	  vpPointSite  *list_query_pixels;
+	  vpPointSite sq;
+	  double angFB = theta;
+	  int n0;
+	  s.init((double)icpoint->get_i(), (double)icpoint->get_j(), delta, cvlt, sign);
+	  list_query_pixels = s.getQueryList(I, 3);
+	  for (int n=0; n<7; n++)
+	  {
+		  sq = list_query_pixels[n];
+		  if(I[sq.i][sq.j]==255)
+		  {
+			 pbg.set_i(sq.i);
+			 pbg.set_j(sq.j);
+			 if(k==1)
+			 {
+              n0 = n;
+			 }
+			 k++;
+		  }
+	  }
+	  if(k>1)
+	  {
+		  isSilhouette = true;
+			 if(n0>3)
+			 {
+          nxs = -nxs;
+          nys = -nys;
+          invnormal = true;
+			 }
+	  }
+	  delete [] list_query_pixels;
+
+
+  }
+  catch(...)
+  {
+//    vpERROR_TRACE("Error caught") ;
+    throw ;
+  }
+  vpCDEBUG(1) <<" end vpMeLine::initTracking()"<<std::endl ;
+}
+
+
+void
+vpMbtControlPoint::display(const vpImage<unsigned char>&I, const vpColor col, const unsigned int thickness)
+{
+
+vpDisplay::displayCross(I,*icpoint,2,col,thickness);
+
+}
+
+void
+vpMbtControlPoint::display(const vpImage<vpRGBa>&I, const vpColor col, const unsigned int thickness)
+{
+
+vpDisplay::displayCross(I,*icpoint,2,col,thickness);
+
+}
+
+
+
+/*!
+  Construct a list of vpMeSite moving edges at a particular sampling
+  step between the two extremities of the line.
+
+  \param I : Image in which the line appears.
+*/
+
+void
+vpMbtControlPoint::initInteractionMatrixError()
+{
+
+    L.resize(list.size(),6) ;
+    L1.resize(list.size(),6) ;
+    L2.resize(list.size(),6) ;
+    error.resize(list.size()) ;
+    nbFeature = list.size() ;
+    //std::cout<<" theta 1 "<<(180/M_PI)*featureline.getTheta()<<std::endl;
+}
+
+/*!
+  Compute the interaction matrix and the error vector corresponding to the line.
+*/
+void
+vpMbtControlPoint::computeInteractionMatrixError(const vpHomogeneousMatrix &cMo,const vpImage<unsigned char> &I)
+{
+
+
+	vpCameraParameters cam1;
+	cam1=*cam;
+	//vpFeatureLine fline;
+    //std::cout<<theta<<std::endl;
+
+    line.changeFrame(cMo);
+    line.projection();
+
+    vpFeatureBuilder::create(featureline,line);
+
+    for (int n = 0 ; n < list.size() ; n++ )
+    {
+
+    double rho0 = featureline.getRho() ;
+    double theta0 = featureline.getTheta();
+
+    double co = cos(theta0);
+    double si = sin(theta0);
+    //std::cout<<" theta "<<(180/M_PI)*featureline.getTheta()<<std::endl;
+
+    double mx = 1.0/cam->get_px() ;
+    double my = 1.0/cam->get_py() ;
+    double xc = cam->get_u0() ;
+    double yc = cam->get_v0() ;
+
+    double alpha ;
+    vpMatrix H;
+    /*fline.setRhoTheta(rho,theta);
+    fline.setABCD(0.3051272514,0.03509317454,-0.9516647674,9.166432506);*/
+    //featureline.print();
+    //featureline.display(cam1,I,vpColor::red,1);
+    H = featureline.interaction();
+    //std::cout<<H<<std::endl;
+
+
+    double x,y;
+    int j =0 ;
+      x = (double)(list[n]).j ;
+      y = (double)(list[n]).i ;
+      //std::cout<<" x "<< x <<" y "<< y << std::endl;
+
+      x = (x-xc)*mx ;
+      y = (y-yc)*my ;
+
+      alpha = x*si - y*co;
+
+      double *Lrho = H[0] ;
+      double *Ltheta = H[1] ;
+      // Calculate interaction matrix for a distance
+      for (int k=0 ; k < 6 ; k++)
+      {
+        L[j][k] = (Lrho[k] + alpha*Ltheta[k]);
+      }
+      error[j] = rho0 - ( x*co + y*si) ;
+      j++;
+
+    }
+}
+
+void
+vpMbtControlPoint::computeInteractionMatrixErrorMH(const vpHomogeneousMatrix &cMo,const vpImage<unsigned char> &I)
+{
+    line.vpLine::changeFrame(cMo);
+    line.vpLine::projection();
+
+    vpFeatureBuilder::create(featureline,line);
+    const double rho0 = featureline.getRho() ;
+    const double theta0 = featureline.getTheta();
+
+    const double co = cos(theta0);
+    const double si = sin(theta0);
+
+    const double mx = 1.0/cam->get_px() ;
+    const double my = 1.0/cam->get_py() ;
+    const double xc = cam->get_u0() ;
+    const double yc = cam->get_v0() ;
+    const vpMatrix &H = featureline.interaction();
+    double xmin, ymin;
+    double errormin = 10.0;
+
+    const int j = 0;
+    for (int n = std::max(0, int(list.size()) - 1) ; n < list.size() ; n++ )
+    {
+        const vpPointSite &Pk0 = (list[n]);
+        const int n_hyp = Pk0.getNumCandidates();
+        if (n == 0)
+        {
+            xmin = (Pk0.j - xc) * mx;
+            ymin = (Pk0.i - yc) * my;
+        }
+        for (int l = 0; l < n_hyp ; l++) //for each candidate of P
+        {
+            const vpPointSite &Pk = candidates[l+1];
+
+            if((Pk.suppress == 0) )
+            {
+                const double x = (Pk.j - xc) * mx ;
+                const double y = (Pk.i - yc) * my ;
+                const double err = fabs(rho0 - (x * co + y * si));
+                if (err <= errormin)
+                {
+                    errormin = err;
+                    xmin = x;
+                    ymin = y;
+
+                }
+            }
+        }
+    }
+    error[j] = rho0 - (xmin * co + ymin * si);
+
+    const double alpha = xmin * si - ymin * co;
+
+    const double *Lrho = H[0];
+    const double *Ltheta = H[1];
+    // Calculate interaction matrix for a distance
+    for (int k = 0 ; k < 6 ; k++)
+    {
+        L[j][k] = (Lrho[k] + alpha * Ltheta[k]);
+    }
+}
+
+
+void
+vpMbtControlPoint::computeInteractionMatrixError2(const vpHomogeneousMatrix &cMo,const vpImage<unsigned char> &I)
+{
+
+
+	vpCameraParameters cam1;
+	cam1=*cam;
+	//vpFeatureLine fline;
+    //std::cout<<theta<<std::endl;
+    cpointo.changeFrame(cMo);
+    cpointo.projection();
+
+    vpFeatureBuilder::create(featurepoint,cpointo);
+
+    for (int m = 0 ; m < list.size() ; m++ )
+    {
+
+    double x0 = featurepoint.get_x();
+    double y0 = featurepoint.get_y();
+
+    double mx = 1.0/cam->get_px();
+    double my = 1.0/cam->get_py();
+    double xc = cam->get_u0();
+    double yc = cam->get_v0();
+
+    double alpha ;
+    vpMatrix H;
+    /*fline.setRhoTheta(rho,theta);
+    fline.setABCD(0.3051272514,0.03509317454,-0.9516647674,9.166432506);*/
+    //featureline.print();
+    //featureline.display(cam1,I,vpColor::red,1);
+    H = featurepoint.interaction();
+    //std::cout<<H<<std::endl;
+
+
+    double x,y;
+    int j =0 ;
+      x = (double)(list[m]).j ;
+      y = (double)(list[m]).i ;
+      //std::cout<<" x "<< x <<" y "<< y << std::endl;
+
+      x = (x-xc)*mx ;
+      y = (y-yc)*my ;
+
+      double *Lx = H[0] ;
+      double *Ly = H[1] ;
+      // Calculate interaction matrix for a distance
+      for (int k=0 ; k < 6 ; k++)
+      {
+    	  if(vpMath::sqr(x0-x)+  vpMath::sqr(y0-y)!=0)
+        L[j][k] = ((x0-x)*Lx[k] + (y0-y)*Ly[k])/(sqrt(vpMath::sqr(x0-x)+vpMath::sqr(y0-y)));
+    	  else
+    		  L[j][k] =0;
+      }
+      error[j] = sqrt(vpMath::sqr(x0-x)+  vpMath::sqr(y0-y));//vpMath::sqr(x0-x)+  vpMath::sqr(y0-y);//
+      j++;
+
+    }
+}
+
+void
+vpMbtControlPoint::computeInteractionMatrixError3(const vpHomogeneousMatrix &cMo, const vpImage<unsigned char> &I, const vpImage<double> &Igrad, const vpImage<double> &Igradx, const vpImage<double> &Igrady)
+{
+
+
+	vpCameraParameters cam1;
+	cam1=*cam;
+	//vpFeatureLine fline;
+    //std::cout<<theta<<std::endl;
+    line.changeFrame(cMo);
+    line.projection();
+    cpointo.changeFrame(cMo);
+
+    cpointo.projection();
+
+    vpFeatureBuilder::create(featurepoint,cpointo);
+
+    vpFeatureBuilder::create(featureline,line);
+
+
+    double rho0 = featureline.getRho() ;
+    double theta0 = featureline.getTheta();
+    //theta0 = theta0 + M_PI/2;
+    double co = cos(theta0);
+    double si = sin(theta0);
+
+
+    double autoProf=40.416;
+    //std::cout<<" theta "<<(180/M_PI)*featureline.getTheta()<<std::endl;
+
+    double mx = 1.0/cam->get_px();
+    double my = 1.0/cam->get_py();
+    double xc = cam->get_u0();
+    double yc = cam->get_v0();
+
+
+    double x0 = featurepoint.get_x();
+    double y0 = featurepoint.get_y();
+    double i0 = (double)icpoint->get_i();
+    double j0 = (double)icpoint->get_j();
+
+
+    double * gradN;
+    gradN = new double[11];
+    //grad = getProfile(Igrad);
+
+    double * gradx;
+    gradx = new double[11];
+    //gradx = getProfile(Igradx);
+
+    double * grady;
+    grady = new double[11];
+    //grady = getProfile(Igrady);
+
+    int n;
+      double ii , jj ;
+      /*gradN =  NULL ;
+      gradx = NULL;
+      grady = NULL;*/
+
+      double salpha = sin(theta0);
+      double calpha = cos(theta0);
+      //std::cout<<"alpha "<<(180/M_PI)*alpha<<std::endl;
+      n = 0 ;
+      vpImagePoint ip;
+
+      //std::cout << "autoIm00 "   << std::endl;
+
+
+      for(int kk = -5 ; kk <= 5 ; kk++)
+      {
+        ii = (i0+kk*salpha);
+        jj = (j0+kk*calpha);
+
+    	// Display
+        //if    ((selectDisplay==RANGE_RESULT)||(selectDisplay==RANGE)) {
+          ip.set_i( ii );
+          ip.set_j( jj );
+          vpDisplay::displayCross(I, ip, 1, vpColor::red);
+        //}
+
+        // Copy parent's convolution
+        //vpPointSite pel ;
+        //pel.init(ii, jj, alpha, convlt,mask_sign) ;
+        //pel.setDisplay(selectDisplay) ;// Display
+
+    	// Add site to the query list
+        //list_query_pixels[n] = pel ;
+        //std::cout << "autoIm02 "   << (int)ii << " "<< (int)jj << " " << n << std::endl;
+        if((int)ii>0 && (int)ii<480 && (int)jj>0 && (int)jj<640)
+        {
+        //std::cout << "autoIm01 "   << n << std::endl;
+        gradN[n]=Igrad[(int)ii][(int)jj];
+        //std::cout << "autoIm02 "   << gradN[n] << std::endl;
+        gradx[n]=Igradx[(int)ii][(int)jj];
+        //std::cout << "autoIm03 "   << n << std::endl;
+        grady[n]=Igrady[(int)ii][(int)jj];
+        }
+        else
+        {
+        	gradN[n]=0;
+        	gradx[n]=0;
+        	grady[n]=0;
+        }
+        n++ ;
+      }
+      //std::cout << "ok ok" << gradN[0] << " "<<  gradN[1] << " "<< gradN[2] << " "<< gradN[4] << " "<< gradN[5] << " "<< gradN[6] << " "<<  gradN[7] << " "<< gradN[8] << " "<< gradN[10] << " "<< gradN[11] << " "<<gradN[12] << " "<<  gradN[13] << " "<< gradN[14] << " "<< gradN[15] << " "<< gradN[16] << " "<<std::endl;
+          //getchar();
+
+      //std::cout << "autoIm00 "   << std::endl;
+
+
+      for (int m = 0 ; m < list.size() ; m++ )
+      {
+
+    double alpha ;
+    vpMatrix H;
+    vpMatrix Hp;
+    /*fline.setRhoTheta(rho,theta);
+    fline.setABCD(0.3051272514,0.03509317454,-0.9516647674,9.166432506);*/
+    //featureline.print();
+    //featureline.display(cam1,I,vpColor::red,1);
+    H = featureline.interaction();
+    Hp = featurepoint.interaction();
+    //std::cout<<H<<std::endl;
+
+    double x,y;
+    int j =0 ;
+      //x = (double)list.value().j ;
+      //y = (double)list.value().i ;
+      //std::cout<<" x "<< x <<" y "<< y << std::endl;
+
+      /*x = (x-xc)*mx ;
+      y = (y-yc)*my ;
+
+      alpha = x*si - y*co;*/
+
+    double autoIm =0;
+
+
+    for (int l = 0 ; l<11;l++)
+    	  {
+
+    		  autoIm += gradN[l]*gradN[l];
+    	  }
+
+    double norm2 = autoProf*sqrt(autoIm);
+    //std::cout << "norm2 "   << norm2 << std::endl;
+    double normCrossCorel=0;
+    if(norm2>0)
+    {
+	  for (int l = 0 ; l<11;l++)
+	  {
+
+		  //normCrossCorel += profile1[l]*gradN[l]/norm2;
+		  normCrossCorel += (profile1[l]-gradN[l])*(profile1[l]-gradN[l]);
+	  }
+    }
+    else {
+    	normCrossCorel =0;
+
+    }
+
+    //if (normCrossCorel>0.9)
+    //std::cout << "normCrossCorr "   << normCrossCorel << std::endl;
+
+      error[j] = normCrossCorel;
+      vpMatrix L0(11,6);
+      L1.resize(1,6);
+      L2.resize(1,6);
+
+      double *Lrho = H[0];
+      double *Ltheta = H[1];
+      double *Lx = Hp[0];
+      double *Ly = Hp[1];
+      // Calculate interaction matrix for a distance
+      for (int k=0 ; k < 6 ; k++)
+      {
+    	  for (int l = 0 ; l<11;l++)
+    	  {
+
+    		  //L0[l][k] = -(gradx[l]*(Lx[k]-(l-5)*si*Ltheta[k]) + grady[l]*(Ly[k] + (l-5)*co*Ltheta[k]));
+    		  L0[l][k] = (gradx[l]*(Lx[k]-(l-5)*si*Ltheta[k]) + grady[l]*(Ly[k] + (l-5)*co*Ltheta[k]));
+    		  //L0[l][k] = (1*co*(Lx[k]-(l-5)*si*Ltheta[k]) + 1*co*(Ly[k] + (l-5)*si*Ltheta[k]));
+
+    	  }
+      }
+double beta;
+      if(autoIm>0){
+       beta = (-error[j]+1)/autoIm;
+      }
+      else{
+       beta = 0;
+      }
+
+      double l1 = 0;
+      double l2 = 0;
+
+      for (int k=0 ; k < 6 ; k++)
+      {
+    	  for (int l = 0 ; l<11;l++)
+    	  {
+
+    		  /*l1 += gradN[l]*L0[l][k];
+    		  l2 += profile1[l]*L0[l][k];*/
+
+    		  l1 += -2*(profile1[l]-gradN[l])*L0[l][k];
+
+    	  }
+    	  L1[j][k] = l1;
+    	  L2[j][k] = l2;
+      }
+
+
+      if(norm2>0)
+      {
+      for (int k=0 ; k < 6 ; k++)
+      {
+
+    		 // L[j][k] = beta*L1[j][k] - L2[j][k]/norm2;
+    	  L[j][k] = L1[j][k];
+      }
+      }
+      else
+      {
+          for (int k=0 ; k < 6 ; k++)
+          {
+
+        		  L[j][k] = 0;
+          }
+      }
+
+      j++;
+
+    }
+
+    delete []gradN;
+    delete []gradx;
+    delete []grady;
+}
+
+void
+vpMbtControlPoint::computeInteractionMatrixError4(const vpHomogeneousMatrix &cMo, const vpImage<unsigned char> &I, const vpImage<double> &Igrad, const vpImage<double> &Igradx, const vpImage<double> &Igrady)
+{
+
+
+	vpCameraParameters cam1;
+	cam1=*cam;
+	//vpFeatureLine fline;
+    //std::cout<<theta<<std::endl;
+    line.changeFrame(cMo);
+    line.projection();
+    cpointo.changeFrame(cMo);
+
+    cpointo.projection();
+
+    vpFeatureBuilder::create(featurepoint,cpointo);
+
+    vpFeatureBuilder::create(featureline,line);
+
+
+    double rho0 = featureline.getRho() ;
+    double theta0 = featureline.getTheta();
+    //theta0 = theta0 + M_PI/2;
+    double co = cos(theta0);
+    double si = sin(theta0);
+
+
+    double autoProf=40.416;
+    //std::cout<<" theta "<<(180/M_PI)*featureline.getTheta()<<std::endl;
+
+    double mx = 1.0/cam->get_px();
+    double my = 1.0/cam->get_py();
+    double xc = cam->get_u0();
+    double yc = cam->get_v0();
+
+
+    double x0 = featurepoint.get_x();
+    double y0 = featurepoint.get_y();
+    double i0 = (double)icpoint->get_i();
+    double j0 = (double)icpoint->get_j();
+
+
+    double * gradN;
+    gradN = new double[11];
+    //grad = getProfile(Igrad);
+
+    double * gradx;
+    gradx = new double[11];
+    //gradx = getProfile(Igradx);
+
+    double * grady;
+    grady = new double[11];
+    //grady = getProfile(Igrady);
+
+    int n;
+      double ii , jj ;
+      /*gradN =  NULL ;
+      gradx = NULL;
+      grady = NULL;*/
+
+      double salpha = sin(theta0);
+      double calpha = cos(theta0);
+      //std::cout<<"alpha "<<(180/M_PI)*alpha<<std::endl;
+      n = 0 ;
+      vpImagePoint ip;
+
+      //std::cout << "autoIm00 "   << std::endl;
+
+
+      for(int kk = -5 ; kk <= 5 ; kk++)
+      {
+        ii = (i0+kk*salpha);
+        jj = (j0+kk*calpha);
+
+    	// Display
+        //if    ((selectDisplay==RANGE_RESULT)||(selectDisplay==RANGE)) {
+          ip.set_i( ii );
+          ip.set_j( jj );
+          vpDisplay::displayCross(I, ip, 1, vpColor::red) ;
+        //}
+
+        // Copy parent's convolution
+        //vpPointSite pel ;
+        //pel.init(ii, jj, alpha, convlt,mask_sign) ;
+        //pel.setDisplay(selectDisplay) ;// Display
+
+    	// Add site to the query list
+        //list_query_pixels[n] = pel ;
+        //std::cout << "autoIm02 "   << (int)ii << " "<< (int)jj << " " << n << std::endl;
+        if((int)ii>0 && (int)ii<480 && (int)jj>0 && (int)jj<640)
+        {
+        //std::cout << "autoIm01 "   << n << std::endl;
+        gradN[n]=Igrad[(int)ii][(int)jj];
+        //std::cout << "autoIm02 "   << gradN[n] << std::endl;
+        gradx[n]=Igradx[(int)ii][(int)jj];
+        //std::cout << "autoIm03 "   << n << std::endl;
+        grady[n]=Igrady[(int)ii][(int)jj];
+        }
+        else
+        {
+        	gradN[n]=0;
+        	gradx[n]=0;
+        	grady[n]=0;
+        }
+        n++ ;
+      }
+      //std::cout << "ok ok" << gradN[0] << " "<<  gradN[1] << " "<< gradN[2] << " "<< gradN[4] << " "<< gradN[5] << " "<< gradN[6] << " "<<  gradN[7] << " "<< gradN[8] << " "<< gradN[10] << " "<< gradN[11] << " "<<gradN[12] << " "<<  gradN[13] << " "<< gradN[14] << " "<< gradN[15] << " "<< gradN[16] << " "<<std::endl;
+          //getchar();
+
+      //std::cout << "autoIm00 "   << std::endl;
+
+
+      for (int m = 0 ; m < list.size() ; m++ )
+      {
+
+    double alpha ;
+    vpMatrix H;
+    vpMatrix Hp;
+    /*fline.setRhoTheta(rho,theta);
+    fline.setABCD(0.3051272514,0.03509317454,-0.9516647674,9.166432506);*/
+    //featureline.print();
+    //featureline.display(cam1,I,vpColor::red,1);
+    H = featureline.interaction();
+    Hp = featurepoint.interaction();
+    //std::cout<<H<<std::endl;
+
+    double x,y;
+    int j =0 ;
+      //x = (double)list.value().j ;
+      //y = (double)list.value().i ;
+      //std::cout<<" x "<< x <<" y "<< y << std::endl;
+
+      /*x = (x-xc)*mx ;
+      y = (y-yc)*my ;
+
+      alpha = x*si - y*co;*/
+
+    double autoIm = 0;
+
+
+    /*for (int l = 0 ; l<11;l++)
+    	  {
+
+    		  autoIm += gradN[l]*gradN[l];
+    	  }*/
+
+    //double norm2 = autoProf*sqrt(autoIm);
+    //std::cout << "norm2 "   << norm2 << std::endl;
+    double normCrossCorel=0;
+
+	  for (int l = 0 ; l<11;l++)
+	  {
+
+		  normCrossCorel += profile1[l]*gradN[l];
+	  }
+
+
+    //if (normCrossCorel>0.9)
+    //std::cout << "normCrossCorr "   << normCrossCorel << std::endl;
+
+      error[j] = -normCrossCorel;
+      vpMatrix L0(11,6);
+      L1.resize(1,6);
+      L2.resize(1,6);
+
+      double *Lrho = H[0] ;
+      double *Ltheta = H[1] ;
+      double *Lx = Hp[0];
+      double *Ly = Hp[1];
+      // Calculate interaction matrix for a distance
+      for (int k=0 ; k < 6 ; k++)
+      {
+    	  for (int l = 0 ; l<11;l++)
+    	  {
+
+    		  L0[l][k] = -(si*(Lx[k]-(l-5)*mx*si*Ltheta[k]) + co*(Ly[k] + (l-5)*my*co*Ltheta[k]));
+    	  }
+      }
+
+      double l1 = 0;
+      double l2 = 0;
+
+      for (int k=0 ; k < 6 ; k++)
+      {
+    	  for (int l = 0 ; l<11;l++)
+    	  {
+
+    		  l1 += gradN[l]*L0[l][k];
+    		  l2 += profile1[l]*L0[l][k];
+    	  }
+    	  L1[j][k] = l1;
+    	  L2[j][k] = l2;
+      }
+
+
+      for (int k=0 ; k < 6 ; k++)
+      {
+
+    		  L[j][k] = - L2[j][k];
+      }
+
+      j++;
+
+    }
+
+    delete []gradN;
+    delete []gradx;
+    delete []grady;
+}
+
+
+/*!
+  Suppress the moving which belong no more to the line.
+  
+  \param I : The image.
+*/
+//void
+//vpMbtMeLine::suppressPoints(const vpImage<unsigned char> & /*I*/)
+/*{
+  int nbrelmt;
+  nbrelmt = list.nbElement();
+  list.front();
+  while(!list.outside())
+  {
+    vpMeSite s = list.value() ;//current reference pixel
+
+  if (fabs(sin(theta)) > 0.9) // Vertical line management
+  {
+    if ((s.i < imin) ||(s.i > imax)) 
+    {
+      s.suppress = 1;
+    }
+  }
+
+  else if (fabs(cos(theta)) > 0.9) // Horizontal line management
+  {
+    if ((s.j < jmin) || (s.j > jmax))
+    {
+      s.suppress = 1;
+    }
+  }
+
+  else
+  {
+    if ((s.i < imin) ||(s.i > imax) || (s.j < jmin) || (s.j > jmax) ) 
+    {
+      s.suppress = 1;
+    }
+  }
+
+  if (s.suppress != 0)
+    list.suppress() ;
+  else
+    list.next() ;
+  }
+  nbrelmt = list.nbElement();
+}*/
+
+
+/*!
+ Seek along the line defined by its equation, the two extremities of the line. This function is useful in case of translation of the line.
+ 
+ \param I : Image in which the line appears.
+*/
+
+/*void
+vpMbtMeLine::reSample(const vpImage<unsigned char> &I)
+{
+  double d = sqrt(vpMath::sqr(PExt[0].ifloat-PExt[1].ifloat)+vpMath::sqr(PExt[0].jfloat-PExt[1].jfloat)) ;
+
+  int n = numberOfSignal() ;
+  double expecteddensity = d / (double)me->sample_step;
+
+  if ((double)n<0.5*expecteddensity && n > 0)
+  {
+    double delta_new = delta;
+    delta = delta_1;
+    sample(I) ;
+    delta = delta_new;
+    //  2. On appelle ce qui n'est pas specifique
+    {
+      vpMeTracker::initTracking(I) ;
+    }
+  }
+}*/
+
+
+/*!
+  Resample the line if the number of sample is less than 50% of the
+  expected value.
+
+  \note The expected value is computed thanks to the length of the
+  line and the parameter which indicates the number of pixel between
+  two points (vpMe::sample_step).
+
+  \param I : Image in which the line appears.
+  \param ip1 : The first extremity of the line.
+  \param ip2 : The second extremity of the line.
+*/
+/*void
+vpMbtMeLine::reSample(const vpImage<unsigned char> &I, vpImagePoint ip1, vpImagePoint ip2)
+{
+  double d = sqrt(vpMath::sqr(ip1.get_i()-ip2.get_i())+vpMath::sqr(ip1.get_j()-ip2.get_j())) ;
+
+  int n = list.nbElements();//numberOfSignal() ;
+  expecteddensity = d / (double)me->sample_step;
+
+  if ((double)n<0.5*expecteddensity && n > 0)
+  {
+    double delta_new = delta;
+    delta = delta_1;
+    PExt[0].ifloat = (float)ip1.get_i() ;
+    PExt[0].jfloat = (float)ip1.get_j() ;
+    PExt[1].ifloat = (float)ip2.get_i() ;
+    PExt[1].jfloat = (float)ip2.get_j() ;
+    sample(I) ;
+    delta = delta_new;
+    vpMeTracker::track(I) ;
+  }
+}*/
+
+/*!
+  Set the alpha value of the different vpMeSite to the value of delta.
+*/
+/*void
+vpMbtMeLine::updateDelta()
+{
+  vpMeSite p ;
+
+  double diff = 0;
+
+  if(fabs(theta) == M_PI )
+  {
+    theta = 0 ;
+  }
+
+  diff = fabs(theta - theta_1);
+  if (diff > M_PI/2.0)
+  sign *= -1;
+
+  theta_1 = theta;
+  
+  delta = - theta + M_PI/2.0;
+  normalizeAngle(delta);
+  
+  list.front() ;
+  for (int i=0 ; i < list.nbElement() ; i++)
+  {
+    p = list.value() ;
+    p.alpha = delta ;
+    p.mask_sign = sign;
+    list.modify(p) ;
+    list.next() ;
+  }
+  delta_1 = delta;
+}*/
+
+/*!
+ Track the line in the image I.
+ 
+ \param I : Image in which the line appears.
+ */
+void
+vpMbtControlPoint::track(const vpImage<unsigned char>& I, const vpImage<unsigned char>& Iprec)
+{
+  //  2. On appelle ce qui n'est pas specifique
+  try
+  {
+    vpPointsTracker::track(I,Iprec);
+  }
+  catch(...)
+  {
+    throw ;
+  }
+
+  // supression des points rejetes par les ME
+  //  suppressPoints(I);
+  //  setExtremities();
+}
+
+ void
+ vpMbtControlPoint::trackMH(const vpImage<unsigned char>& I, const vpImage<unsigned char>& Iprec)
+ {
+   //  2. On appelle ce qui n'est pas specifique
+   try
+   {
+     vpPointsTracker::trackMH(I,Iprec);
+
+   }
+   catch(...)
+   {
+     throw ;
+   }
+
+   // supression des points rejetes par les ME
+   //  suppressPoints(I);
+   //  setExtremities();
+ }
+
+ void
+ vpMbtControlPoint::trackPred(const vpImage<unsigned char>& I, const vpImage<unsigned char>& Iprec)
+ {
+   //  2. On appelle ce qui n'est pas specifique
+   try
+   {
+     vpPointsTracker::trackPred(I,Iprec);
+   }
+   catch(...)
+   {
+     throw ;
+   }
+
+   // supression des points rejetes par les ME
+   //  suppressPoints(I);
+   //  setExtremities();
+ }
+
+
+/*!
+  Update the moving edges parameters after the virtual visual servoing.
+  
+  \param  I : The image.
+  \param  rho : The \f$\rho\f$ parameter used in the line's polar equation.
+  \param  theta : The \f$\theta\f$ parameter used in the line's polar equation.
+*/
+/*void
+vpMbtMeLine::updateParameters(const vpImage<unsigned char> &I, double rho, double theta)
+{
+  this->rho = rho;
+  this->theta = theta;
+  a = cos(theta);
+  b = sin(theta);
+  c = -rho;
+  // recherche de point aux extremite de la droites
+  // dans le cas d'un glissement
+  suppressPoints(I);
+  seekExtremities(I);
+  suppressPoints(I);
+  setExtremities();
+  //reechantillonage si necessaire
+  reSample(I);
+
+  // remet a jour l'angle delta pour chaque  point de la liste
+  updateDelta();
+}*/
+
+
+/*!
+  Update the moving edges parameters after the virtual visual servoing.
+  
+  \param I : The image.
+  \param ip1 : The first extremity of the line.
+  \param ip2 : The second extremity of the line.
+  \param rho : The \f$\rho\f$ parameter used in the line's polar equation.
+  \param theta : The \f$\theta\f$ parameter used in the line's polar equation.
+*/
+/*void
+vpMbtMeLine::updateParameters(const vpImage<unsigned char> &I, vpImagePoint ip1, vpImagePoint ip2, double rho, double theta)
+{
+  this->rho = rho;
+  this->theta = theta;
+  a = cos(theta);
+  b = sin(theta);
+  c = -rho;
+  // recherche de point aux extremite de la droites
+  // dans le cas d'un glissement
+  suppressPoints(I);
+  seekExtremities(I);
+  suppressPoints(I);
+  setExtremities();
+  //reechantillonage si necessaire
+  reSample(I,ip1,ip2);
+
+  // remet a jour l'angle delta pour chaque  point de la liste
+  updateDelta();
+}*/
+
+
+/*!
+  Seek in the list of available points the two extremities of the line.
+*/
+/*void
+vpMbtMeLine::setExtremities()
+{
+  double imin = +1e6 ;
+  double jmin = +1e6;
+  double imax = -1 ;
+  double jmax = -1 ;
+
+  // Loop through list of sites to track
+  list.front();
+  while(!list.outside())
+  {
+    vpMeSite s = list.value() ;//current reference pixel
+    if (s.ifloat < imin)
+    {
+      imin = s.ifloat ;
+      jmin = s.jfloat ;
+    }
+
+    if (s.ifloat > imax)
+    {
+      imax = s.ifloat ;
+      jmax = s.jfloat ;
+    }
+    list.next() ;
+  }
+
+  if (list.nbElements() != 0)
+  {
+    PExt[0].ifloat = imin ;
+    PExt[0].jfloat = jmin ;
+    PExt[1].ifloat = imax ;
+    PExt[1].jfloat = jmax ;
+  }
+
+  if (fabs(imin-imax) < 25)
+  {
+    list.front();
+    while(!list.outside())
+    {
+      vpMeSite s = list.value() ;//current reference pixel
+      if (s.jfloat < jmin)
+      {
+	imin = s.ifloat ;
+	jmin = s.jfloat ;
+      }
+
+      if (s.jfloat > jmax)
+      {
+	imax = s.ifloat ;
+	jmax = s.jfloat ;
+      }
+      list.next() ;
+    }
+
+    if (list.nbElements() != 0)
+    {
+      PExt[0].ifloat = imin ;
+      PExt[0].jfloat = jmin ;
+      PExt[1].ifloat = imax ;
+      PExt[1].jfloat = jmax ;
+    }
+    bubbleSortJ();
+  }
+
+  else
+    bubbleSortI();
+}
+
+
+void
+vpMbtMeLine::bubbleSortI()
+{
+  int nbElmt = list.nbElements();
+  for (int pass = 1; pass < nbElmt; pass++)
+  {
+    list.front();
+    for (int i=0; i < nbElmt-pass; i++)
+    {
+      vpMeSite s1 = list.value() ;
+      vpMeSite s2 = list.nextValue() ;
+      if (s1.ifloat > s2.ifloat)
+        list.swapRight();
+      else
+        list.next();
+    }
+  }
+}
+
+
+void
+vpMbtMeLine::bubbleSortJ()
+{
+  int nbElmt = list.nbElements();
+  for(int pass=1; pass < nbElmt; pass++)
+  {
+    list.front();
+    for (int i=0; i < nbElmt-pass; i++)
+    {
+      vpMeSite s1 = list.value() ;
+      vpMeSite s2 = list.nextValue() ;
+      if (s1.jfloat > s2.jfloat)
+        list.swapRight();
+      else
+        list.next();
+    }
+  }
+}
+
+
+void
+vpMbtMeLine::findSignal(const vpImage<unsigned char>& I, const vpMe *me, double *conv)
+{
+  vpImagePoint itest(PExt[0].ifloat+(PExt[1].ifloat-PExt[0].ifloat)/2, PExt[0].jfloat+(PExt[1].jfloat-PExt[0].jfloat)/2);
+  
+  vpMeSite pix ; //= list.value();
+  pix.init(itest.get_i(), itest.get_j(), delta, 0, sign);
+  
+  vpMeSite  *list_query_pixels;
+//  double  convolution = 0;
+  int range  = me->range;
+  
+  list_query_pixels = pix.getQueryList(I, range);
+  
+  vpDisplay::displayCross(I,itest,5,vpColor::cyan,3);
+  vpDisplay::displayLine(I,vpImagePoint(list_query_pixels[0].ifloat,list_query_pixels[0].jfloat),vpImagePoint(list_query_pixels[2*range].ifloat,list_query_pixels[2*range].jfloat),vpColor::cyan);
+  vpDisplay::displayCross(I,vpImagePoint(list_query_pixels[0].ifloat,list_query_pixels[0].jfloat),5,vpColor::orange,3);
+
+  for(int n = 0 ; n < 2 * range + 1 ; n++)
+  {
+    conv[n] = list_query_pixels[n].convolution(I, me);
+  }
+  delete [] list_query_pixels;
+}*/
+
+#endif
+

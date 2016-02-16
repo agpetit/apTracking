@@ -1,0 +1,395 @@
+/*!
+ * ======================================================
+ *
+ *
+ * DESCRIPTION: Main program demonstrating 3D tracking using 3D rendering
+ *
+ *
+ *
+ * \authors Antoine Petit
+ * \date 05/06/11
+ *======================================================
+ */
+
+#include <QApplication>
+#include "surrender/scenemanager.h"
+#include "surrender/sceneviewer.h"
+
+#include <visp/vpOpenCVGrabber.h>
+#include <visp/vpVideoReader.h>
+#include <cstdlib>
+#include <visp/vpDebug.h>
+#include <visp/vpConfig.h>
+#include <visp/vpDisplayX.h>
+#include <visp/vpDisplayGTK.h>
+#include <visp/vpDisplayGDI.h>
+#include <visp/vpDisplayOpenCV.h>
+#include <visp/vpPose.h>
+#include <visp/vpPoint.h>
+#include <visp/vpImagePoint.h>
+#include <visp/vpDot2.h>
+#include <visp/vpPixelMeterConversion.h>
+#include <visp/vpImageConvert.h>
+#include <visp/vpExponentialMap.h>
+
+
+#include <fstream>
+#include <math.h>
+#include <string.h>
+#include <highgui.h>
+
+
+#include <visp/vpException.h>
+#include <visp/vpImageException.h>
+#include <visp/vpRGBa.h>
+#include <visp/vpIoTools.h>
+#include <visp/vpImageIo.h>
+#include <visp/vpParseArgv.h>
+#include <visp/vpImage.h>
+#include <visp/vpImageFilter.h>
+#include <visp/vpImageConvert.h>
+#include <visp/vpTime.h>
+#include <visp/vpFeatureLuminance.h>
+#include <visp/vpPlot.h>
+
+#ifdef True
+#undef True
+#undef False
+#endif
+
+#include <cv.h>
+
+#include "vpMbPointsTracker.h"
+
+#include <iostream>
+
+#include "luaconfig.h"
+
+using namespace std;
+using namespace cv;
+#define USE_USB_CAMERA 0
+
+using namespace luxifer;
+
+#define GETOPTARGS  "o:i:c:s:dh"
+
+
+void usage(const char *name, const char *badparam)
+{
+  fprintf(stdout, "\n\
+Example of tracking based on the 3D model.\n\
+\n\
+SYNOPSIS\n\
+  %s [-o <object name>]\n\
+ [-i <image path>] \n\
+ [-s <first image>] \n\
+ [-c <config file>] \n\
+ [-d] [-h]",
+  name );
+
+  fprintf(stdout, "\n\
+OPTIONS:                                               \n\
+  -o <object name>                                 \n\
+     Specify the name of object or scene to track\n\
+\n\
+  -i <input image path>                                \n\
+     Set image input path.\n\
+\n\
+  -s <first image>                                \n\
+     Set the first image of the sequence.\n\
+ \n\
+  -c <config file>                                \n\
+     Set the config file to use (Lua script).\n\
+\n\
+  -d \n\
+     Turn off the display.\n\
+\n\
+  -h \n\
+     Print the help.\n\n");
+
+  if (badparam)
+    fprintf(stdout, "\nERROR: Bad parameter [%s]\n", badparam);
+}
+
+
+bool getOptions(int argc, char **argv, std::string &object, std::string &ipath, bool &display, int &start_image, std::string &configfile)
+{
+  const char *optarg;
+  const char **argv1=(const char**)argv;
+  int   c;
+  while ((c = vpParseArgv::parse(argc, argv1, GETOPTARGS, &optarg)) > 1) {
+
+    switch (c) {
+    case 'o': object = optarg; break;
+    case 'i': ipath = optarg; break;
+    case 'd': display = false; break;
+    case 'c': configfile = optarg; break;
+    case 's': start_image = atoi(optarg);   break;
+    case 'h': usage(argv[0], NULL); return false; break;
+
+    default:
+      usage(argv[0], optarg);
+      return false; break;
+    }
+  }
+
+  if ((c == 1) || (c == -1)) {
+    // standalone param or error
+    usage(argv[0], NULL);
+    std::cerr << "ERROR: " << std::endl;
+    std::cerr << "  Bad argument " << optarg << std::endl << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+
+int main(int argc, char **argv)
+{
+    QApplication a(argc, argv);
+
+<<<<<<< .mine
+    //LuaConfig cfg("config.lua");
+
+=======
+>>>>>>> .r20
+    // Paths and file names
+    std::string env_ipath;
+    std::string env_ipath2;
+    std::string opath;
+    std::string opt_ipath;
+    std::string ipath;
+    std::string configFile;
+    std::string s_path;
+    std::string opt_object;
+    std::string object;
+    std::string initFile;
+    std::string modelFile;
+    bool opt_display;
+    bool displayMovingEdge = true;
+    bool opt_click_allowed = true;
+    int start_image = 0;
+
+    env_ipath="/local/agpetit/images";
+    env_ipath2="/local/agpetit";
+    s_path = "/local/agpetit/soft/apTracking/mbt-co/build/";
+
+    // Read the command line options
+    if (!getOptions(argc, argv, opt_object, opt_ipath, opt_display, start_image, configFile)) {
+      return (-1);
+    }
+
+    opt_display = true;
+    // Get the option values
+
+     if (!opt_ipath.empty())
+       ipath = opt_ipath + vpIoTools::path("/image%06d.png");
+     else
+       ipath = env_ipath2 + vpIoTools::path("/soft/luxifer_20120111_livraison_inria/demo9/image%06d.png");
+
+     if (!opt_object.empty())
+       object = opt_object;
+     else
+    	object = "spot5";
+
+     if (configFile.empty())
+         configFile = object + vpIoTools::path("/") + object + vpIoTools::path(".lua");
+      modelFile = object + vpIoTools::path("/")+ object + vpIoTools::path(".obj");
+      initFile = object + vpIoTools::path("/") + object;
+
+    opath = vpIoTools::path("out/image%06d.jpg");
+
+    vpMbPointsTracker tracker;
+    // Set tracking and rendering parameters
+    vpCameraParameters mcam;
+    apRend mrend;
+    tracker.loadConfigFile(configFile);
+    tracker.getCameraParameters(mcam);
+    tracker.getRendParameters(mrend);
+
+
+    // OpenCVGrabber to grab images from USB Camera
+    vpOpenCVGrabber grabber;
+
+    SceneViewer viewer;
+    SceneManager *mgr = new SceneManager(const_cast<QGLContext*>(viewer.context()));
+    viewer.setSceneManager(mgr);
+    viewer.show();
+    viewer.move(200, 200);
+
+    vpImage<unsigned char> Id;
+    vpImage<unsigned char> Id1(512,512);
+    vpImage<vpRGBa> Ioverlay;
+
+    /*grabber.setDeviceType(1);
+      grabber.open(Id);
+      grabber.acquire(Id);*/
+
+    //VideoReader to read images from disk
+    vpVideoReader reader;
+    reader.setFileName(ipath.c_str());
+    reader.setFirstFrameIndex(start_image);
+    reader.open(Id);
+    reader.acquire(Id);
+    const int width = reader.getWidth();
+    const int height = reader.getHeight();
+
+    viewer.resize(width, height);
+    mgr->setApRend(&mrend);
+    mgr->setImageSize(width, height);
+    mgr->setFOV(atan((height * 0.5) / mcam.get_py()) * 360.0 / M_PI);
+    mgr->setAspectRatio(width * mcam.get_py() / (height * mcam.get_px()));
+    mgr->load(modelFile);
+
+    // Depth edges map, with gradient orientation
+    vpImage<unsigned char> Ior(height,width);
+    // Normal map and texture map
+    vpImage<vpRGBa> Inormd(height,width);
+    // Texture edge map
+    vpImage<unsigned char> Itex(height,width);
+    for (int n=0; n <height ; n++)
+    {
+        for (int m = 0 ; m < width; m++)
+        {
+            Itex[n][m]=100;
+        }
+    }
+
+    // Main window creation and displaying
+    vpDisplayX display1;
+    if (opt_display)
+    {
+        display1.init(Id, 10, 10, "Test tracking");
+        vpDisplay::display(Id) ;
+        vpDisplay::flush(Id);
+    }
+
+
+    vpHomogeneousMatrix cMo;
+
+    // Manual initialization of the tracker
+    if (opt_display && opt_click_allowed)
+    {
+        while(!vpDisplay::getClick(Id,false)){
+            vpDisplay::display(Id);
+            vpDisplay::displayCharString(Id, 15, 10,
+                                         "click after positioning the object",
+                                         vpColor::red);
+            vpDisplay::flush(Id) ;
+        }
+    }
+
+    if (opt_display && opt_click_allowed)
+    {
+        tracker.initClick(Id, initFile.c_str(), true);
+    }
+    else
+    {
+        vpHomogeneousMatrix cMoi(-0.002774173802,-0.001058705951,0.2028195729,2.06760528,0.8287820106,-0.3974327515);
+        tracker.init(Id,cMoi);
+    }
+
+    tracker.getPose(cMo);
+
+    //Init pose for Trakmark sequence
+
+    /*cMo.buildFrom(11.7759940348,5.8999979250,5.5547190835,-2.6525344080,-0.0000000000,1.6833495227 );
+       cMo.buildFrom( -0.768532741,  6.24302505,  13.54560648,  -2.683611579,  0.003069081378,  1.629208268 );
+       cMo=cMo.inverse();*/
+    //tracker.init(Id,cMo);
+    if (opt_display)
+        vpDisplay::flush(Id);
+    double px = mcam.get_px() ;
+    double py = mcam.get_py() ;
+
+
+    vpTRACE(" ") ;
+
+    // ----------------------------------------------------------
+
+    //grabber.setDeviceType(1);
+    /*grabber.open(Idisplay);
+grabber.acquire(Idisplay);*/
+    // Compute the initial pose of the camera
+    //computeInitialPose(&mcam, Idisplay, &mPose, md, mcog, &cmo, mP);
+    // Close the framegrabber
+    //grabber.close();
+    //grabber.open(Id);
+
+    vpTranslationVector tr;
+    cMo.extract(tr);
+
+    int im=start_image;
+
+    fstream fout("out/tracking.txt", std::ios_base::out);
+
+    // Main tracking loop
+    try
+    {
+        while(true){
+
+            // Acquire images
+            try{
+                    reader.acquire(Id);
+            }
+            catch(...){
+                break;
+            }
+            //Id=Id1;
+            vpDisplay::display(Id);
+
+            // Render the 3D model, get the depth edges, normal and texture maps
+            try{
+                mgr->updateRTT(Inormd,Ior,&cMo);
+                a.processEvents(QEventLoop::AllEvents, 1);
+            }
+            catch(...){
+                vpTRACE("Error in 3D rendering") ;
+                throw;
+            }
+            //vpDisplay::getClick(Id,true);
+            tracker.setPose(cMo);
+            cMo.extract(tr);
+
+            // Pose tracking
+            try{
+                double t0= vpTime::measureTimeMs();
+                tracker.track(Id,Inormd,Ior,Ior,tr[2]);
+                double t1= vpTime::measureTimeMs();
+                cout << "timeTrack "<<t1-t0<<endl;
+            }
+            catch(...){
+                vpTRACE("Error in tracking") ;
+                throw;
+            }
+            // Display 3D model
+            tracker.getPose(cMo);
+            tracker.display(Id,cMo,mcam,vpColor::green,1);
+            std::cout<<" cMo " <<cMo<<std::endl;
+            vpDisplay::flush(Id);
+            vpDisplay::getImage(Id,Ioverlay);
+
+            fout << im << ' ' << cMo << std::endl;
+
+            // Write images
+            char buf4[FILENAME_MAX];
+            sprintf(buf4, opath.c_str(), im);
+            std::string filename4(buf4);
+            //std::cout << "Write: " << filename4 << std::endl;
+//            vpImageIo::write(Ioverlay, filename4);
+            im++;
+        }
+
+        grabber.close();
+    }
+    catch ( char const *e)
+    {
+        std::cerr << "Exception: " << e << "\n";
+        return 1;
+    }
+    return EXIT_SUCCESS;
+
+
+}
+

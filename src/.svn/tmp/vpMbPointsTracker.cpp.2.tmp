@@ -1,0 +1,4020 @@
+/*
+ * vpMbPointsTracker.cpp
+ *
+ *  Created on: March 10, 2011
+ *      Author: Antoine Petit
+ */
+
+#include <visp/vpConfig.h>
+#include <visp/vpDebug.h>
+
+#include <visp/vpPose.h>
+#include <visp/vpExponentialMap.h>
+#include <visp/vpPixelMeterConversion.h>
+#include <visp/vpImageIo.h>
+#include <visp/vpRobust.h>
+#include <visp/vpDisplayOpenCV.h>
+#include <visp/vpDisplayX.h>
+#include <visp/vpDisplayGDI.h>
+#include <visp/vpMatrixException.h>
+#include <visp/vpMatrix.h>
+#include <visp/vpImagePoint.h>
+
+#include <visp/vpException.h>
+#include <visp/vpTrackingException.h>
+
+#include "vpMbPointsTracker.h"
+#include "vpMbtControlPoint.h"
+#include "luaconfig.h"
+
+#include <string>
+#include <sstream>
+
+/*!
+ Basic constructor
+ */
+vpMbPointsTracker::vpMbPointsTracker() {
+	compute_interaction = 1;
+	npoints = 0;
+	lambda = 1;
+	percentageGdPt = 0.1;
+	computeCovariance = false;
+	points.resize(1);
+	scales.resize(1);
+	scales[0] = true;
+	points[0].resize(0);
+	lines.resize(1);
+	lines[0].resize(0);
+	lines_cand.resize(1);
+	lines_cand[0].resize(0);
+	Ipyramid.resize(0);
+	IRGBpyramid.resize(0);
+}
+
+/*!
+ Basic destructor useful to deallocate the memory.
+ */
+vpMbPointsTracker::~vpMbPointsTracker() {
+	vpMbtControlPoint *p;
+
+	for (unsigned int i = 0; i < points.size(); i += 1) {
+		if (scales[i]) {
+			for (int k = 0; k < points[i].size(); k++) {
+				p = (points[i])[k];
+				if (p != NULL)
+					delete p;
+				p = NULL;
+			}
+			points[i].resize(0);
+		}
+	}
+	points.resize(0);
+	cleanPyramid(Ipyramid);
+
+	for (unsigned int i = 0; i < CCDTracker.pointsCCD.size(); i += 1) {
+		if (scales[i]) {
+			for (int k = 0; k < CCDTracker.pointsCCD[i].size(); k++) {
+				p = (CCDTracker.pointsCCD[i])[k];
+				if (p != NULL)
+					delete p;
+				p = NULL;
+			}
+			CCDTracker.pointsCCD[i].resize(0);
+		}
+	}
+	CCDTracker.pointsCCD.resize(0);
+	cleanPyramid(IRGBpyramid);
+
+	apMbtDistanceLineMH *l;
+	for (unsigned int i = 0; i < lines.size(); i += 1) {
+		if (scales[i]) {
+			for (int k = 0; k < points[i].size(); k++) {
+				l = lines[i][k];
+				for (int ii; ii < l->pointsvect.size(); ii++) {
+					p = l->pointsvect[ii];
+					delete p;
+					p = NULL;
+				}
+				l->pointsvect.resize(0);
+				if (l != NULL)
+					delete l;
+				l = NULL;
+			}
+
+			lines[i].clear();
+		}
+	}
+	lines.resize(0);
+}
+
+/*void
+ vpMbPointsTracker::setOgre(const exampleVpAROgre &ogre_)
+ {
+ ogre = ogre_;
+ }*/
+
+/*!
+ Set the moving edge parameters.
+
+ \param _me : an instance of vpMe containing all the desired parameters
+ */
+void vpMbPointsTracker::setMovingEdge(const vpMe &_me) {
+	this->me = _me;
+
+	for (unsigned int i = 0; i < points.size(); i += 1) {
+		if (scales[i]) {
+			vpMbtControlPoint *p;
+			for (int k = 0; k < points[i].size(); k++) {
+				p = (points[i])[k];
+				p->setMovingEdge(&me);
+			}
+		}
+	}
+}
+
+/*!
+ Compute the visual servoing loop to get the pose of the feature set.
+
+ \exception vpTrackingException::notEnoughPointError if the number of detected
+ feature is equal to zero.
+
+ \param _I : The current image.
+ */
+void vpMbPointsTracker::computeVVS(const vpImage<unsigned char>& _I) {
+	double residu_1 = 1e3;
+	double r = 1e3 - 1;
+	vpMatrix LTL;
+	vpColVector LTR;
+
+	// compute the interaction matrix and its pseudo inverse
+	vpMbtControlPoint *p;
+
+	vpColVector w;
+	vpColVector weighted_error;
+	vpColVector factor;
+
+	unsigned int iter = 0;
+
+	//Nombre de moving edges
+	int nbrow = 0;
+	vpFeatureLine fli;
+
+	for (int k = 0; k < points[scaleLevel].size(); k++) {
+		p = (points[scaleLevel])[k];
+		nbrow += 1;
+		p->initInteractionMatrixError();
+		//
+		//std::cout<<fli.getTheta()<<std::endl;
+	}
+
+	if (nbrow == 0) {
+		vpERROR_TRACE(
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+		throw vpTrackingException(vpTrackingException::notEnoughPointError,
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+	}
+
+	vpMatrix L(nbrow, 6), Lp;
+
+	// compute the error vector
+	vpColVector error(nbrow);
+	int nerror = error.getRows();
+	vpColVector v;
+
+	double limite = 3; //Une limite de 3 pixels
+	limite = limite / cam.get_px(); //Transformation limite pixel en limite metre.
+
+	//Parametre pour la premiere phase d'asservissement
+	double e_prev = 0, e_cur, e_next;
+	bool reloop = true;
+	double count = 0;
+
+	/*** First phase ***/
+
+	while (reloop == true && iter < 5) {
+		if (iter == 0) {
+			weighted_error.resize(nerror);
+			w.resize(nerror);
+			w = 0;
+			factor.resize(nerror);
+			factor = 1;
+		}
+
+		count = 0;
+		//;
+		int n = 0;
+		//reloop = false;
+		reloop = true;
+		for (int k = 0; k < points[scaleLevel].size(); k++)
+		//for (int k = 0; k<points[scaleLevel].size(); k++)
+		{
+			//p = (points[scaleLevel])[k];
+			p = (points[scaleLevel])[k];
+			p->computeInteractionMatrixError(cMo, _I);
+			//p->computeInteractionMatrixError2(cMo,_I);
+			//p->computeInteractionMatrixError4(cMo, I ,Igrad , Igradx, Igrady);
+
+			double fac = 1;
+			/*if (iter == 0)
+			 {
+			 fac = 0.2;
+			 break;
+			 }*/
+
+			//std::cout << " fac " << fac << std::endl;
+
+			if (iter == 0 && p != NULL)
+
+				//for (int i=0 ; i < 1 ; i++)
+				//{
+				for (int j = 0; j < 6; j++) {
+					L[n][j] = p->L[0][j]; //On remplit la matrice d'interaction globale
+				}
+			error[n] = p->error[0]; //On remplit la matrice d'erreur
+
+			if (error[n] <= limite)
+				count = count + 1.0; //Si erreur proche de 0 on incremente cur
+
+			w[n] = 0;
+
+			if (iter == 0) {
+				factor[n] = fac;
+				vpPointSite site = p->list[0];
+				//vpPointSite site = p->list.value();
+				//if (site.suppress != 0) factor[n] = 0;
+				if (site.suppress != 0)
+					factor[n] = 0.2;
+			}
+
+			//else
+			//{
+			e_cur = p->error[0];
+			e_next = p->error[0];
+			if (fabs(e_cur - e_prev) < limite) {
+				w[n] += 0.5;
+				//w[n]=1;
+			}
+			if (fabs(e_cur - e_next) < limite) {
+				w[n] += 0.5;
+				//w[n]=1;
+			}
+			e_prev = e_cur;
+			//}
+			//}
+
+			n += 1;
+			//
+		}
+
+		count = count / (double) nbrow;
+		if (count < 0.85) {
+			reloop = true;
+		}
+
+		double num = 0;
+		double den = 0;
+
+		double wi;
+		double eri;
+		for (int i = 0; i < nerror; i++) {
+			wi = w[i] * factor[i];
+			eri = error[i];
+			num += wi * vpMath::sqr(eri);
+			den += wi;
+
+			weighted_error[i] = wi * eri;
+		}
+
+		if ((iter == 0) || compute_interaction) {
+			for (int i = 0; i < nerror; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[i][j] = w[i] * factor[i] * L[i][j];
+				}
+			}
+		}
+
+		LTL = L.AtA();
+		computeJTR(L, weighted_error, LTR);
+		v = -0.7 * LTL.pseudoInverse(LTL.getRows() * DBL_EPSILON) * LTR;
+		cMo = vpExponentialMap::direct(v).inverse() * cMo;
+
+		iter++;
+	}
+	std::cout << "\t First minimization in " << iter << " iteration "
+			<< std::endl;
+
+	/*** Second phase ***/
+	vpColVector W_true;
+	vpMatrix L_true;
+	vpRobust robust(nerror);
+	robust.setIteration(0);
+	iter = 0;
+	//vpColVector error_px(nerror);
+
+	while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 20)) {
+		// ;
+		int n = 0;
+		for (int k = 0; k < points[scaleLevel].size(); k++)
+		//for (int k = 0; k<points[scaleLevel].size(); k++)
+		{
+			//p = (points[scaleLevel])[k];
+			p = (points[scaleLevel])[k];
+			p->computeInteractionMatrixError(cMo, _I);
+			//p->computeInteractionMatrixError2(cMo,_I);
+			//p->computeInteractionMatrixError4(cMo, I ,Igrad , Igradx, Igrady);
+			//for (int i=0 ; i < l->nbFeature ; i++)
+			//{
+			for (int j = 0; j < 6; j++) {
+				L[n][j] = p->L[0][j];
+				error[n] = p->error[0];
+				//error_px[n+i] = l->error[i] * cam.get_px();
+			}
+			//}
+			n += 1;
+			//
+		}
+
+		if (iter == 0) {
+			weighted_error.resize(nerror);
+			w.resize(nerror);
+			w = 1;
+
+			robust.setThreshold(2 / cam.get_px()); // limite en metre
+			robust.MEstimator(vpRobust::TUKEY, error, w);
+			//robust.setThreshold(2); // limite en pixel
+			//robust.MEstimator(vpRobust::TUKEY, error_px,w);
+		} else {
+			robust.setIteration(iter);
+			robust.MEstimator(vpRobust::TUKEY, error, w);
+			//robust.MEstimator(vpRobust::TUKEY, error_px,w);
+		}
+
+		residu_1 = r;
+
+		L_true = L;
+		W_true = vpColVector(nerror);
+
+		double num = 0;
+		double den = 0;
+		double wi;
+		double eri;
+		for (int i = 0; i < nerror; i++) {
+			wi = w[i] * factor[i];
+			eri = error[i];
+			W_true[i] = wi*wi;
+			num += wi * vpMath::sqr(eri);
+			den += wi;
+
+			weighted_error[i] = wi * eri;
+		}
+
+		r = sqrt(num / den); //Le critere d'arret prend en compte le poids
+
+		if ((iter == 0) || compute_interaction) {
+			for (int i = 0; i < nerror; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[i][j] = w[i] * factor[i] * L[i][j];
+				}
+			}
+		}
+
+		LTL = L.AtA();
+		computeJTR(L, weighted_error, LTR);
+		v = -lambda * LTL.pseudoInverse(LTL.getRows() * DBL_EPSILON) * LTR;
+		cMo = vpExponentialMap::direct(v).inverse() * cMo;
+
+		iter++;
+	}
+	if (computeCovariance)
+	{
+	vpMatrix D;
+	D.diag(W_true);
+	covarianceMatrix = computeCovarianceMatrix(L_true,-v,lambda*error,D);
+	}
+
+	int n = 0;
+	for (int k = 0; k < points[scaleLevel].size(); k++) {
+		p = (points[scaleLevel])[k];
+		{
+			double wmean = 0;
+			/*if (p->nbFeature > 0)*///
+
+			//for (int i=0 ; i < p->nbFeature ; i++)
+			//{
+			wmean += w[n];
+			vpPointSite s = p->list[0];
+			if (w[n] < 0.5) {
+				s.suppress = 4;
+				p->list[0] = s;
+			}
+
+			//}
+			n += 1;
+
+			wmean = 1;
+
+			//p->setMeanWeight(wmean);
+
+		}
+
+	}
+	//   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
+	//    std::cout << "error: " << (residu_1 - r) << std::endl;
+}
+
+/*void
+ vpMbPointsTracker::computeVVSHyb(const vpImage<unsigned char>& _I, 	apOgre ogre_)
+ {
+ double residu_1 =1e3;
+ double r =1e3-1;
+ vpMatrix LTL;
+ vpColVector LTR;
+
+ // compute the interaction matrix and its pseudo inverse
+ vpMbtControlPoint *p ;
+
+ vpColVector w;
+ vpColVector weighted_error;
+ vpColVector factor;
+
+ vpTranslationVector tr;
+ cMo.extract(tr);
+
+ unsigned int iter = 0;
+
+ //Nombre de moving edges
+ int nbrow  = 0;
+ vpFeatureLine fli;
+
+ ;
+ for (int k = 0; k<points[scaleLevel].size(); k++)
+ {
+ p = (points[scaleLevel])[k];
+ nbrow += 1;
+ p->initInteractionMatrixError();
+
+ //std::cout<<fli.getTheta()<<std::endl;
+ }
+
+ if (nbrow==0)
+ {
+ vpERROR_TRACE("\n\t\t Error-> not enough data in the interaction matrix...") ;
+ throw vpTrackingException(vpTrackingException::notEnoughPointError, "\n\t\t Error-> not enough data in the interaction matrix...");
+ }
+
+ vpMatrix L(nbrow,6), Lsd, LT;
+ // matrice d'interaction a la position desiree
+ vpMatrix Hsd;  // hessien a la position desiree
+ vpMatrix H ; // Hessien utilise pour le levenberg-Marquartd
+
+ vpColVector errorG ;
+
+ // compute the error vector
+ vpColVector error(nbrow);
+ int nerror = error.getRows();
+ int nerrorG;
+ vpColVector v ;
+
+ double limite = 3; //Une limite de 3 pixels
+ limite = limite / cam.get_px(); //Transformation limite pixel en limite metre.
+
+ //Parametre pour la premiere phase d'asservissement
+ double e_prev = 0, e_cur, e_next;
+ bool reloop = true;
+ double count = 0;
+ int nbr =480;
+ int nbc = 640;
+ vpImage<unsigned char> imG(480,640);
+ vpImage<unsigned char> Igd(480,640);
+ vpImage<unsigned char> Ig(480,640);
+ vpImage<unsigned char> Idiff(480,640);
+ vpColVector e;
+
+ for (int i=3; i < nbr-3 ; i++)
+ {
+ //   cout << i << endl ;
+ for (int j = 3 ; j < nbc-3; j++)
+ {
+ // cout << dim_s <<" " <<l <<"  " <<i << "  " << j <<endl ;
+ double Igf =   vpImageFilter::gaussianFilter(_I,i,j) ;
+ imG[i][j] = Igf ;
+
+ }
+ }*/
+
+/*  for (int i=3; i < nbr-3 ; i++)
+ {
+ for (int j = 3 ; j < nbc-3; j++)
+ {*/
+/*  for (int i=150; i < 350 ; i++)
+ {
+ for (int j = 150 ; j < 550; j++)
+ {
+ // cout << dim_s <<" " <<l <<"  " <<i << "  " << j <<endl ;
+ double Ix =   1 * vpImageFilter::sobelFilterX(imG,i,j);
+ double Iy =   1 * vpImageFilter::sobelFilterY(imG,i,j);
+ Igd[i][j]= (unsigned char)sqrt(vpMath::sqr(Ix)+vpMath::sqr(Iy));
+ //I2[i][j] = (unsigned char)Igrad[i][j];
+ }
+ }
+
+ sId.init(Igd.getHeight(), Igd.getWidth(), tr[2]);
+ sI.init(Igd.getHeight(), Igd.getWidth(), tr[2]);
+ sId.buildFrom(Igd);
+ sId.interaction(Lsd);
+ //Lsd=2*Lsd;
+ nerrorG = Lsd.getRows();
+ vpColVector errorT(nerror+nerrorG);
+ vpDisplayX displayo;
+ displayo.init(Idiff, 1500, 1000, "display");
+ double mu = 0.003;
+ vpMatrix diagHsd(6,6);
+ vpMatrix diagLTL(6,6);
+
+
+ Hsd = Lsd.AtA();
+ diagHsd.eye(6);
+ for(int i = 0 ; i < 6 ; i++) diagHsd[i][i] = Hsd[i][i];
+
+ H = ((mu * diagHsd) + Hsd).pseudoInverse();
+
+ /*** First phase ***/
+
+/*  while ( reloop == true && iter<30)
+ {
+
+ cMo.extract(tr);
+ ogre_.updateClipDistances0(tr[2],1);
+ ogre_.updateRTTGrad(Ig,&cMo);
+ sI.update(Ig.getHeight(), Ig.getWidth(),tr[2]);
+ sI.buildFrom(Ig);
+ sI.error(sId, errorG);
+
+ vpImageTools::imageDifference(Ig,Igd,Idiff);
+ vpDisplay::display(Idiff);
+ vpDisplay::flush(Idiff);*/
+
+/*H = ((mu * diagHsd) + Hsd).pseudoInverse();
+ //	compute the control law
+ e = H * Lsd.t() *errorG;
+ v =  -0.5*e;
+ cMo =  vpExponentialMap::direct(v).inverse() * cMo;*/
+
+/*	  if(iter==0)
+ {
+ weighted_error.resize(nerror+nerrorG) ;
+ w.resize(nerror+nerrorG);
+ w = 0;
+ factor.resize(nerror+nerrorG);
+ factor = 1;
+ }*/
+
+/*  if(iter==0)
+ {
+ weighted_error.resize(nerror) ;
+ w.resize(nerror);
+ w = 0;
+ factor.resize(nerror);
+ factor = 1;
+ }*/
+
+/*count = 0;
+ ;
+ int n = 0;
+ //reloop = false;
+ reloop = true;
+
+ for (int k = 0; k<points[scaleLevel].size(); k++)
+ {
+ p = (points[scaleLevel])[k];
+ p->computeInteractionMatrixError(cMo,_I);
+ //p->computeInteractionMatrixError2(cMo,_I);
+
+ double fac = 1;
+ if (iter == 0)
+ {
+ fac = 0.2;
+ break;
+ }
+
+ //std::cout << " fac " << fac << std::endl;
+
+ if (iter == 0 && p != NULL)
+ p->list.front();
+
+ //for (int i=0 ; i < 1 ; i++)
+ //{
+ for (int j=0; j < 6 ; j++)
+ {
+ L[n][j] = p->L[0][j]; //On remplit la matrice d'interaction globale
+ }
+ error[n] = p->error[0]; //On remplit la matrice d'erreur
+
+ if (error[n] <= limite) count = count+1.0; //Si erreur proche de 0 on incremente cur
+
+ w[n] = 0;
+
+ if (iter == 0)
+ {
+ factor[n] = fac;
+ vpPointSite site = p->list.value();
+ if (site.suppress != 0) factor[n] = 0.2;
+ p->list.next();
+ }
+
+ e_cur = p->error[0];
+ e_next = p->error[0];
+ if ( fabs(e_cur - e_prev) < limite )
+ {
+ w[n] += 0.5;
+ }
+ if ( fabs(e_cur - e_next) < limite )
+ {
+ w[n] += 0.5;
+ }
+ e_prev = e_cur;
+
+
+ n+= 1 ;
+
+ }
+
+ count = count / (double)nbrow;
+ if (count < 0.85)
+ {
+ reloop = true;
+ }
+
+ double num=0;
+ double den=0;
+
+ double wi; double eri;
+ for(int i = 0; i < nerror; i++)
+ {
+ wi = w[i]*factor[i];
+ eri = error[i];
+ num += wi*vpMath::sqr(eri);
+ den += wi ;
+
+ weighted_error[i] =50000* wi*eri;
+ //weighted_error[i] =  wi*eri;
+ //weighted_error[i] =  0*wi*eri;
+ }
+ for(int i = nerror; i < nerror+nerrorG; i++)
+ {
+ weighted_error[i] =  3*errorG[i-nerror];
+ }
+
+
+ if((iter==0) || compute_interaction)
+ {
+ for (int i=0 ; i < nerror ; i++)
+ {
+ for (int j=0 ; j < 6 ; j++)
+ {
+ L[i][j] = 50000*w[i]*factor[i]*L[i][j] ;
+ //L[i][j] = w[i]*factor[i]*L[i][j] ;
+ //L[i][j] = 0*w[i]*factor[i]*L[i][j] ;
+ }
+ }
+ }
+
+
+ vpMatrix::stackMatrices(L,Lsd,LT);*/
+//LT=L;
+
+
+/* H = ((mu * diagHsd) + Hsd).pseudoInverse();
+ H1 = ((mu * diagHsd1) + Hsd1).pseudoInverse();
+ //	compute the control law
+ e = H * Lsd.t() *error;
+ e1 = H1 * Lsd1.t() *error1;
+ double normeError = (error1.sumSquare());
+ //A.plot(0,0,iter,sqrt((normeError)/(I3.getHeight()*I3.getWidth())));
+ //if (normeError < 0.5e7) lambda = 1 ;
+ v =  -lambda*e;*/
+
+/*double t0= vpTime::measureTimeMs();
+ LTL = LT.AtA();
+ double t1= vpTime::measureTimeMs();
+ std::cout<<"timeiter"<< t1-t0<<std::endl;
+ diagLTL.eye(6);
+ for(int i = 0 ; i < 6 ; i++) diagLTL[i][i] = LTL[i][i];
+ LTL=LTL + 0.003*diagLTL;
+ //std::cout << " ltl " << LTL.pseudoInverse() << std::endl;
+ //std::cout<<  " H " << H << std::endl;
+ //computeJTR(LT, weighted_error, LTR);
+ //v = -0.2*LTL.pseudoInverse()*LTR;
+ v = -0.5*(LTL.pseudoInverse())*LT.t()*weighted_error;
+ //std::cout << v << std::endl;
+ cMo =  vpExponentialMap::direct(v).inverse() * cMo;
+
+
+ iter++;
+ }
+ std::cout << "\t First minimization in " << iter << " iteration00 " << std::endl ;*/
+
+//std::cout<<iter<<std::endl;
+/*   ;
+ int n =0 ;
+ for (int k = 0; k<points[scaleLevel].size(); k++)
+ {
+ p = (points[scaleLevel])[k] ;
+ {
+ double wmean = 0 ;
+ //if (p->nbFeature > 0)
+ p->list.front();
+
+ //for (int i=0 ; i < p->nbFeature ; i++)
+ //{
+ wmean += w[n] ;
+ vpPointSite s = p->list.value() ;
+ if (w[n] < 0.5)
+ {
+ s.suppress = 4 ;
+ p->list.modify(s) ;
+ }
+
+ p->list.next();
+ //}
+ n+= 1 ;
+
+ wmean = 1;
+
+ //p->setMeanWeight(wmean);
+
+ }
+
+ }
+ //   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
+ //    std::cout << "error: " << (residu_1 - r) << std::endl;
+ }*/
+
+void vpMbPointsTracker::computeVVSCorr(const vpImage<unsigned char>& I,
+		const vpImage<double>& Igrad, const vpImage<double>& Igradx,
+		const vpImage<double>& Igrady) {
+	double residu_1 = 1e3;
+	double r = 1e3 - 1;
+	vpMatrix LTL;
+	vpColVector LTR;
+
+	// compute the interaction matrix and its pseudo inverse
+	vpMbtControlPoint *p;
+
+	vpColVector w;
+	vpColVector weighted_error;
+	vpColVector factor;
+
+	unsigned int iter = 0;
+
+	//Nombre de moving edges
+	int nbrow = 0;
+	vpFeatureLine fli;
+
+	for (int k = 0; k < points[scaleLevel].size(); k++) {
+		p = (points[scaleLevel])[k];
+		nbrow += 1;
+		p->initInteractionMatrixError();
+		//
+		//std::cout<<fli.getTheta()<<std::endl;
+	}
+
+	if (nbrow == 0) {
+		vpERROR_TRACE(
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+		throw vpTrackingException(vpTrackingException::notEnoughPointError,
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+	}
+
+	vpMatrix L(nbrow, 6), Lp;
+
+	// compute the error vector
+	vpColVector error(nbrow);
+	int nerror = error.getRows();
+	vpColVector v;
+
+	double limite = 3; //Une limite de 3 pixels
+	limite = limite / cam.get_px(); //Transformation limite pixel en limite metre.
+
+	//Parametre pour la premiere phase d'asservissement
+	double e_prev = 0, e_cur, e_next;
+	bool reloop = true;
+	double count = 0;
+	while (reloop == true && iter < 50) {
+		if (iter == 0) {
+			weighted_error.resize(nerror);
+			w.resize(nerror);
+			w = 0;
+			factor.resize(nerror);
+			factor = 1;
+		}
+
+		count = 0;
+		//;
+		int n = 0;
+		//reloop = false;
+		reloop = true;
+		vpImage<unsigned char> _I;
+
+		//for (int k = 0; k<points[scaleLevel].size(); k++)
+		for (int k = 0; k < points[scaleLevel].size(); k++) {
+			p = (points[scaleLevel])[k];
+			p->computeInteractionMatrixError3(cMo, I, Igrad, Igradx, Igrady);
+			//std::cout << "autoIm00 "   << std::endl;
+			//p->computeInteractionMatrixError2(cMo,_I);
+			//getchar();
+
+
+			double fac = 1;
+			if (iter == 0) {
+				fac = 0.2;
+				break;
+			}
+
+			//std::cout << " fac " << fac << std::endl;
+
+			if (iter == 0 && p != NULL)
+				p->list[0];
+
+			//for (int i=0 ; i < 1 ; i++)
+			//{
+			for (int j = 0; j < 6; j++) {
+				L[n][j] = p->L[0][j]; //On remplit la matrice d'interaction globale
+			}
+			error[n] = p->error[0]; //On remplit la matrice d'erreur
+
+
+			if (error[n] <= limite)
+				count = count + 1.0; //Si erreur proche de 0 on incremente cur
+
+			w[n] = 1;
+
+			if (iter == 0) {
+				factor[n] = fac;
+				vpPointSite site = p->list[0];
+				if (site.suppress != 0)
+					factor[n] = 0.2;
+				//p->list.next();
+			}
+
+			//else
+			//{
+			e_cur = p->error[0];
+			e_next = p->error[0];
+			if (fabs(e_cur - e_prev) < limite) {
+				w[n] += 0.5;
+			}
+			if (fabs(e_cur - e_next) < limite) {
+				w[n] += 0.5;
+			}
+			e_prev = e_cur;
+			//}
+			//}
+
+			n += 1;
+			//
+		}
+
+		//vpDisplay::flush(I);
+
+		count = count / (double) nbrow;
+		if (count < 0.85) {
+			reloop = true;
+		}
+
+		double num = 0;
+		double den = 0;
+
+		double wi;
+		double eri;
+		for (int i = 0; i < nerror; i++) {
+			wi = w[i] * factor[i];
+			eri = error[i];
+			num += wi * vpMath::sqr(eri);
+			den += wi;
+
+			//weighted_error[i] =  wi*eri ;
+			weighted_error[i] = 1;
+		}
+
+		if ((iter == 0) || compute_interaction) {
+			for (int i = 0; i < nerror; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[i][j] = w[i] * factor[i] * L[i][j];
+				}
+			}
+		}
+		vpMatrix Hsd; // hessien a la position desiree
+		vpMatrix H;
+
+		LTL = L.AtA();
+		//std::cout << weighted_error << std::endl;
+		computeJTR(L, weighted_error, LTR);
+		v = -200 * LTL.pseudoInverse() * LTR;
+		cMo = vpExponentialMap::direct(v).inverse() * cMo;
+
+		iter++;
+	}
+	std::cout << "\t First minimization in " << iter << " iteration00 "
+			<< std::endl;
+
+	//std::cout<<iter<<std::endl;
+	// ;
+	int n = 0;
+	for (int k = 0; k < points[scaleLevel].size(); k++) {
+		p = (points[scaleLevel])[k];
+		{
+			double wmean = 0;
+			p->list[0];
+
+			//for (int i=0 ; i < p->nbFeature ; i++)
+			//{
+			wmean += w[n];
+			vpPointSite s = p->list[0];
+			if (w[n] < 0.5) {
+				s.suppress = 4;
+				p->list[0] = s;
+				;
+			}
+
+			//p->list.next();
+			//}
+			n += 1;
+
+			wmean = 1;
+
+			//p->setMeanWeight(wmean);
+
+		}
+		//
+	}
+	//   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
+	//    std::cout << "error: " << (residu_1 - r) << std::endl;
+}
+
+void vpMbPointsTracker::computeVVSMH(const vpImage<unsigned char>& _I) {
+	double residu_1 = 1e3;
+	double r = 1e3 - 1;
+	vpMatrix LTL;
+	vpColVector LTR;
+
+	// compute the interaction matrix and its pseudo inverse
+	vpColVector w;
+	vpColVector weighted_error;
+	vpColVector factor;
+
+	int iter = 0;
+
+	//Nombre de moving edges
+	int nbrow = 0;
+	vpFeatureLine fli;
+
+    const size_t scaleLevel_size = points[scaleLevel].size();
+    for (int k = 0; k < scaleLevel_size; k++)
+    {
+        vpMbtControlPoint *p = (points[scaleLevel])[k];
+        nbrow += 1;
+        p->initInteractionMatrixError();
+
+		//std::cout<<fli.getTheta()<<std::endl;
+	}
+	if (nbrow == 0) {
+		vpERROR_TRACE(
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+		throw vpTrackingException(vpTrackingException::notEnoughPointError,
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+	}
+
+	vpMatrix L(nbrow, 6), Lp;
+
+	// compute the error vector
+	vpColVector error(nbrow);
+	int nerror = error.getRows();
+	vpColVector v;
+	double limite = 3; //Une limite de 3 pixels
+	limite = limite / cam.get_px(); //Transformation limite pixel en limite metre.
+
+	//Parametre pour la premiere phase d'asservissement
+	double e_prev = 0, e_cur, e_next;
+	bool reloop = true;
+	double count = 0;
+	/*** First phase ***/
+
+	while (reloop == true && iter < 5) {
+		if (iter == 0) {
+			weighted_error.resize(nerror);
+			w.resize(nerror);
+			w = 0;
+			factor.resize(nerror);
+			factor = 1;
+		}
+
+		count = 0;
+		;
+		int n = 0;
+		//reloop = false;
+		reloop = true;
+
+        if (iter == 0)
+            (points[scaleLevel])[0]->computeInteractionMatrixErrorMH(cMo,_I);
+        else
+        {
+#pragma omp parallel for
+            for (int k = 0; k < scaleLevel_size ; ++k)
+            {
+                vpMbtControlPoint *p = (points[scaleLevel])[k];
+                p->computeInteractionMatrixErrorMH(cMo,_I);
+                //p->computeInteractionMatrixError2(cMo,_I);
+
+                error[k] = p->error[0]; //On remplit la matrice d'erreur
+
+                if (error[k] <= limite) count = count+1.0; //Si erreur proche de 0 on incremente cur
+
+                w[k] = 0;
+
+                e_next = e_cur = p->error[0];
+                if (fabs(e_cur - e_prev) < limite)
+                    w[k] += 1.0;
+                else
+                    w[k] += 0.5;
+                e_prev = e_cur;
+            }
+        }
+
+		count = count / (double) nbrow;
+		if (count < 0.85) {
+			reloop = true;
+		}
+
+		double num = 0;
+		double den = 0;
+
+		double wi;
+		double eri;
+		for (int i = 0; i < nerror; i++) {
+			wi = w[i] * factor[i];
+			eri = error[i];
+			num += wi * vpMath::sqr(eri);
+			den += wi;
+			weighted_error[i] = wi * eri;
+		}
+
+		if ((iter == 0) || compute_interaction) {
+			for (int i = 0; i < nerror; i++) {
+				for (int j = 0; j < 6; j++) {
+					//L[i][j] = w[i]*factor[i]*L[i][j] ;
+					L[i][j] = factor[i] * L[i][j];
+				}
+			}
+		}
+
+//		LTL = L.AtA();
+        L.AtA(LTL);
+        computeJTR(L, weighted_error, LTR);
+		v = -1 * LTL.pseudoInverse(LTL.getRows() * DBL_EPSILON) * LTR;
+		cMo = vpExponentialMap::direct(v).inverse() * cMo;
+
+		iter++;
+	}
+	std::cout << "\t First minimization in " << iter << " iteration00 "
+			<< std::endl;
+
+	/*** Second phase ***/
+
+	vpColVector W_true;
+	vpMatrix L_true;
+	vpRobust robust(nerror);
+	robust.setIteration(0);
+	iter = 0;
+	//vpColVector error_px(nerror);
+
+	while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 15)) {
+#pragma omp parallel for
+        for (int k = 0; k<points[scaleLevel].size(); k++)
+        {
+            vpMbtControlPoint *p = (points[scaleLevel])[k];
+            p->computeInteractionMatrixErrorMH(cMo,_I);
+            for (int j = 0 ; j < 6 ; j++)
+            {
+                L[k][j] = p->L[0][j] ;
+                error[k] = p->error[0] ;
+            }
+        }
+
+		if (iter == 0) {
+			weighted_error.resize(nerror);
+			w.resize(nerror);
+			w = 1;
+
+			robust.setThreshold(2 / cam.get_px()); // limite en metre
+			robust.MEstimator(vpRobust::TUKEY, error, w);
+			//robust.setThreshold(2); // limite en pixel
+			//robust.MEstimator(vpRobust::TUKEY, error_px,w);
+		} else {
+			robust.setIteration(iter);
+			robust.MEstimator(vpRobust::TUKEY, error, w);
+			//robust.MEstimator(vpRobust::TUKEY, error_px,w);
+		}
+
+		residu_1 = r;
+
+		L_true = L;
+		W_true = vpColVector(nerror);
+
+		double num = 0;
+		double den = 0;
+		double wi;
+		double eri;
+		for (int i = 0; i < nerror; i++) {
+			wi = w[i] * factor[i];
+			W_true = wi*wi;
+			eri = error[i];
+			num += wi * vpMath::sqr(eri);
+			den += wi;
+
+			weighted_error[i] = wi * eri;
+		}
+
+		r = sqrt(num / den); //Le critere d'arret prend en compte le poids
+
+		if ((iter == 0) || compute_interaction) {
+			for (int i = 0; i < nerror; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[i][j] = w[i] * factor[i] * L[i][j];
+				}
+			}
+		}
+
+//		LTL = L.AtA();
+        L.AtA(LTL);
+        computeJTR(L, weighted_error, LTR);
+		v = -lambda * LTL.pseudoInverse(LTL.getRows() * DBL_EPSILON) * LTR;
+		cMo = vpExponentialMap::direct(v).inverse() * cMo;
+
+		iter++;
+	}
+	if (computeCovariance)
+	{
+	vpMatrix D;
+	D.diag(W_true);
+	covarianceMatrix = computeCovarianceMatrix(L_true,-v,lambda*error,D);
+	}
+
+	//  std::cout << "iter = " << iter <<std::endl;
+	int n = 0;
+    for (int k = 0; k < points[scaleLevel].size(); k++)
+    {
+        vpMbtControlPoint *p = (points[scaleLevel])[k];
+		{
+			double wmean = 0;
+			/*if (p->nbFeature > 0)*///p->list.front();
+
+			//for (int i=0 ; i < p->nbFeature ; i++)
+			//{
+			wmean += w[n];
+            vpPointSite &s = p->list[0];
+            if (w[n] < 0.5)
+				s.suppress = 4;
+
+			//}
+			n += 1;
+
+			wmean = 1;
+
+			//p->setMeanWeight(wmean);
+
+		}
+
+	}
+	//   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
+	//    std::cout << "error: " << (residu_1 - r) << std::endl;
+}
+
+
+/*!
+ Compute the visual servoing loop to get the pose of the feature set.
+
+ \exception vpTrackingException::notEnoughPointError if the number of detected
+ feature is equal to zero.
+
+ \param _I : The current greyscale image.
+ \param _IRGB : The current RGB image.
+ */
+void vpMbPointsTracker::computeVVSCCD(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB) {
+	double residu_1 = 1e3;
+	double r = 1e3 - 1;
+	vpMatrix LTL;
+	vpColVector LTR;
+
+	// compute the interaction matrix and its pseudo inverse
+	vpMbtControlPoint *p;
+
+	vpColVector w;
+	vpColVector weighted_error;
+	vpColVector factor;
+	CCDTracker.init(CCDParameters,cam);
+    CCDTracker.setImage(_IRGB);
+
+	unsigned int iter = 0;
+
+	//Nombre de moving edges
+	int nbrow = 0;
+	vpFeatureLine fli;
+
+	for (int k = 0; k < points[scaleLevel].size(); k++) {
+		p = (points[scaleLevel])[k];
+		nbrow += 1;
+		p->initInteractionMatrixError();
+	}
+
+	if (nbrow == 0) {
+		vpERROR_TRACE(
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+		throw vpTrackingException(vpTrackingException::notEnoughPointError,
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+	}
+
+	vpMatrix L(nbrow, 6), Lp;
+
+	vpMatrix LTCIL(6,6);
+	vpColVector LTCIR(6);
+
+	// compute the error vector
+	vpColVector error(nbrow);
+	int nerror = error.getRows();
+	vpColVector v;
+
+	double limite = 3; //Une limite de 3 pixels
+	limite = limite / cam.get_px(); //Transformation limite pixel en limite metre.
+
+	//Parametre pour la premiere phase d'asservissement
+	double e_prev = 0, e_cur, e_next;
+	bool reloop = true;
+	double count = 0;
+
+	/*** First phase ***/
+
+	while (reloop == true && iter < 3) {
+		if (iter == 0) {
+			weighted_error.resize(nerror);
+			w.resize(nerror);
+			w = 0;
+			factor.resize(nerror);
+			factor = 1;
+		}
+
+		count = 0;
+		int n = 0;
+		//reloop = false;
+		reloop = true;
+		for (int k = 0; k < points[scaleLevel].size(); k++)
+		{
+			p = (points[scaleLevel])[k];
+			p->computeInteractionMatrixError(cMo, _I);
+
+			double fac = 1;
+			/*if (iter == 0)
+			 {
+			 fac = 0.2;
+			 break;
+			 }*/
+
+			if (iter == 0 && p != NULL)
+
+				for (int j = 0; j < 6; j++) {
+					L[n][j] = p->L[0][j]; //On remplit la matrice d'interaction globale
+				}
+			error[n] = p->error[0]; //On remplit la matrice d'erreur
+
+			if (error[n] <= limite)
+				count = count + 1.0; //Si erreur proche de 0 on incremente cur
+
+			w[n] = 1;
+
+			if (iter == 0) {
+				factor[n] = fac;
+				vpPointSite site = p->list[0];
+				//if (site.suppress != 0) factor[n] = 0;
+				if (site.suppress != 0)
+					factor[n] = 0.2;
+			}
+			n += 1;
+		}
+
+		count = count / (double) nbrow;
+		if (count < 0.85) {
+			reloop = true;
+		}
+
+		double num = 0;
+		double den = 0;
+
+		double wi;
+		double eri;
+		for (int i = 0; i < nerror; i++) {
+			wi = w[i] * factor[i];
+			eri = error[i];
+			num += wi * vpMath::sqr(eri);
+			den += wi;
+
+			weighted_error[i] = wi * eri;
+		}
+
+		if ((iter == 0) || compute_interaction) {
+			for (int i = 0; i < nerror; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[i][j] = w[i] * factor[i] * L[i][j];
+				}
+			}
+		}
+
+		CCDTracker.updateCCDPoints(cMo);
+		CCDTracker.computeLocalStatistics();
+		double t0 = vpTime::measureTimeMs();
+		CCDTracker.updateParameters(LTCIL,LTCIR);
+		double t1 = vpTime::measureTimeMs();
+		//std::cout << " timeupdate " << t1 -t0 << std::endl;
+
+		if(iter>0)
+		CCDTracker.checkCCDConvergence();
+
+		LTL = L.AtA();
+		computeJTR(L, weighted_error, LTR);
+		v = -0.7 * (LTL + weight_ccd * LTCIL).pseudoInverse(LTL.getRows() * DBL_EPSILON) * (LTR - weight_ccd * LTCIR);
+		cMo = vpExponentialMap::direct(v).inverse() * cMo;
+
+		iter++;
+	}
+	/*std::cout << "\t First minimization in " << iter << " iteration "
+			<< std::endl;*/
+
+	/*** Second phase ***/
+	vpColVector W_true;
+	vpMatrix L_true;
+	vpRobust robust(nerror);
+	robust.setIteration(0);
+
+	vpRobust robustCCD(CCDTracker.nerror_ccd);
+	robustCCD.setIteration(0);
+	robustCCD.setThreshold(2/cam.get_px());
+
+	//CCDTracker.initRobust();
+
+	iter = 0;
+	//vpColVector error_px(nerror);
+
+	while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 15)) {
+		int n = 0;
+		for (int k = 0; k < points[scaleLevel].size(); k++)
+		{
+			p = (points[scaleLevel])[k];
+			p->computeInteractionMatrixError(cMo, _I);
+			for (int j = 0; j < 6; j++) {
+				L[n][j] = p->L[0][j];
+				error[n] = p->error[0];
+			}
+			n += 1;
+		}
+
+		if (iter == 0) {
+			weighted_error.resize(nerror);
+			w.resize(nerror);
+			w = 1;
+
+			robust.setThreshold(2 / cam.get_px()); // limite en metre
+			robust.MEstimator(vpRobust::TUKEY, error, w);
+		} else {
+			robust.setIteration(iter);
+			robust.MEstimator(vpRobust::TUKEY, error, w);
+		}
+
+		residu_1 = r;
+
+		L_true = L;
+		W_true = vpColVector(nerror);
+
+		double num = 0;
+		double den = 0;
+		double wi;
+		double eri;
+		for (int i = 0; i < nerror; i++) {
+			wi = w[i] * factor[i];
+			eri = error[i];
+			W_true[i] = wi*wi;
+			num += wi * vpMath::sqr(eri);
+			den += wi;
+
+			weighted_error[i] = wi * eri;
+		}
+
+		r = sqrt(num / den); //Le critere d'arret prend en compte le poids
+
+		if ((iter == 0) || compute_interaction) {
+			for (int i = 0; i < nerror; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[i][j] = w[i] * factor[i] * L[i][j];
+				}
+			}
+		}
+
+		robustCCD.setIteration(iter);
+		CCDTracker.updateCCDPoints(cMo);
+		CCDTracker.computeLocalStatistics();
+		double t0 = vpTime::measureTimeMs();
+		CCDTracker.updateParametersRobust(LTCIL,LTCIR,robustCCD);
+		//CCDTracker.updateParameters(LTCIL,LTCIR);
+		double t1 = vpTime::measureTimeMs();
+		//std::cout << " timeupdate " << t1 -t0 << std::endl;
+		if(iter > 0)
+			CCDTracker.checkCCDConvergence();
+
+		LTL = L.AtA();
+		computeJTR(L, weighted_error, LTR);
+		v = -lambda * (LTL + weight_ccd * LTCIL).pseudoInverse(LTL.getRows() * DBL_EPSILON) * (LTR - weight_ccd * LTCIR);
+		cMo = vpExponentialMap::direct(v).inverse() * cMo;
+
+		iter++;
+	}
+	if (computeCovariance)
+	{
+	vpMatrix D;
+	D.diag(W_true);
+	covarianceMatrix = computeCovarianceMatrix(L_true,-v,lambda*error,D);
+	}
+	//   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
+	//    std::cout << "error: " << (residu_1 - r) << std::endl;
+}
+
+void vpMbPointsTracker::computeVVSCCDMH(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB) {
+	double residu_1 = 1e3;
+	double r = 1e3 - 1;
+	vpMatrix LTL;
+	vpColVector LTR;
+
+	// compute the interaction matrix and its pseudo inverse
+
+	vpColVector w;
+	vpColVector weighted_error;
+	vpColVector factor;
+
+	CCDTracker.init(CCDParameters,cam);
+    CCDTracker.setImage(_IRGB);
+
+	unsigned int iter = 0;
+
+	//Nombre de moving edges
+	int nbrow = 0;
+
+#pragma omp parallel for
+	for (int k = 0; k < points[scaleLevel].size(); k++) {
+        vpMbtControlPoint *p = (points[scaleLevel])[k];
+		p->initInteractionMatrixError();
+	}
+    nbrow = points[scaleLevel].size();
+
+	if (nbrow == 0) {
+		vpERROR_TRACE(
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+		throw vpTrackingException(vpTrackingException::notEnoughPointError,
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+	}
+
+    vpMatrix L(nbrow, 6);
+
+	vpMatrix LTCIL(6,6);
+	vpColVector LTCIR(6);
+
+	// compute the error vector
+	vpColVector error(nbrow);
+	int nerror = error.getRows();
+	vpColVector v;
+
+	double limite = 3; //Une limite de 3 pixels
+	limite = limite / cam.get_px(); //Transformation limite pixel en limite metre.
+
+	//Parametre pour la premiere phase d'asservissement
+	bool reloop = true;
+	double count = 0;
+
+	/*** First phase ***/
+
+	while (reloop == true && iter < 3) {
+		if (iter == 0) {
+			weighted_error.resize(nerror);
+			w.resize(nerror);
+			w = 0;
+			factor.resize(nerror);
+			factor = 1;
+		}
+//        double t0 = vpTime::measureTimeMs();
+
+		count = 0;
+		//reloop = false;
+        reloop = true;
+#pragma omp parallel
+        {
+            int local_count = 0;
+#pragma omp for nowait
+            for (int k = 0; k < points[scaleLevel].size(); ++k)
+            {
+                vpMbtControlPoint *p = (points[scaleLevel])[k];
+                p->computeInteractionMatrixErrorMH(cMo, _I);
+
+                const double fac = 1;
+
+                if (iter == 0 && p != NULL)
+                    for (int j = 0; j < 6; ++j)
+                        L[k][j] = p->L[0][j]; //On remplit la matrice d'interaction globale
+                error[k] = p->error[0]; //On remplit la matrice d'erreur
+
+                if (error[k] <= limite)
+                    local_count = local_count + 1; //Si erreur proche de 0 on incremente cur
+
+                w[k] = 1;
+
+                if (iter == 0)
+                {
+                    factor[k] = fac;
+                    const vpPointSite &site = p->list[0];
+                    //if (site.suppress != 0) factor[n] = 0;
+                    if (site.suppress != 0)
+                        factor[k] = 0.2;
+                }
+            }
+            if (local_count != 0.0)
+#pragma omp critical
+            {
+                count += local_count;
+            }
+        }
+
+		count = count / (double) nbrow;
+		if (count < 0.85) {
+			reloop = true;
+		}
+
+		double num = 0;
+		double den = 0;
+
+		double wi;
+		double eri;
+		for (int i = 0; i < nerror; i++) {
+			wi = w[i] * factor[i];
+			eri = error[i];
+			num += wi * vpMath::sqr(eri);
+			den += wi;
+
+			weighted_error[i] = wi * eri;
+		}
+
+		if ((iter == 0) || compute_interaction) {
+			for (int i = 0; i < nerror; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[i][j] = w[i] * factor[i] * L[i][j];
+				}
+			}
+		}
+
+//        std::cout << "t-2 = " << vpTime::measureTimeMs() - t0 << std::endl;
+//        t0 = vpTime::measureTimeMs();
+        CCDTracker.updateCCDPoints(cMo);
+		CCDTracker.computeLocalStatistics();
+//        std::cout << "t-1 = " << vpTime::measureTimeMs() - t0 << std::endl;
+//        t0 = vpTime::measureTimeMs();
+		CCDTracker.updateParameters(LTCIL,LTCIR);
+//        double t1 = vpTime::measureTimeMs();
+//        std::cout << "t0 = " << vpTime::measureTimeMs() - t0 << std::endl;
+
+		if(iter>0)
+		CCDTracker.checkCCDConvergence();
+
+//		LTL = L.AtA();
+//        t0 = vpTime::measureTimeMs();
+        L.AtA(LTL);
+		computeJTR(L, weighted_error, LTR);
+//        std::cout << "t1 = " << vpTime::measureTimeMs() - t0 << std::endl;
+//        t0 = vpTime::measureTimeMs();
+        v = -0.7 * (LTL + weight_ccd * LTCIL).pseudoInverse(LTL.getRows() * DBL_EPSILON) * (LTR - weight_ccd * LTCIR);
+		cMo = vpExponentialMap::direct(v).inverse() * cMo;
+//        std::cout << "t2 = " << vpTime::measureTimeMs() - t0 << std::endl;
+
+		iter++;
+	}
+	/*std::cout << "\t First minimization in " << iter << " iteration "
+			<< std::endl;*/
+
+	/*** Second phase ***/
+	vpColVector W_true;
+	vpMatrix L_true;
+	vpRobust robust(nerror);
+	robust.setIteration(0);
+
+	vpRobust robustCCD(CCDTracker.nerror_ccd);
+	robustCCD.setIteration(0);
+	robustCCD.setThreshold(2/cam.get_px());
+
+	//CCDTracker.initRobust();
+
+	iter = 0;
+	//vpColVector error_px(nerror);
+
+	while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 10)) {
+//        double t0 = vpTime::measureTimeMs();
+#pragma omp parallel for
+		for (int k = 0; k < points[scaleLevel].size(); k++)
+		{
+            const int n = k;
+            vpMbtControlPoint *p = (points[scaleLevel])[k];
+			p->computeInteractionMatrixErrorMH(cMo, _I);
+			for (int j = 0; j < 6; j++) {
+				L[n][j] = p->L[0][j];
+				error[n] = p->error[0];
+			}
+		}
+//        std::cout << "t0 = " << vpTime::measureTimeMs() - t0 << std::endl;
+//        t0 = vpTime::measureTimeMs();
+
+		if (iter == 0) {
+			weighted_error.resize(nerror);
+			w.resize(nerror);
+			w = 1;
+
+			robust.setThreshold(2 / cam.get_px()); // limite en metre
+			robust.MEstimator(vpRobust::TUKEY, error, w);
+		} else {
+			robust.setIteration(iter);
+			robust.MEstimator(vpRobust::TUKEY, error, w);
+		}
+
+		residu_1 = r;
+
+		L_true = L;
+		W_true = vpColVector(nerror);
+
+		double num = 0;
+		double den = 0;
+		double wi;
+		double eri;
+		for (int i = 0; i < nerror; i++) {
+			wi = w[i] * factor[i];
+			eri = error[i];
+			W_true[i] = wi*wi;
+			num += wi * vpMath::sqr(eri);
+			den += wi;
+
+			weighted_error[i] = wi * eri;
+		}
+
+		r = sqrt(num / den); //Le critere d'arret prend en compte le poids
+
+		if ((iter == 0) || compute_interaction) {
+			for (int i = 0; i < nerror; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[i][j] = w[i] * factor[i] * L[i][j];
+				}
+			}
+		}
+
+//        std::cout << "t1 = " << vpTime::measureTimeMs() - t0 << std::endl;
+//        t0 = vpTime::measureTimeMs();
+        robustCCD.setIteration(iter);
+		CCDTracker.updateCCDPoints(cMo);
+//        std::cout << "t2a = " << vpTime::measureTimeMs() - t0 << std::endl;
+//        t0 = vpTime::measureTimeMs();
+        CCDTracker.computeLocalStatistics();
+//        std::cout << "t2b = " << vpTime::measureTimeMs() - t0 << std::endl;
+//        t0 = vpTime::measureTimeMs();
+//		double t0 = vpTime::measureTimeMs();
+		CCDTracker.updateParametersRobust(LTCIL,LTCIR,robustCCD);
+		//CCDTracker.updateParameters(LTCIL,LTCIR);
+//		double t1 = vpTime::measureTimeMs();
+		//std::cout << " timeupdate " << t1 -t0 << std::endl;
+		if(iter > 0)
+			CCDTracker.checkCCDConvergence();
+//        std::cout << "t2c = " << vpTime::measureTimeMs() - t0 << std::endl;
+//        t0 = vpTime::measureTimeMs();
+
+//		LTL = L.AtA();
+        L.AtA(LTL);
+		computeJTR(L, weighted_error, LTR);
+		v = -lambda * (LTL + weight_ccd * LTCIL).pseudoInverse(LTL.getRows() * DBL_EPSILON) * (LTR - weight_ccd * LTCIR);
+		cMo = vpExponentialMap::direct(v).inverse() * cMo;
+//        std::cout << "t3 = " << vpTime::measureTimeMs() - t0 << std::endl;
+
+		iter++;
+	}
+	if (computeCovariance)
+	{
+        vpMatrix D;
+        D.diag(W_true);
+        covarianceMatrix = computeCovarianceMatrix(L_true,-v,lambda*error,D);
+    }
+	//   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
+	//    std::cout << "error: " << (residu_1 - r) << std::endl;
+}
+
+void vpMbPointsTracker::computeVVSPointsLinesMH(
+		const vpImage<unsigned char> &I, double compute_interaction) {
+	//double t1 = vpTime::measureTimeMs();
+
+	double residu_1 = 1e3;
+	double r = 1e3 - 1;
+	double rP = 1e3 - 1;
+	int nerror = 0;
+	int nerrorP = 0;
+	double lambda = 0.7;
+	vpMatrix LTL;
+	vpColVector LTR;
+
+	// compute the interaction matrix and its pseudo inverse
+	apMbtDistanceLineMH *l, *l1, *l2;
+
+	vpMbtControlPoint *p;
+
+	//vpRobust robust(0);
+	vpColVector w;
+	vpColVector weighted_error;
+	vpColVector factor;
+
+	vpColVector wP;
+	vpColVector weighted_errorP;
+	vpColVector factorP;
+
+	vpColVector weighted_errorH;
+
+	vpCameraParameters cam;
+	int iter = 0;
+
+	int nbrow = 0;
+	int nbrowP = 0;
+	vpFeatureLine fli;
+	lines[scaleLevel][0]->getCameraParameters(&cam);
+	std::cout << " nb row p 0 " << lines[scaleLevel].size() << std::endl;
+	for (int k = 0; k < lines[scaleLevel].size(); k++) {
+		l = lines[scaleLevel][k];
+		if(l->MHmeline->points_vect.size()>0)
+		{
+			l->initInteractionMatrixErrorMH();
+			nbrow += l->nbFeature;
+		}
+	}
+	if (nbrow == 0) {
+		vpERROR_TRACE(
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+		throw vpTrackingException(vpTrackingException::notEnoughPointError,
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+	}
+	for (int k = 0; k < points[scaleLevel].size(); k++) {
+		p = points[scaleLevel][k];
+		nbrowP += 1;
+		p->initInteractionMatrixError();
+	}
+	std::cout << " nb row p " << nbrowP << std::endl;
+
+	if (nbrowP == 0) {
+		vpERROR_TRACE(
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+		throw vpTrackingException(vpTrackingException::notEnoughPointError,
+				"\n\t\t Error-> not enough data in the interaction matrix...");
+	}
+
+	vpMatrix L(nbrow, 6), Lp;
+	vpMatrix LP(nbrowP, 6), LpP;
+	vpMatrix LH;
+
+	// compute the error vector for the lines
+	vpColVector error(nbrow);
+	nerror = error.getRows();
+	vpColVector v;
+
+	// compute the error vector the points
+	vpColVector errorP(nbrowP);
+	nerrorP = errorP.getRows();
+	vpColVector vP;
+
+	///////////////////////////////////
+	double limite = 3; //Une limite de 4 pixels
+	limite = limite / cam.get_px(); //Transformation limite pixel en limite metre.
+	std::cout << "\t limite " << limite << std::endl;
+	double e_prev = 0, e_cur, e_next;
+	bool reloop = true;
+	double count = 0;
+
+	double e_prevP = 0, e_curP, e_nextP;
+	bool reloopP = true;
+	double countP = 0;
+
+	while ( /*reloop == true &&*/iter < 3) {
+		if (iter == 0) {
+			weighted_error.resize(nerror);
+			w.resize(nerror);
+			w = 0;
+			factor.resize(nerror);
+			factor = 1;
+
+			weighted_errorP.resize(nerrorP);
+			wP.resize(nerrorP);
+			wP = 0;
+			factorP.resize(nerrorP);
+			factorP = 1;
+
+		}
+
+		count = 0;
+
+		int n = 0;
+		reloop = false;
+		for (int k = 0; k < lines[scaleLevel].size(); k++) {
+			l = lines[scaleLevel][k];
+			if(l->MHmeline->points_vect.size()>0)
+			{
+			l->computeInteractionMatrixErrorMH(I, cMo);
+			double fac = 1;
+
+			for (int i = 0; i < l->nbFeature; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[n + i][j] = l->L[i][j];
+				}
+				error[n + i] = l->error[i];
+				if (error[n + i] <= limite)
+					count++;
+
+				w[n + i] = 0;
+				if (i == 0) {
+					e_cur = l->error[0];
+					if (l->nbFeature > 1)
+						e_next = l->error[1];
+					if (fabs(e_cur - e_next) < limite && vpMath::sign(e_cur)
+							== vpMath::sign(e_next)) {
+						w[n + i] = 1;//0.5
+					}
+					e_prev = e_cur;
+				}
+
+				//else w[n+i] = 1;
+				//}
+				else if (i == l->nbFeature - 1) {
+					e_cur = l->error[i];
+					if (fabs(e_cur - e_prev) < limite && vpMath::sign(e_cur)
+							== vpMath::sign(e_prev)) {
+						w[n + i] += 1;//0.5;
+					}
+				}
+
+				else {
+					e_cur = l->error[i];
+					e_next = l->error[i + 1];
+					if (fabs(e_cur - e_prev) < limite /*&& vpMath::sign(e_cur) == vpMath::sign(e_prev)*/) {
+						w[n + i] += 0.5;
+					}
+					if (fabs(e_cur - e_next) < limite /*&& vpMath::sign(e_cur) == vpMath::sign(e_next)*/) {
+						w[n + i] += 0.5;
+					}
+					e_prev = e_cur;
+				}
+			}
+			n += l->nbFeature;
+		}
+		}
+		count /= (double) nbrow;
+		if (count < 0.85)
+			reloop = true;
+
+		countP = 0;
+		int nP = 0;
+		//reloop = false;
+		reloopP = true;
+		for (int k = 0; k < points[scaleLevel].size(); k++) {
+			p = points[scaleLevel][k];
+			p->computeInteractionMatrixErrorMH(cMo, I);
+
+			double fac = 1;
+			/*if (iter == 0)
+			 {
+			 fac = 0.2;
+			 break;
+			 }*/
+
+			if (iter == 0 && p != NULL)
+
+				for (int j = 0; j < 6; j++) {
+					LP[nP][j] = p->L[0][j]; //On remplit la matrice d'interaction globale
+				}
+			errorP[nP] = p->error[0]; //On remplit la matrice d'erreur
+
+			if (errorP[nP] <= limite)
+				countP = countP + 1.0; //Si erreur proche de 0 on incremente cur
+
+			wP[nP] = 0;
+
+			if (iter == 0) {
+				factorP[nP] = fac;
+				vpPointSite site = p->list[0];
+				//if (site.suppress != 0) factor[n] = 0;
+				if (site.suppress != 0)
+					factorP[nP] = 0.2;
+			}
+
+			e_curP = p->error[0];
+			e_nextP = p->error[0];
+			if (fabs(e_curP - e_prevP) < limite) {
+				wP[nP] += 0.5;
+				//w[n]=1;
+			}
+			if (fabs(e_curP - e_nextP) < limite) {
+				wP[nP] += 0.5;
+				//w[n]=1;
+			}
+			e_prevP = e_curP;
+			nP += 1;
+		}
+
+		countP = countP / (double) nbrowP;
+		if (countP < 0.85) {
+			reloop = true;
+		}
+
+		double num = 0;
+		double den = 0;
+
+		double wi;
+		double eri;
+		for (int i = 0; i < nerror; i++) {
+			wi = w[i] * factor[i];
+			eri = error[i];
+			num += wi * vpMath::sqr(eri);
+			den += wi;
+
+			weighted_error[i] = wi * eri;
+		}
+
+		double numP = 0;
+		double denP = 0;
+
+		double wiP;
+		double eriP;
+		for (int i = 0; i < nerrorP; i++) {
+			wiP = wP[i] * factorP[i];
+			eriP = errorP[i];
+			numP += wiP * vpMath::sqr(eriP);
+			denP += wiP;
+
+			weighted_errorP[i] = wiP * eriP;
+		}
+
+		if ((iter == 0) || compute_interaction) {
+			for (int i = 0; i < nerror; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[i][j] = w[i] * factor[i] * L[i][j];
+				}
+			}
+
+			//L.pseudoInverse(Lp,1e-6) ;
+
+			for (int i = 0; i < nerrorP; i++) {
+				for (int j = 0; j < 6; j++) {
+					LP[i][j] = wP[i] * factorP[i] * LP[i][j];
+				}
+			}
+		}
+
+		vpMatrix::stackMatrices(L, LP, LH);
+		vpMatrix::stackMatrices(weighted_error, weighted_errorP,
+				weighted_errorH);
+		/*LTL = LH.AtA();
+		computeJTR(LH, weighted_errorH, LTR);
+		v = -0.7 * LTL.pseudoInverse(LTL.getRows() * DBL_EPSILON) * LTR;*/
+
+		LTL = L.AtA();
+		computeJTR(L, weighted_error, LTR);
+		v = -0.7 * LTL.pseudoInverse(LTL.getRows() * DBL_EPSILON) * LTR;
+		cMo = vpExponentialMap::direct(v).inverse() * cMo;
+
+		iter++;
+	}
+	std::cout << "\t First minimization in " << iter << " iteration " << cMo
+			<< std::endl;
+
+	//////////////////////////////////////////////////////////////
+	vpRobust robust(nerror);
+	robust.setIteration(0);
+
+	vpRobust robustP(nerrorP);
+	robustP.setIteration(0);
+
+	iter = 0;
+	while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 10))//10
+	{
+		int n = 0;
+		for (int k = 0; k < lines[scaleLevel].size(); k++) {
+			l = lines[scaleLevel][k];
+			if(l->MHmeline->points_vect.size()>0)
+			{
+			l->computeInteractionMatrixErrorMH(I, cMo);
+			for (int i = 0; i < l->nbFeature; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[n + i][j] = l->L[i][j];
+					error[n + i] = l->error[i];
+				}
+			}
+			n += l->nbFeature;
+			}
+		}
+
+		int nP = 0;
+		for (int k = 0; k < points[scaleLevel].size(); k++) {
+			p = points[scaleLevel][k];
+			p->computeInteractionMatrixErrorMH(cMo, I);
+			//for (int i=0 ; i < l->nbFeature ; i++)
+			//{
+			for (int j = 0; j < 6; j++) {
+				LP[nP][j] = p->L[0][j];
+				errorP[nP] = p->error[0];
+				//error_px[n+i] = l->error[i] * cam.get_px();
+			}
+			//}
+			nP += 1;
+		}
+
+		if (iter == 0) {
+			weighted_error.resize(nerror);
+			w.resize(nerror);
+			w = 1;
+
+			robust.setThreshold(2 / cam.get_px());
+			robust.MEstimator(vpRobust::TUKEY, error, w);
+
+			weighted_errorP.resize(nerrorP);
+			wP.resize(nerrorP);
+			wP = 1;
+
+			robustP.setThreshold(2 / cam.get_px()); // limite en metre
+			robustP.MEstimator(vpRobust::TUKEY, errorP, wP);
+		} else {
+			robust.setIteration(iter);
+			robust.MEstimator(vpRobust::TUKEY, error, w);
+
+			robustP.setIteration(iter);
+			robustP.MEstimator(vpRobust::TUKEY, errorP, wP);
+		}
+
+		residu_1 = r;
+		r = errorP.sumSquare() / (double) (errorP.getRows() * errorP.getRows());
+		// std::cout << "error: " << residu_1 - r << std::endl;
+
+		//---------------------------------------
+		// Compute the mean of the weight for a given line reinit if necessary
+		n = 0;
+		for (int k = 0; k < lines[scaleLevel].size(); k++) {
+			l = lines[scaleLevel][k];
+			if(l->MHmeline->points_vect.size()>0)
+			{
+				double wmean = 0;
+				for (int i = 0; i < l->nbFeature; i++) {
+					if (iter < 1)
+					 {
+					 w[n+i] = l->weight[i]*w[n+i];
+					 //std::cout << " weight " << w[n+i] <<std::endl;
+					 }
+					wmean += w[n + i];
+
+				}
+				n += l->nbFeature;
+				wmean /= l->nbFeature;
+				if (l->nbFeature == 0)
+					wmean = 1;
+				l->wmean = wmean;
+
+			}
+		}
+		// std::cout << " cmo " << cMo <<std::endl;
+		int nb_good_datas = 0;
+		double num = 0;
+		double den = 0;
+		double wi;
+		double wi_line;
+		double eri;
+		for (int i = 0; i < nerror; i++) {
+			wi = w[i];
+			eri = error[i];
+			num += wi * vpMath::sqr(eri);
+			den += wi;
+			/*if(wi!=0)
+			 {
+			 nb_good_datas++;
+			 }*/
+
+			weighted_error[i] = wi * eri;
+		}
+
+		double numP = 0;
+		double denP = 0;
+		double wiP;
+		double eriP;
+		for (int i = 0; i < nerrorP; i++) {
+			wiP = wP[i] * factorP[i];
+			eriP = errorP[i];
+			numP += wiP * vpMath::sqr(eriP);
+			denP += wiP;
+
+			weighted_errorP[i] = wiP * eriP;
+		}
+
+		rP = sqrt(numP / denP); //Le critere d'arret prend en compte le poids
+
+		r = rP;
+
+		if ((iter == 0) || compute_interaction) {
+			for (int i = 0; i < nerror; i++) {
+				for (int j = 0; j < 6; j++) {
+					L[i][j] = w[i] * L[i][j] * factor[i];
+				}
+			}
+
+			for (int i = 0; i < nerrorP; i++) {
+				for (int j = 0; j < 6; j++) {
+					LP[i][j] = wP[i] * factorP[i] * LP[i][j];
+				}
+			}
+
+			//L.pseudoInverse(Lp,1e-6) ;
+		}
+
+		//std::cout << " ok 2nd " << cMo <<   std::endl ;
+		vpMatrix::stackMatrices(L, LP, LH);
+		vpMatrix::stackMatrices(weighted_error, weighted_errorP,
+				weighted_errorH);
+		//LTL = LH.AtA();
+		LTL = L.AtA();
+		//computeJTR(LH, weighted_errorH, LTR);
+		computeJTR(L, weighted_error, LTR);
+		v = -lambda * LTL.pseudoInverse(LTL.getRows() * DBL_EPSILON) * LTR;
+		cMo = vpExponentialMap::direct(v).inverse() * cMo;
+
+		iter++;
+	}
+
+	//std::cout<<iter<<std::endl;
+	int n = 0;
+	for (int k = 0; k < points[scaleLevel].size(); k++) {
+		p = points[scaleLevel][k];
+		{
+			double wmean = 0;
+			/*if (p->nbFeature > 0)*/
+
+			//for (int i=0 ; i < p->nbFeature ; i++)
+			//{
+			wmean += w[n];
+			vpPointSite s = p->list[0];
+			if (w[n] < 0.5) {
+				s.suppress = 4;
+				p->list[0] = s;
+			}
+			//}
+			n += 1;
+			wmean = 1;
+			//p->setMeanWeight(wmean);
+
+		}
+	}
+
+	/*int it0 = 0;
+	 lines[scaleLevel].front() ;
+	 int nL =0 ;
+	 while (!lines[scaleLevel].outside())
+	 {
+	 l = lines[scaleLevel].value() ;
+	 {
+	 double wmean = 0 ;
+	 if (l->nbFeature > 0) l->MHmeline->list.front();
+
+	 for (int i=0 ; i < l->nbFeature ; i++)
+	 {
+	 wmean += w[n+i] ;
+	 apMHMeSite p = l->MHmeline->list.value() ;
+	 //std::cout << " supress " << p.suppress << " count " << it0 << std::endl;
+	 it0++;
+	 if (w[n+i] < 0.5)
+	 {
+	 p.suppress = 4 ;
+	 l->MHmeline->list.modify(p) ;
+	 }
+
+	 l->MHmeline->list.next();
+	 }
+	 nL+= l->nbFeature ;
+
+	 if (l->nbFeature!=0)
+	 wmean /= l->nbFeature ;
+	 else
+	 wmean = 1;
+
+	 l->setMeanWeight(wmean);
+
+	 if (wmean < 0.8)
+	 l->Reinit = true;
+	 }
+	 lines[scaleLevel].next() ;
+	 }*/
+
+	//display(I,cMo,cam,vpColor::blue) ;
+	//vpDisplay::flush(I) ;
+
+	std::cout << "\t Robust minimization in " << iter << " iteration " << cMo
+			<< std::endl;
+
+	//  double t2 = vpTime::measureTimeMs();
+	//std::cout <<"**** VVS Cand time: " << t2-t1<<std::endl;
+
+}
+
+/*!
+ Check if the tracking failed.
+
+ \throw vpTrackingException::fatalError if the test fails.
+ */
+/*void
+ vpMbPointsTracker::testTracking()
+ {
+ int nbExpectedPoint = 0;
+ int nbGoodPoint = 0;
+ int nbBadPoint = 0;
+
+ vpMbtControlPoint *p ;
+
+ ;
+ for (int k = 0; k<points[scaleLevel].size(); k++)
+ {
+ nbExpectedPoint += expecteddensity;
+ p = (points[scaleLevel])[k];
+ if (p->suppress == 0) nbGoodPoint++;
+ else nbBadPoint++;
+ points[scaleLevel].next();
+ }
+
+ if (nbGoodPoint < percentageGdPt *(nbGoodPoint+nbBadPoint) || nbExpectedPoint < 2)
+ {
+ std::cout << "nbGoodPoint :" << nbGoodPoint << std::endl;
+ std::cout << "nbBadPoint :" << nbBadPoint << std::endl;
+ std::cout << "nbExpectedPoint :" << nbExpectedPoint << std::endl;
+ throw vpTrackingException(vpTrackingException::fatalError, "test Tracking fail");
+ }
+
+ TO DO
+ }*/
+
+/*!
+ Compute each state of the tracking procedure for all the feature sets.
+
+ If the tracking is considered as failed an exception is thrown.
+
+ \param I : The image.
+ */
+
+void vpMbPointsTracker::track(const vpImage<unsigned char> &I, const vpImage<vpRGBa> &IRGB,const vpImage<
+		vpRGBa> &Inormd, const vpImage<unsigned char>& Ior, const vpImage<
+		unsigned char>& Itex, const double dist) {
+	initPyramid(I, Ipyramid);
+	//initPyramid(Iprec, Ipyramidprec);
+	switch(trackingType)
+	{
+	case CCD_SH:
+	case CCD_MH:
+	case CCD_LINES_MH:
+		initPyramid(IRGB, IRGBpyramid);
+	}
+
+	for (int lvl = (scales.size() - 1); lvl >= 0; lvl -= 1) {
+		if (scales[lvl]) {
+			vpHomogeneousMatrix cMo_1 = cMo;
+			try {
+				downScale(lvl);
+				try {
+					double t0 = vpTime::measureTimeMs();
+					switch(trackingType)
+					{
+					case POINTS_SH:
+					case POINTS_MH:
+					extractControlPoints(*Ipyramid[lvl], Inormd, Ior, Itex, dist);
+					break;
+					case LINES_MH:
+					extractControlPointsLines(*Ipyramid[lvl], Inormd, Ior, Itex, dist);
+					case CCD_SH:
+					case CCD_MH:
+					extractControlPointsCCD(*Ipyramid[lvl], Inormd, Ior, Itex, dist);
+					break;
+					case CCD_LINES_MH:
+					//extractCCDControlPointsLines(I, Inormd, Ior, Itex, dist); TO DO
+					break;
+					}
+					double t1 = vpTime::measureTimeMs();
+					std::cout << "timeextract " << t1 - t0 << std::endl;
+				} catch (...) {
+					vpTRACE("Error in points extraction");
+				}
+				double t2 = vpTime::measureTimeMs();
+				try {
+					switch(trackingType)
+					{
+					case POINTS_SH:
+					case CCD_SH:
+					trackControlPoints(*Ipyramid[lvl]);
+					break;
+					case POINTS_MH:
+					case CCD_MH:
+					trackControlPointsMH(*Ipyramid[lvl]);
+					break;
+					case LINES_MH:
+					case CCD_LINES_MH:
+					trackControlPointsMH(*Ipyramid[lvl]);
+					trackControlPointsLinesMH(*Ipyramid[lvl]);
+					}
+				} catch (...) {
+					vpTRACE("Error in tracking");
+					throw;
+				}
+				double t3 = vpTime::measureTimeMs();
+				std::cout << "timetrack " << t3 - t2 << std::endl;
+
+				try {
+					double t4 = vpTime::measureTimeMs();
+					switch(trackingType)
+					{
+					case POINTS_SH:
+					computeVVS(*Ipyramid[lvl]);
+					break;
+					case POINTS_MH:
+					computeVVSMH(*Ipyramid[lvl]);
+					break;
+					case LINES_MH:
+					nbdraw = 1;
+					computeVVSPointsLinesMH(*Ipyramid[lvl], 0);
+					break;
+					case CCD_SH:
+					computeVVSCCD(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+					break;
+					case CCD_MH:
+					computeVVSCCDMH(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+					break;
+					/*case CCD_LINES_MH:
+					//TO DO
+					break;*/
+					}
+					double t5 = vpTime::measureTimeMs();
+					std::cout << "timeVVS " << t5 - t4 << std::endl;
+				} catch (...) {
+					vpTRACE("Error in computeVVS");
+					throw vpException(vpException::fatalError,
+							"Error in computeVVS");
+				}
+				/* try
+				 {
+				 testTracking();
+				 }
+				 catch(...)
+				 {
+				 throw vpTrackingException(vpTrackingException::fatalError, "test Tracking fail");
+				 }*/
+
+				try {
+					//displayControlPoints();
+				} catch (...) {
+					vpTRACE("Error in moving edge updating");
+					throw;
+				}
+
+			} catch (...) {
+				if (lvl != 0) {
+					cMo = cMo_1;
+					reInitLevel(lvl);
+					upScale(lvl);
+				} else {
+					upScale(lvl);
+					throw;
+				}
+			}
+		}
+	}
+
+	cleanPyramid(Ipyramid);
+	switch(trackingType)
+	{
+	case CCD_SH:
+	case CCD_MH:
+	case CCD_LINES_MH:
+		cleanPyramid(IRGBpyramid);
+		CCDTracker.clearCCDTracker();
+	}
+	//cleanPyramid(Ipyramidprec);
+	Iprec=I;
+}
+
+/*void
+ vpMbPointsTracker::trackHyb(const vpImage<unsigned char> &I, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist, const double m, apOgre ogre_)
+ {
+ initPyramid(I, Ipyramid);
+ //initPyramid(Iprec, Ipyramidprec);
+
+ for (int lvl = (scales.size()-1); lvl >= 0; lvl -= 1){
+ if(scales[lvl]){
+ vpHomogeneousMatrix cMo_1 = cMo;
+ try
+ {
+ downScale(lvl);
+ try
+ {
+ double t0= vpTime::measureTimeMs();
+ extractControlPoints(I, Inormd, Ior,Itex, dist);
+ double t1= vpTime::measureTimeMs();
+ std::cout << "timeextract "<<t1-t0<<std::endl;
+ }
+ catch(...)
+ {
+ vpTRACE("Error in points extraction");
+ }
+ double t2= vpTime::measureTimeMs();
+ try
+ {
+ trackControlPoints(*Ipyramid[lvl]);
+ }
+ catch(...)
+ {
+ vpTRACE("Error in moving edge tracking") ;
+ throw ;
+ }
+ double t3= vpTime::measureTimeMs();
+ std::cout << "timetrack "<<t3-t2<<std::endl;
+ try
+ {
+ double t4= vpTime::measureTimeMs();
+ computeVVSHyb(*Ipyramid[lvl],ogre_);
+ double t5= vpTime::measureTimeMs();
+ std::cout << "timeVVS "<<t5-t4<<std::endl;
+ }
+ catch(...)
+ {
+ vpTRACE("Error in computeVVS") ;
+ throw vpException(vpException::fatalError, "Error in computeVVS");
+ }
+
+
+ try
+ {
+ //displayControlPoints();
+ }
+ catch(...)
+ {
+ vpTRACE("Error in moving edge updating") ;
+ throw ;
+ }
+
+ }
+ catch(...)
+ {
+ if(lvl != 0){
+ cMo = cMo_1;
+ reInitLevel(lvl);
+ upScale(lvl);
+ }
+ else{
+ upScale(lvl);
+ throw ;
+ }
+ }
+ }
+ }
+
+ cleanPyramid(Ipyramid);
+ //cleanPyramid(Ipyramidprec);
+ Iprec=I;
+ }*/
+
+/*!
+ Compute each state of the tracking procedure for all the feature sets, in case of the multiple hypothesis solution.
+
+ If the tracking is considered as failed an exception is thrown.
+
+ \param I : The image.
+ */
+
+/*!
+ Compute each state of the tracking procedure for all the feature sets, in case of dense tracking alon the edges normals.
+
+ If the tracking is considered as failed an exception is thrown.
+
+ \param I : The image.
+ */
+void vpMbPointsTracker::track(const vpImage<unsigned char> &I, const vpImage<
+		double> &Igrad, const vpImage<double> &Igradx,
+		const vpImage<double> & Igrady, const vpImage<vpRGBa> &Inormd,
+		const vpImage<unsigned char>& Ior, const vpImage<unsigned char>& Itex,
+		const double dist) {
+	//initPyramid(I, Ipyramid);
+	//initPyramid(Iprec, Ipyramidprec);
+
+	for (int lvl = (scales.size() - 1); lvl >= 0; lvl -= 1) {
+		if (scales[lvl]) {
+			vpHomogeneousMatrix cMo_1 = cMo;
+			try {
+				downScale(lvl);
+				try {
+					double t0 = vpTime::measureTimeMs();
+					extractControlPoints(I, Inormd, Ior, Itex, dist);
+					double t1 = vpTime::measureTimeMs();
+					std::cout << "timeextract " << t1 - t0 << std::endl;
+				} catch (...) {
+					vpTRACE("Error in points extraction");
+				}
+				double t2 = vpTime::measureTimeMs();
+				double t3 = vpTime::measureTimeMs();
+				std::cout << "timetrack " << t3 - t2 << std::endl;
+
+				try {
+					double t4 = vpTime::measureTimeMs();
+					computeVVSCorr(I, Igrad, Igradx, Igrady);
+					double t5 = vpTime::measureTimeMs();
+					std::cout << "timeVVS " << t5 - t4 << std::endl;
+				} catch (...) {
+					vpTRACE("Error in computeVVS");
+					throw vpException(vpException::fatalError,
+							"Error in computeVVS");
+				}
+
+				try {
+					//displayControlPoints();
+				} catch (...) {
+					vpTRACE("Error in moving edge updating");
+					throw;
+				}
+
+			} catch (...) {
+				if (lvl != 0) {
+					cMo = cMo_1;
+					reInitLevel(lvl);
+					upScale(lvl);
+				} else {
+					upScale(lvl);
+					throw;
+				}
+			}
+		}
+	}
+
+	//cleanPyramid(Ipyramid);
+	//cleanPyramid(Ipyramidprec);
+	//Iprec=I;
+}
+
+/*!
+ Compute each state of the tracking procedure for all the feature sets for the prediction phase.
+
+ If the tracking is considered as failed an exception is thrown.
+
+ \param I : The image.
+ */
+void vpMbPointsTracker::trackPred(const vpImage<unsigned char> &I) {
+	initPyramid(I, Ipyramid);
+	//initPyramid(Iprec, Ipyramidprec);
+
+	for (int lvl = (scales.size() - 1); lvl >= 0; lvl -= 1) {
+		if (scales[lvl]) {
+			vpHomogeneousMatrix cMo_1 = cMo;
+			try {
+				downScale(lvl);
+				double t2 = vpTime::measureTimeMs();
+				try {
+					trackControlPointsPred(*Ipyramid[lvl]);
+				} catch (...) {
+					vpTRACE("Error in moving edge tracking");
+					throw;
+				}
+				double t3 = vpTime::measureTimeMs();
+				std::cout << "timetrack " << t3 - t2 << std::endl;
+
+				/*vpMbtControlPoint *p ;
+				 points[lvl].front() ;
+				 vpFeatureLine fli;
+				 while (!points[lvl].outside()){
+				 p = points[lvl].value() ;
+				 //p->initInteractionMatrixError();
+				 //fli=p->getFeatureLine();
+				 //fli.display(cam,I,vpColor::yellow,1);
+				 //fli=p->getFeatureLine();
+				 //fli.print();
+				 //std::cout<<fli.getTheta()<<std::endl;
+
+				 points[lvl].next() ;
+				 }*/
+				try {
+					computeVVS(*Ipyramid[lvl]);
+				} catch (...) {
+					vpTRACE("Error in computeVVS");
+					throw vpException(vpException::fatalError,
+							"Error in computeVVS");
+				}
+				/* try
+				 {
+				 testTracking();
+				 }
+				 catch(...)
+				 {
+				 throw vpTrackingException(vpTrackingException::fatalError, "test Tracking fail");
+				 }*/
+
+				try {
+					//displayControlPoints();
+				} catch (...) {
+					vpTRACE("Error in moving edge updating");
+					throw;
+				}
+			} catch (...) {
+				if (lvl != 0) {
+					cMo = cMo_1;
+					reInitLevel(lvl);
+					upScale(lvl);
+				} else {
+					upScale(lvl);
+					throw;
+				}
+			}
+		}
+	}
+
+	cleanPyramid(Ipyramid);
+	//cleanPyramid(Ipyramidprec);
+	//Iprec=I;
+}
+
+/*!
+ Initialize the tracking thanks to the initial pose of the camera.
+
+ \param I : The image.
+ \param _cMo : The initial pose used to initialize the tracking.
+ */
+void vpMbPointsTracker::init(const vpImage<unsigned char>& I,
+		const vpHomogeneousMatrix &_cMo) {
+	this->cMo = _cMo;
+
+	sId.init(I.getHeight(), I.getWidth(), 1);
+	sI.init(I.getHeight(), I.getWidth(), 1);
+	sId.setCameraParameters(cam);
+	sI.setCameraParameters(cam);
+	/*vpMbtControlPoint *p;
+	 vpColVector norm(3);
+	 norm[0]=1;
+	 norm[1]=1;
+	 norm[2]=1;
+	 double a=1;
+
+	 for (unsigned int i = 0; i < points_1.size(); i += 1){
+	 if(scales[i]){
+	 vpMbtControlPoint *p ;
+	 p=new vpMbtControlPoint;
+	 p->setCameraParameters(&cam);
+	 p->setMovingEdge(&me);
+	 p->buildPoint(0,0,a,0.0,norm,cMo);
+	 points_1[i]+=p;
+	 }
+	 }*/
+	//bool a = false;
+	//initPyramid(I, Ipyramid);
+	Iprec = I;
+}
+
+/*cleanPyramid(Ipyramid);
+ }*/
+
+/*!
+ Load the xml configuration file.
+ Write the parameters in the corresponding objects (Ecm, camera, 3D rendering).
+
+ \param _filename : full name of the xml file.
+ */
+void vpMbPointsTracker::loadConfigFile(const std::string& _filename) {
+	loadConfigFile(_filename.c_str());
+}
+
+/*!
+ Load the xml configuration file.
+ Write the parameters in the corresponding objects (Ecm, camera, 3D rendering).
+ 
+ \throw vpException::ioError if the file has not been properly parsed (file not
+ found or wrong format for the data).
+
+ \param filename : full name of the xml file.
+ */
+void vpMbPointsTracker::loadConfigFile(const char* filename) {
+	LuaConfig cfg(filename);
+	vpCameraParameters camera(cfg.getAsNumber("conf.camera.px"),
+			cfg.getAsNumber("conf.camera.py"),
+			cfg.getAsNumber("conf.camera.u0"),
+			cfg.getAsNumber("conf.camera.v0"));
+	vpMe meParser;
+	meParser.sample_step = cfg.getAsNumber("conf.sample.step");
+	meParser.ntotal_sample = cfg.getAsNumber("conf.sample.nb_sample");
+	meParser.setMaskSize(cfg.getAsNumber("conf.ecm.mask.size"));
+	meParser.setMaskNumber(cfg.getAsNumber("conf.ecm.mask.nb_mask"));
+	meParser.range = cfg.getAsNumber("conf.ecm.range.tracking");
+	meParser.mu1 = cfg.getAsNumber("conf.ecm.contrast.mu1");
+	meParser.mu2 = cfg.getAsNumber("conf.ecm.contrast.mu2");
+	meParser.threshold = cfg.getAsNumber("conf.ecm.contrast.edge_threshold");
+	apRend rend;
+	rend.edgeR_th = cfg.getAsNumber("conf.rendering.edgeRend_threshold");
+	rend.clipDist = cfg.getAsNumber("conf.rendering.clipDist");
+	rend.sampleR = cfg.getAsNumber("conf.rendering.sampleRend");
+	rend.scaleModel = cfg.getAsNumber("conf.rendering.scaleModel");
+	rend.Normx = cfg.getAsNumber("conf.rendering.xDir");
+	rend.Normy = cfg.getAsNumber("conf.rendering.yDir");
+	rend.Normz = cfg.getAsNumber("conf.rendering.zDir");
+
+	int tracktype = cfg.getAsNumber("conf.trackingtype");
+	switch(tracktype)
+	{
+	case 0:
+		trackingType = POINTS_SH;
+		break;
+	case 1:
+		trackingType = POINTS_MH;
+		break;
+	case 2:
+		trackingType = LINES_MH;
+		break;
+	case 3:
+		trackingType = CCD_SH;
+		useRGB = true;
+		break;
+	case 4:
+		trackingType = CCD_MH;
+		useRGB = true;
+		break;
+	case 5:
+		trackingType = CCD_LINES_MH;
+		useRGB = true;
+	}
+
+    if(cfg.getAsNumber("conf.computecovariance") == 1)
+    	computeCovariance = true;
+    else
+    	computeCovariance = false;
+
+    if(cfg.getAsNumber("conf.usekalman") == 1)
+    {
+    	useKalman = true;
+    	computeCovariance = true;
+    }
+    else
+    {
+    	useKalman = false;
+    	computeCovariance = false;
+    }
+
+	apKalmanParameters kalmanParam;
+	kalmanParam.sigmaPT = cfg.getAsNumber("conf.kalman.sigmapt");
+	kalmanParam.sigmaPR = cfg.getAsNumber("conf.kalman.sigmapr");
+	kalmanParam.sigmaQT = cfg.getAsNumber("conf.kalman.sigmaqt");
+	kalmanParam.sigmaQR = cfg.getAsNumber("conf.kalman.sigmaqr");
+
+	apCCDParameters ccdParams;
+    ccdParams.gamma_1 = cfg.getAsNumber("conf.ccd.gamma_1");
+    ccdParams.gamma_2 = cfg.getAsNumber("conf.ccd.gamma_2");
+    ccdParams.gamma_3 = cfg.getAsNumber("conf.ccd.gamma_3");
+    ccdParams.gamma_4 = cfg.getAsNumber("conf.ccd.gamma_4");
+    ccdParams.alpha = cfg.getAsNumber("conf.ccd.alpha");
+    ccdParams.beta = cfg.getAsNumber("conf.ccd.beta");
+    ccdParams.kappa = cfg.getAsNumber("conf.ccd.kappa");
+    ccdParams.c = cfg.getAsNumber("conf.ccd.c");
+    ccdParams.h = cfg.getAsNumber("conf.ccd.h");
+    ccdParams.delta_h = cfg.getAsNumber("conf.ccd.delta_h");
+    ccdParams.resolution = cfg.getAsNumber("conf.ccd.resolution");
+    ccdParams.degree = cfg.getAsNumber("conf.ccd.degree");
+    ccdParams.phi_dim = cfg.getAsNumber("conf.ccd.phi_dim");
+
+	apDetection detection;
+	if (cfg.getAsNumber("conf.detection.similarity") == 0)
+		detection.similarityMs = apDetection::ORIENTED_CHAMFER;
+	else if (cfg.getAsNumber("conf.detection.similarity") == 1)
+		detection.similarityMs = apDetection::SHAPE_CONTEXT;
+	detection.nbimax = cfg.getAsNumber("conf.detection.nbimax");
+	detection.startingLevel = cfg.getAsNumber("conf.detection.startinglevel");
+	detection.nscales = cfg.getAsNumber("conf.detection.nscales");
+	detection.sample = cfg.getAsNumber("conf.detection.sample");
+	detection.nbParticles = cfg.getAsNumber(
+			"conf.detection.pfilter.nbparticles");
+	detection.lambda = cfg.getAsNumber("conf.detection.pfilter.lambda");
+	detection.nr = cfg.getAsNumber("conf.detection.shapecontext.nradius");
+	detection.nw = cfg.getAsNumber("conf.detection.shapecontext.ntheta");
+	detection.sx = cfg.getAsNumber("conf.detection.shapecontext.samplex");
+	detection.sy = cfg.getAsNumber("conf.detection.shapecontext.sampley");
+	detection.stheta = cfg.getAsNumber(
+			"conf.detection.shapecontext.sampletheta");
+	detection.cannyTh1 = cfg.getAsNumber("conf.detection.canny.cannyTh1");
+	detection.cannyTh2 = cfg.getAsNumber("conf.detection.canny.cannyTh2");
+	detection.mud = cfg.getAsNumber("conf.detection.orientedchamfer.mud");
+	detection.lambdao = cfg.getAsNumber(
+			"conf.detection.orientedchamfer.lambdao");
+	detection.sigmaf = cfg.getAsNumber("conf.detection.bayesian.sigmaf");
+
+	apLearn learning;
+	if (cfg.getAsNumber("conf.learn.similarityL") == 0)
+		learning.similarityMS = apDetection::ORIENTED_CHAMFER;
+	else if (cfg.getAsNumber("conf.learn.similarityL") == 1)
+		learning.similarityMS = apDetection::SHAPE_CONTEXT;
+	learning.sampleViewsRho = cfg.getAsNumber("conf.learn.srho");
+	learning.sampleViewsTheta = cfg.getAsNumber("conf.learn.stheta");
+	learning.sampleViewsPhi = cfg.getAsNumber("conf.learn.sphi");
+	learning.sampleRViewsTheta = cfg.getAsNumber("conf.learn.srtheta");
+	learning.sampleRViewsPhi = cfg.getAsNumber("conf.learn.srphi");
+	learning.nOverlap = cfg.getAsNumber("conf.learn.overlap");
+
+	apSegmentationParameters segmentation;
+	segmentation.KLTParams.block_size = cfg.getAsNumber("conf.segmentation.klt.blocksize");
+	segmentation.KLTParams.grid_bg = cfg.getAsNumber("conf.segmentation.klt.gridbg");
+	segmentation.KLTParams.grid_fg = cfg.getAsNumber("conf.segmentation.klt.gridfg");
+	segmentation.KLTParams.harris_free = cfg.getAsNumber("conf.segmentation.klt.harrisfree");
+	segmentation.KLTParams.history = cfg.getAsNumber("conf.segmentation.klt.history");
+	segmentation.KLTParams.level_pyr = cfg.getAsNumber("conf.segmentation.klt.pyramidlevels");
+	segmentation.KLTParams.min_dist = cfg.getAsNumber("conf.segmentation.klt.mindist");
+	segmentation.KLTParams.nbPoints = cfg.getAsNumber("conf.segmentation.klt.npoints");
+	segmentation.KLTParams.quality = cfg.getAsNumber("conf.segmentation.klt.quality");
+	segmentation.KLTParams.use_Harris = cfg.getAsNumber("conf.segmentation.klt.useharris");
+	segmentation.KLTParams.window_size = cfg.getAsNumber("conf.segmentation.klt.windowsize");
+	segmentation.energyParams.alpha_0 = cfg.getAsNumber("conf.segmentation.energy.alpha0");
+	segmentation.energyParams.beta_0 = cfg.getAsNumber("conf.segmentation.energy.beta0");
+	segmentation.energyParams.gamma_0 = cfg.getAsNumber("conf.segmentation.energy.gamma0");
+	segmentation.energyParams.alpha = cfg.getAsNumber("conf.segmentation.energy.alpha");
+	segmentation.energyParams.beta = cfg.getAsNumber("conf.segmentation.energy.beta");
+	segmentation.energyParams.gamma = cfg.getAsNumber("conf.segmentation.energy.gamma");
+	segmentation.kernelParams.bwidth_col_0 = cfg.getAsNumber("conf.segmentation.kernel.bwidthcol0");
+	segmentation.kernelParams.bwidth_col_1 = cfg.getAsNumber("conf.segmentation.kernel.bwidthcol1");
+	segmentation.kernelParams.bwidth_spat = cfg.getAsNumber("conf.segmentation.kernel.bwidthspat");
+	segmentation.startFrame = cfg.getAsNumber("conf.segmentation.startframe");
+	segmentation.nGaussians = cfg.getAsNumber("conf.segmentation.ngaussians");
+	segmentation.deltaHomography = cfg.getAsNumber("conf.segmentation.deltahomography");
+	segmentation.nbins = cfg.getAsNumber("conf.segmentation.nbins");
+	weight_ccd = cfg.getAsNumber("conf.weightccd");
+
+	setCameraParameters(camera);
+	setMovingEdge(meParser);
+	setRendParameters(rend);
+	setDetectionParameters(detection);
+	setLearningParameters(learning);
+	setKalmanParameters(kalmanParam);
+	setCCDParameters(ccdParams);
+	setSegmentationParameters(segmentation);
+
+}
+
+/*!
+ Display the 3D model from a given position of the camera.
+
+ \param I : The image.
+ \param _cMo : Pose used to project the 3D model into the image.
+ \param cam : The camera parameters.
+ \param col : The desired color.
+ \param thickness : The thickness of the points.
+ */
+void vpMbPointsTracker::display(const vpImage<unsigned char>& I,
+		const vpHomogeneousMatrix &_cMo, const vpCameraParameters &cam,
+		const vpColor& col, const unsigned int thickness) {
+	vpMbtControlPoint *p;
+	for (unsigned int i = 0; i < scales.size(); i += 1) {
+		if (scales[i]) {
+			for (int k = 0; k < points[i].size(); k++) {
+				p = (points[i])[k];
+				//p->display(I, vpColor::blue, thickness) ;
+				p->update(_cMo);
+				p->display(I, col, thickness);
+			}
+			break; //displaying model on one clase only
+		}
+	}
+}
+
+/*!
+ Display the 3D model from a given position of the camera.
+
+ \param I : The image.
+ \param _cMo : Pose used to project the 3D model into the image.
+ \param cam : The camera parameters.
+ \param col : The desired color.
+ \param thickness : The thickness of the points.
+ */
+void vpMbPointsTracker::display(const vpImage<vpRGBa>& I,
+		const vpHomogeneousMatrix &_cMo, const vpCameraParameters &cam,
+		const vpColor& col, const unsigned int thickness) {
+	vpMbtControlPoint *p;
+
+	for (unsigned int i = 0; i < scales.size(); i += 1) {
+		if (scales[i]) {
+			for (int k = 0; k < points[i].size(); k++) {
+				p = (points[i])[k];
+				p->display(I, col, thickness);
+			}
+			break; //displaying model on one clase only
+		}
+	}
+}
+
+/*!
+ Initialize the control points thanks to a given pose of the camera.
+
+ \param I : The image.
+ \param _cMo : The pose of the camera used to initialize the control points.
+ */
+/*void
+ vpMbPointsTracker::initControlPoints(const vpImage<unsigned char> &I, const vpHomogeneousMatrix &_cMo)
+ {
+ vpMbtControlPoint *p ;
+
+ ;
+ for (int k = 0; k<points[scaleLevel].size(); k++)
+ {
+ p = (points[scaleLevel])[k] ;
+ p->initControlPoint(I,_cMo) ;
+ }
+
+ }
+ }*/
+
+/*!
+ Track the control points in the image.
+
+ \param I : the image.
+ */
+void vpMbPointsTracker::trackControlPoints(const vpImage<unsigned char> &I) {
+#pragma omp parallel for
+    for (int k = 0; k < points[scaleLevel].size(); k++)
+        (points[scaleLevel])[k]->track(I, Iprec);
+}
+
+/*!
+ Track the control points in the image, in case of a multiple hypothesis solution.
+
+ \param I : the image.
+ */
+void vpMbPointsTracker::trackControlPointsMH(const vpImage<unsigned char> &I) {
+#pragma omp parallel for
+    for (int k = 0; k < points[scaleLevel].size() ; ++k)
+        (points[scaleLevel])[k]->trackMH(I,Iprec);
+}
+
+/*!
+ Track the control points in the image, in case of a multiple hypothesis solution, for a prediction phase.
+
+ \param I : the image.
+ */
+void vpMbPointsTracker::trackControlPointsPred(const vpImage<unsigned char> &I) {
+#pragma omp parallel for
+    for (int k = 0; k < points[scaleLevel].size(); k++)
+        (points[scaleLevel])[k]->trackPred(I, Iprec);
+}
+
+void vpMbPointsTracker::trackControlPointsLinesMH(
+		const vpImage<unsigned char> &I) {
+#pragma omp parallel for
+    for (int k = 0; k < lines[scaleLevel].size(); k++)
+        lines[scaleLevel][k]->trackMovingEdgeMHP(I, gradMap, cMo);
+}
+
+/*!
+ Update the control points at the end of the virtual visual servoing.
+
+ \param I : the image.
+ */
+void vpMbPointsTracker::updateControlPoints() {
+
+	//points_1=points;
+	/*vpMbtControlPoint *p;
+	 vpMbtControlPoint *p1;
+	 vpPoint P;
+	 vpPoint P1;
+	 //vpColVector profile(3);
+	 ;
+	 for (int k = 0; k<points[scaleLevel].size(); k++){
+	 p = (points[scaleLevel])[k];
+	 points1[scaleLevel].front();
+	 P=p->cpoint;
+	 while (!points1[scaleLevel].outside()){
+	 p1 = points1[scaleLevel].value();
+	 P1=p->cpoint;
+	 if (!samePoint(P1,P2))
+	 {
+	 profile=p1->getProfile();
+	 }
+	 p->setProfile(p);
+
+	 }
+	 //if (l->nbFeature == 0 && l->isVisible()) l->Reinit = true;
+	 points[scaleLevel].next();
+	 }  */
+	//delete *points;
+	vpMbtControlPoint *p;
+	for (unsigned int i = 0; i < scales.size(); i++) {
+		if (scales[i]) {
+			for (int k = 0; k < points[i].size(); k++) {
+				p = (points[i])[k];
+				if (p != NULL)
+					delete p;
+				p = NULL;
+			}
+		}
+	}
+
+}
+
+/*!
+ Check if two vpPoints are similar.
+
+ To be similar : \f$ (X_1 - X_2)^2 + (Y_1 - Y_2)^2 + (Z_1 - Z_2)^2 < threshold \f$.
+
+ \param P1 : The first point to compare
+ \param P2 : The second point to compare
+ \param threshold : The threshold  used to decide if the points are similar or not.
+ */
+bool samePoint(const vpPoint &P1, const vpPoint &P2, double threshold = 1e-4) {
+	double d = vpMath::sqr(P1.get_oX() - P2.get_oX()) + vpMath::sqr(P1.get_oY()
+			- P2.get_oY()) + vpMath::sqr(P1.get_oZ() - P2.get_oZ());
+	if (d < threshold)
+		return true;
+	else
+		return false;
+}
+
+void process(const vpImage<vpRGBa>& Inormd, vpImage<unsigned char>& Iout)
+{
+	int rows = Inormd.getHeight();
+	int cols = Inormd.getWidth();
+	vpImage<unsigned char> Iin(rows,cols);
+	vpImage<unsigned char> Ig(rows,cols);
+#pragma omp parallel
+    {
+#pragma omp for
+        for (int nn = 3; nn < rows - 3; nn++)
+            for (int mm = 3; mm < cols - 3; mm++)
+                Iin[nn][mm] = Inormd[nn][mm].A;
+#pragma omp for
+        for (int nn = 3; nn < rows - 3; nn++)
+            for (int mm = 3; mm < cols - 3; mm++)
+                Ig[nn][mm] = vpImageFilter::gaussianFilter(Iin, nn, mm);
+#pragma omp for
+        for (int ii = 3; ii < rows - 3; ii++) {
+            for (int jj = 3; jj < cols - 3; jj++) {
+                double a = (apImageFilter::sobelFilterX(Ig, ii, jj));
+                double b = (apImageFilter::sobelFilterY(Ig, ii, jj));
+                if ((a != 0 || b != 0) && sqrt((vpMath::sqr(a)
+                        + vpMath::sqr(b))) > 0)
+                    Iout[ii][jj] = 255 * (-(atan(a / b)) / M_PI + 1 / 2);
+                else
+                    Iout[ii][jj] = 0;
+            }
+        }
+    }
+}
+
+/*!
+ Extract 3D control points from the depth edges, the texture or color edges, given the depth buffer and the normal map
+ \param I : input image.
+ \param Inormd : Normal map (RGB channels) and depth buffer (A channel)
+ \param Ior : oriented edge map from depth edge.
+ \param Itex : oriented edge map from texture or color edges.
+ \param dist : Z coordinate of the center of the object, in order to define and update the near and far clip distances
+ */
+
+void vpMbPointsTracker::extractControlPoints(const vpImage<unsigned char> &I,
+		const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char>& Ior,
+        const vpImage<unsigned char>& Itex, const double dist)
+{
+    const int sample = rendparam.sampleR;
+    const double znear = dist - rendparam.clipDist;
+    const double zfar = dist + rendparam.clipDist;
+
+    const int rows = Ior.getHeight();
+    const int cols = Ior.getWidth();
+
+	vpImage<unsigned char> I2(rows,cols);
+	process(Inormd,I2);
+
+#pragma omp parallel
+    {
+        std::vector<vpMbtControlPoint*> local_insert_table;
+        vpColVector norm(3);
+        for (unsigned int i = 0; i < scales.size(); ++i)
+        {
+            if (scales[i])
+            {
+#pragma omp master
+                downScale(i);
+#pragma omp barrier
+
+#pragma omp for
+                for (int k = 0; k < points[i].size(); ++k)
+                {
+                    vpMbtControlPoint *p = (points[i])[k];
+                    if (p != NULL)
+                        delete p;
+                }
+#pragma omp master
+                points[i].clear();
+
+                const int m0 = (20 + sample - 1) / sample * sample;
+                const int n1 = rows - 20;
+                const int m1 = cols - 20;
+#pragma omp for nowait
+                for (int n = m0 ; n < n1 ; ++n)
+                {
+                    const int sample0 = ((n - m0) % sample) == 0 ? 1 : sample;
+                    for (int m = m0 ; m < m1 ; m += sample0)
+                    {
+                        double theta;
+                        if (Itex[n][m] != 100)
+                            theta = 3.1416 * (double) ((double) I2[n][m] / 255 - 0.5);
+                        else if (Ior[n][m] != 100)
+                            theta = 3.1416 * (double) ((double) I2[n][m] / 255 - 0.5);
+                        else
+                            continue;
+
+                        norm[0] = (rendparam.Normx) * ((double) ((double) Inormd[n][m].R) / 255 - 0.5);
+                        norm[1] = (rendparam.Normy) * ((double) ((double) Inormd[n][m].G) / 255 - 0.5);
+                        norm[2] = (rendparam.Normz) * ((double) ((double) Inormd[n][m].B) / 255 - 0.5);
+                        const double l = std::sqrt(norm[0] * norm[0] + norm[1] * norm[1] + norm[2] * norm[2]);
+                        if (l > 1e-1)
+                        {
+                            double Z = -(znear * zfar) / (((double) ((double) Inormd[n][m].A) / 255) * (zfar - znear) - zfar);
+                            vpMbtControlPoint *p = new vpMbtControlPoint;
+                            p->setCameraParameters(&cam);
+                            p->setMovingEdge(&me);
+                            p->buildPoint(n, m, Z, theta, norm, cMo);
+                            p->initControlPoint(I, 0);
+                            npoints += 1;
+                            local_insert_table.push_back(p);
+                        }
+                    }
+                }
+                if (!local_insert_table.empty())
+#pragma omp critical
+                {
+                    points[i].insert(points[i].end(), local_insert_table.begin(), local_insert_table.end());
+                    npoints += local_insert_table.size();
+                }
+                local_insert_table.clear();
+            }
+#pragma omp barrier
+#pragma omp master
+            upScale(i);
+        }
+    }
+
+}
+
+/*!
+ Extract 3D control points from the depth edges, the texture or color edges, given the depth buffer and the normal map
+ \param I : input image.
+ \param Inormd : Normal map (RGB channels) and depth buffer (A channel)
+ \param Ior : oriented edge map from depth edge.
+ \param Itex : oriented edge map from texture or color edges.
+ \param dist : Z coordinate of the center of the object, in order to define and update the near and far clip distances
+ */
+
+void vpMbPointsTracker::extractControlPointsCCD(const vpImage<unsigned char> &I,
+		const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char>& Ior,
+		const vpImage<unsigned char>& Itex, const double dist) {
+	int sample = rendparam.sampleR;
+	double znear = dist - rendparam.clipDist;
+	double zfar = dist + rendparam.clipDist;
+
+	int rows = Ior.getHeight();
+	int cols = Ior.getWidth();
+
+	vpImage<unsigned char> I2(rows,cols);
+	process(Inormd,I2);
+    vpImage<unsigned char> Isil(rows,cols);
+
+#pragma omp parallel
+    {
+        std::vector<vpMbtControlPoint*> local_points;
+        std::vector<vpMbtControlPoint*> local_pointsCCD;
+        vpColVector norm(3);
+        for (unsigned int i = 0; i < scales.size(); ++i)
+        {
+#pragma omp barrier
+            if (scales[i])
+            {
+#pragma omp master
+                downScale(i);
+#pragma omp barrier
+
+#pragma omp for nowait
+                for (int k = 0; k < points[i].size(); k++)
+                {
+                    vpMbtControlPoint *p = (points[i])[k];
+                    if (p != NULL)
+                        delete p;
+                }
+#pragma omp master
+                points[i].clear();
+
+
+#pragma omp for nowait
+                for (int k = 0; k < CCDTracker.pointsCCD[i].size(); k++)
+                {
+                    vpMbtControlPoint *pccd = CCDTracker.pointsCCD[i][k] ;
+                    if (pccd!=NULL)
+                        delete pccd ;
+                }
+
+#pragma omp master
+                CCDTracker.pointsCCD[i].clear();
+#pragma omp for
+                for (int k=0;k<rows;k++)
+                    for (int l=0;l<cols;l++)
+                    {
+                        if(Inormd[k][l].A!=0)
+                            Isil[k][l] = Inormd[k][l].A;
+                        else
+                            Isil[k][l] = 255;
+                    }
+
+                local_points.clear();
+                local_pointsCCD.clear();
+
+                const int m0 = (20 + sample - 1) / sample * sample;
+                const int n1 = rows - 20;
+                const int m1 = cols - 20;
+#pragma omp for nowait
+                for (int n = m0 ; n < n1 ; ++n)
+                {
+                    const int sample0 = ((n - m0) % sample) == 0 ? 1: sample;
+                    for (int m = m0 ; m < m1 ; m += sample0)
+                    {
+                        double theta;
+                        if (Itex[n][m] != 100)
+                        {
+                            theta = 3.1416 * (double) ((double) I2[n][m]
+                                                       / 255 - 0.5);
+                        }
+                        else if (Ior[n][m] != 100)
+                        {
+                            theta = 3.1416 * (double) ((double) I2[n][m] / 255
+                                                       - 0.5);
+                        }
+                        else
+                            continue;
+
+                        norm[0] = (rendparam.Normx)
+                                * ((double) ((double) Inormd[n][m].R) / 255
+                                   - 0.5);
+                        norm[1] = (rendparam.Normy)
+                                * ((double) ((double) Inormd[n][m].G) / 255
+                                   - 0.5);
+                        norm[2] = (rendparam.Normz)
+                                * ((double) ((double) Inormd[n][m].B) / 255
+                                   - 0.5);
+                        //std::cout<<norm[0]<<" "<<norm[1]<<" "<<norm[2]<<std::endl;
+                        const double l = std::sqrt(norm[0] * norm[0] + norm[1]
+                                                   * norm[1] + norm[2] * norm[2]);
+                        if (l > 1e-1)
+                        {
+                            double Z = -(znear * zfar)
+                                    / (((double) ((double) Inormd[n][m].A) / 255)
+                                       * (zfar - znear) - zfar);
+
+                            vpMbtControlPoint *p = new vpMbtControlPoint;
+                            p->setCameraParameters(&cam);
+                            p->setMovingEdge(&me);
+                            p->buildPoint(n, m, Z, theta, norm, cMo);
+                            p->initControlPoint(I, 0);
+                            local_points.push_back(p);
+                            vpMbtControlPoint *pccd = new vpMbtControlPoint;
+                            pccd->setCameraParameters(&cam);
+                            pccd->setMovingEdge(&me);
+                            pccd->buildSilhouettePoint(n,m,Z,theta,norm,cMo);
+                            pccd->initControlPoint(Isil,0);
+                            pccd->detectSilhouette(Isil,0);
+                            if(pccd->isSilhouette)
+                                local_pointsCCD.push_back(pccd);
+                            else
+                                delete pccd;
+                        }
+                    }
+                }
+                if (!local_points.empty())
+#pragma omp critical
+                {
+                    npoints += local_points.size();
+                    points[i].insert(points[i].end(), local_points.begin(), local_points.end());
+                    CCDTracker.pointsCCD[i].insert(CCDTracker.pointsCCD[i].end(), local_pointsCCD.begin(), local_pointsCCD.end());
+                    CCDTracker.npointsCCD += local_pointsCCD.size();
+                }
+
+            }
+#pragma omp barrier
+#pragma omp master
+            upScale(i);
+        }
+    }
+}
+
+
+/*!
+ Extract 3D control points from the depth edges, the texture or color edges, given the depth buffer and the normal map
+ Cluster points into lines through Hough transform
+ \param I : input image.
+ \param Inormd : Normal map (RGB channels) and depth buffer (A channel)
+ \param Ior : oriented edge map from depth edge.
+ \param Itex : oriented edge map from texture or color edges.
+ \param dist : Z coordinate of the center of the object, in order to define and update the near and far clip distances
+ */
+
+void vpMbPointsTracker::extractControlPointsLines(
+		const vpImage<unsigned char> &I, const vpImage<vpRGBa>& Inormd,
+		const vpImage<unsigned char>& Ior, const vpImage<unsigned char>& Itex,
+		const double dist) {
+	vpMbtControlPoint *p;
+	vpMbtControlPoint *p0;
+	vpImagePoint ip, ip1, ip2;
+	apMbtDistanceLineMH *l;
+	vpLine *lineL;
+	double t0, t1;
+	int bi1, bi2, bj1, bj2;
+	double px = cam.get_px();
+	double py = cam.get_py();
+	int jc = cam.get_u0();
+	int ic = cam.get_v0();
+	int i1, j1;
+	vpPoint Pc;
+	double zb1, zb2;
+	vpColVector Pc0(3);
+	vpColVector ip0(2);
+	double x, y, Z;
+	vpColVector Normc(3);
+	double rho, theta, rho_l, theta_l;
+	int sample = rendparam.sampleR;
+	double znear = dist - rendparam.clipDist;
+	double zfar = dist + rendparam.clipDist;
+	zn = znear;
+	zf = zfar;
+	vpImage<unsigned char> Ig;
+	Ig = I;
+	for (unsigned int i = 0; i < scales.size(); i += 1) {
+		if (scales[i]) {
+			downScale(i);
+
+			for (int k = 0; k < points[i].size(); k++) {
+				p = (points[i])[k];
+				if (p != NULL)
+					delete p;
+				p = NULL;
+			}
+			points[i].resize(0);
+
+			for (int k = 0; k < lines[i].size(); k++) {
+				l = lines[i][k];
+				if (l != NULL) {
+					for (int ii; ii < l->pointsvect.size(); ii++) {
+						p0 = l->pointsvect[ii];
+						delete p0;
+					}
+					l->pointsvect.resize(0);
+					delete l;
+				}
+				l = NULL;
+			}
+			lines[i].resize(0);
+
+			int rows = Ior.getHeight();
+			int cols = Ior.getWidth();
+			double n_sample;
+			vpRotationMatrix R;
+			cMo.extract(R);
+			vpColVector norm(3);
+			int step = 1;
+			int range;
+			int il = 0;
+
+			gradMap.resize(rows, cols);
+			vpImage<unsigned char> imG(rows, cols);
+			vpImage<unsigned char> imGrad(rows, cols);
+			double a, b;
+			for (int nn = 3; nn < rows - 3; nn++) {
+				for (int mm = 3; mm < cols - 3; mm++) {
+					imG[nn][mm] = vpImageFilter::gaussianFilter(Ig, nn, mm);
+				}
+			}
+			for (int ii = 3; ii < rows - 3; ii++) {
+				for (int jj = 3; jj < cols - 3; jj++) {
+					a = (apImageFilter::sobelFilterX(imG, ii, jj));
+					b = (apImageFilter::sobelFilterY(imG, ii, jj));
+					if ((a != 0 || b != 0) && sqrt((vpMath::sqr(a)
+							+ vpMath::sqr(b))) > 0)
+						imGrad[ii][jj] = 255 * (-(atan(a / b)) / M_PI + 1 / 2);
+					else
+						imGrad[ii][jj] = 0;
+				}
+			}
+			gradMap = imGrad;
+			int w;
+
+			vpImage<unsigned char> Ip0(rows, cols);
+			vpImage<unsigned char> I3(rows, cols);
+
+			for (int n = 0; n < rows; n++) {
+				for (int m = 0; m < cols; m++) {
+					if (Ior[n][m] != 100)
+						Ip0[n][m] = 255;
+					else
+						Ip0[n][m] = 0;
+				}
+			}
+
+			IplImage* Ip = NULL;
+			IplImage* Ip1;
+			vpImageConvert::convert(Ip0, Ip);
+			Mat color_dst;
+			vector<Vec4i> linesV;
+			Mat dst(Ip);
+			cvtColor(dst, color_dst, CV_GRAY2BGR);
+			HoughLinesP(dst, linesV, 1, CV_PI / 180, 5, 10, 3);
+			for (size_t i = 0; i < linesV.size(); i++) {
+				line(color_dst, Point(linesV[i][0], linesV[i][1]), Point(
+						linesV[i][2], linesV[i][3]), Scalar(255, 0, 255), 2, 8);
+			}
+			loadLines(I, linesV, Inormd, cMo);
+			/*vpImage<vpRGBa> Ioverlay;
+			Ip1 = new IplImage(color_dst);
+			vpImageConvert::convert(Ip1, I3);
+			delete Ip1;*/
+			/*vpDisplayX display;
+			 display.init(I3, 1500, 10, "Hough");
+			 vpDisplay::display(I3);
+			 vpDisplay::flush(I3);
+			 vpDisplay::getImage(I3,Ioverlay);
+			 std::cout << " ok " << std::endl;
+			 vpImageIo::writePNG(Ioverlay, "ihough0.png");
+			 getchar();*/
+
+			for (int n = 20; n < rows - 20; n++) {
+				for (int m = 20; m < cols - 20; m++) {
+					if (((double) n / sample - (double) floor(n / sample)
+							< 0.0005 || (double) m / sample - (double) floor(m
+							/ sample) < 0.0005) && (Ior[n][m] != 100
+							|| Itex[n][m] != 100)) {
+						if (Itex[n][m] != 100) {
+							theta = 3.1416 * (double) ((double) Itex[n][m]
+									/ 255 - 0.5);
+						} else {
+							theta = 3.1416 * (double) ((double) Ior[n][m] / 255
+									- 0.5);
+						}
+						Z = -(znear * zfar)
+								/ (((double) ((double) Inormd[n][m].A) / 255)
+										* (zfar - znear) - zfar);
+
+						norm[0] = (rendparam.Normx)
+								* ((double) ((double) Inormd[n][m].R) / 255
+										- 0.5);
+						norm[1] = (rendparam.Normy)
+								* ((double) ((double) Inormd[n][m].G) / 255
+										- 0.5);
+						norm[2] = (rendparam.Normz)
+								* ((double) ((double) Inormd[n][m].B) / 255
+										- 0.5);
+
+						if (((double) Inormd[n][m].R > 0
+								|| (double) Inormd[n][m].G > 0
+								|| (double) Inormd[n][m].B > 0)) {
+							bool flag = false;
+							il = 0;
+							for (int k = 0; k < lines[scaleLevel].size(); k++) {
+								l = lines[scaleLevel][k];
+								lineL = l->line;
+								rho_l = lineL->getRho();
+								theta_l = lineL->getTheta();
+								x = (m - jc) / px;
+								y = (n - ic) / py;
+								rho = x * cos(theta) + y * sin(theta);
+								zb1
+										= ((double) ((double) Inormd[linesV[il][1]][linesV[il][0]].A)
+												/ 255);
+								zb2
+										= ((double) ((double) Inormd[linesV[il][3]][linesV[il][2]].A)
+												/ 255);
+								if (linesV[il][1] > linesV[il][3]) {
+									bi1 = linesV[il][3];
+									bi2 = linesV[il][1];
+								} else {
+									bi2 = linesV[il][3];
+									bi1 = linesV[il][1];
+								}
+
+								if (linesV[il][0] > linesV[il][2]) {
+									bj1 = linesV[il][2];
+									bj2 = linesV[il][0];
+								} else {
+									bj2 = linesV[il][2];
+									bj1 = linesV[il][0];
+								}
+
+								if ((abs(rho - rho_l) < 0.1 || abs(rho + rho_l)
+										< 0.1) && (n <= bi2 && n >= bi1 && m
+										<= bj2 && m >= bj1))//  && abs(theta - theta_l) < 0.1)
+								{
+									flag = true;
+									p0 = new vpMbtControlPoint;
+									p0->setCameraParameters(&cam);
+									p0->setMovingEdge(&me);
+									p0->buildPoint(n, m, Z, theta, norm, cMo);
+									l->pointsvect.push_back(p0);
+									ip.set_i(n);
+									ip.set_j(m);
+									vpDisplay::displayCross(I, ip, 2,
+											vpColor::red, 2);
+								}
+								il++;
+							}
+
+							if (flag == false) {
+								p = new vpMbtControlPoint;
+								p->setCameraParameters(&cam);
+								p->setMovingEdge(&me);
+								p->buildPoint(n, m, Z, theta, norm, cMo);
+								p->initControlPoint(I, 0);
+								npoints += 1;
+								points[i].push_back(p);
+							}
+						}
+						w++;
+					} else {
+						w++;
+					}
+				}
+			}
+			for (int k = 0; k < lines[scaleLevel].size(); k++) {
+				l = lines[scaleLevel][k];
+					l->initMovingEdgeMHP(I, gradMap, cMo);
+			}
+			//getchar();
+
+			std::cout << " time " << t1 - t0 << std::endl;
+
+		}
+		upScale(i);
+	}
+
+}
+
+void vpMbPointsTracker::loadLines(const vpImage<unsigned char>& I,
+		vector<Vec4i>& Lines, const vpImage<vpRGBa>& Inormd,
+		const vpHomogeneousMatrix &cMo) {
+	vpPoint P1, P2, p1;
+	vpImagePoint ip1, ip2;
+	vpColVector P10, P20;
+	double x1, y1, x2, y2, zb1, zb2, z1, z2;
+	apMbtDistanceLineMH *l;
+	for (size_t i = 0; i < Lines.size(); i++) {
+		ip1.set_i(Lines[i][1]);
+		ip1.set_j(Lines[i][0]);
+		ip2.set_i(Lines[i][3]);
+		ip2.set_j(Lines[i][2]);
+		zb1 = ((double) ((double) Inormd[Lines[i][1]][Lines[i][0]].A) / 255);
+		zb2 = ((double) ((double) Inormd[Lines[i][3]][Lines[i][2]].A) / 255);
+		z1 = -(zn * zf) / (zb1 * (zf - zn) - zf);
+		z2 = -(zn * zf) / (zb2 * (zf - zn) - zf);
+		vpPixelMeterConversion::convertPoint(cam, ip1, x1, y1);
+		vpPixelMeterConversion::convertPoint(cam, ip2, x2, y2);
+		P1.setWorldCoordinates(x1 * z1, y1 * z1, z1);
+		P2.setWorldCoordinates(x2 * z2, y2 * z2, z2);
+		P1.changeFrame(cMo.inverse(), P10);
+		P2.changeFrame(cMo.inverse(), P20);
+		P1.setWorldCoordinates(P10[0], P10[1], P10[2]);
+		P2.setWorldCoordinates(P20[0], P20[1], P20[2]);
+		//vpDisplay::displayPoint(I,ip1,vpColor::red);
+		std::string nm = "jj";
+		addLine(I, P1, P2, -1, nm);
+	}
+}
+
+void vpMbPointsTracker::addLine(const vpImage<unsigned char> &I, vpPoint &P1,
+		vpPoint &P2, int polygone, std::string &name) {
+	bool already_here = false;
+	apMbtDistanceLineMH *l;
+	for (unsigned int i = 0; i < scales.size(); i += 1) {
+		if (scales[i]) {
+			downScale(i);
+			l = new apMbtDistanceLineMH;
+			l->setCameraParameters(&cam);
+			l->buildFrom(P1, P2);
+			l->Lindex_polygon.push_back(polygone);
+			l->setMovingEdgeMH(&me);
+			l->setName(name);
+			//l->initMovingEdge(I,cMo);
+			//l->initMovingEdgeMHG(I,gradMap,cMo);
+			nline += 1;
+			lines[i].push_back(l);
+			upScale(i);
+		}
+	}
+}
+
+/*!
+ Load a 3D model contained in a file.
+
+ \param file : Path to the file containing the 3D model description.
+ */
+void vpMbPointsTracker::loadModel(const char* file) {
+	std::string model(file);
+	vpMbTracker::loadModel(model);
+}
+
+/*void
+ vpMbPointsTracker::loadLines(const vpImage<unsigned char>& I, vector<Vec4i>& Lines, const vpMatrix &Zc, const vpHomogeneousMatrix &cMo)
+ {
+ vpPoint P1,P2,p1;
+ vpImagePoint ip1,ip2;
+ vpColVector P10,P20;
+ double x1,y1,x2,y2,z1,z2;
+ vpMbtDistanceLine *l;
+ for( size_t i = 0; i < Lines.size(); i++)
+ {
+ ip1.set_i(Lines[i][1]-8);
+ ip1.set_j(Lines[i][0]+18);
+ ip2.set_i(Lines[i][3]-8);
+ ip2.set_j(Lines[i][2]+18);
+ z1=Zc[Lines[i][1]][Lines[i][0]]/2;
+ z2=Zc[Lines[i][3]][Lines[i][2]]/2;
+ vpPixelMeterConversion::convertPoint(cam,ip1,x1,y1);
+ vpPixelMeterConversion::convertPoint(cam,ip2,x2,y2);
+ P1.setWorldCoordinates(x1*z1,y1*z1,z1);
+ P2.setWorldCoordinates(x2*z2,y2*z2,z2);
+ P1.changeFrame(cMo.inverse(),P10);
+ P2.changeFrame(cMo.inverse(),P20);
+ P1.setWorldCoordinates(P10[0],P10[1],P10[2]);
+ P2.setWorldCoordinates(P20[0],P20[1],P20[2]);
+ std::cout<<" ok "<<z1<<std::endl;
+ vpDisplay::displayPoint(I,ip1,vpColor::red);
+ addLine(P1,P2,-1);
+ }
+ lines[0].front();
+ l=lines[0].value();
+ l->p1;
+ //std::cout<<" ok "<<z1<<std::endl;
+ //std::cout<< "ok " << lines[0].size() << std::endl;
+ //getchar();
+ }
+
+ /*!
+ Reset the tracker. The model is removed and the pose is set to identity.
+ The tracker needs to be initialized with a new model and a new pose.
+
+ */
+void vpMbPointsTracker::resetTracker() {
+	this->cMo.setIdentity();
+	vpMbtControlPoint *p;
+
+	for (unsigned int i = 0; i < scales.size(); i += 1) {
+		if (scales[i]) {
+			for (int k = 0; k < points[i].size(); k++) {
+				p = (points[i])[k];
+				if (p != NULL)
+					delete p;
+				p = NULL;
+			}
+		}
+	}
+
+	//faces.reset();
+
+	//index_polygon =0;
+	compute_interaction = 1;
+	npoints = 0;
+	lambda = 1;
+	//nbvisiblepolygone = 0;
+	percentageGdPt = 0.4;
+
+	// reinitialisation of the scales.
+	this->setScales(scales);
+}
+
+/*!
+ Re-initialise the model used by the tracker.
+
+ \param _I : The image containing the object to initialize.
+ \param _cad_name : Path to the file containing the 3D model description.
+ \param _cMo : The new vpHomogeneousMatrix between the camera and the new model
+ */
+/*void
+ vpMbPointsTracker::reInitModel(const vpImage<unsigned char>& _I, const char* _cad_name, const vpHomogeneousMatrix& _cMo)
+ {
+ resetTracker();
+ loadModel(_cad_name);
+ init(_I, _cMo);
+ }
+
+ void
+ vpMbPointsTracker::reInitConfigModel(const vpImage<unsigned char>& I, const char* cad_name,const char* config_name, const vpHomogeneousMatrix& _cMo)
+ {
+ resetTracker();
+ loadConfigFile(cad_name);
+ loadModel(config_name);
+ init(I, _cMo);*/
+//}
+
+/*!
+ Return the number of good points (vpPointSite) tracked. A good point is a
+ vpPointSite with its flag "suppress" equal to 0. Only these points are used
+ during the virtual visual servoing stage.
+
+ \exception vpException::dimensionError if _level does not represent a used
+ level.
+
+ \return the number of good points.
+ */
+unsigned int vpMbPointsTracker::getNbPoints(const unsigned int _level) {
+	if ((_level > scales.size()) || !scales[_level]) {
+		throw vpException(vpException::dimensionError, "Level is not used");
+	}
+
+	unsigned int nbGoodPoints = 0;
+	vpMbtControlPoint *p;
+	for (int k; k < points[_level].size(); k++) {
+		p = (points[_level])[k];
+		if (p != NULL) {
+			for (int kp = 0; kp < list.size(); kp++) {
+				if ((p->list[kp]).suppress == 0)
+					nbGoodPoints++;
+			}
+		}
+	}
+	return nbGoodPoints;
+}
+
+/*!
+ Set the scales to use to realise the tracking. The vector of boolean activates
+ or not the scales to se for the object tracking. The first element of the list
+ correspond to the tracking on the full image, the second element corresponds
+ to the tracking on an image sbsampled by two.
+
+ Using multi scale tracking allows to track the object with greater moves. It
+ requires the computation of a pyramid of images, but the total tracking can be
+ faster than a tracking based only on the full scale. The pose is computed from
+ the smallest image to the biggest. This may be dangerous if the object to
+ track is small in the image, because the subsampled scale(s) will have only
+ few points to compute the pose (it could result in a loss of precision).
+
+ \warning This method must be used before the tracker has been initialised (
+ before the call of the init() or the initClick() method).
+
+ \warning At least one level must be activated.
+
+ \param _scales : The vector describing the levels to use.
+ */
+void vpMbPointsTracker::setScales(const std::vector<bool>& _scales) {
+	unsigned int nbActivatedLevels = 0;
+	for (unsigned int i = 0; i < _scales.size(); i += 1) {
+		if (_scales[i]) {
+			nbActivatedLevels++;
+		}
+	}
+	if ((_scales.size() < 1) || (nbActivatedLevels == 0)) {
+		vpERROR_TRACE(
+				" !! WARNING : must use at least one level for the tracking. Use the global one");
+		scales.resize(0);
+		scales.push_back(true);
+		points.resize(1);
+		points[0].resize(0);
+	} else {
+		scales = _scales;
+		points.resize(_scales.size());
+		for (unsigned int i = 0; i < points.size(); i += 1) {
+			points[i].resize(0);
+		}
+	}
+}
+
+/*!
+ Compute the pyramid of image associated to the image in parameter. The scales
+ computed are the ones corresponding to the scales  attribte of the class. If
+ OpenCV is detected, the functions used to computed a smoothed pyramid come
+ from OpenCV, otherwise a simple subsampling (no smoothing, no interpolation)
+ is realised.
+
+ \warning The pyramid contains pointers to vpImage. To properly deallocate the
+ pyramid. All the element but the first (which is a pointer to the input image)
+ must be freed. A proper cleaning is implemented in the cleanPyramid() method.
+
+ \param _I : The input image.
+ \param _pyramid : The pyramid of image to build from the input image.
+ */
+void vpMbPointsTracker::initPyramid(const vpImage<unsigned char>& _I,
+		std::vector<const vpImage<unsigned char>*>& _pyramid) {
+	_pyramid.resize(scales.size());
+
+	if (scales[0]) {
+		_pyramid[0] = &_I;
+	} else {
+		_pyramid[0] = NULL;
+	}
+
+	for (unsigned int i = 1; i < _pyramid.size(); i += 1) {
+		if (scales[i]) {
+			unsigned int cScale = static_cast<unsigned int> (pow(2., (int) i));
+			vpImage<unsigned char>* I = new vpImage<unsigned char> (
+					_I.getHeight() / cScale, _I.getWidth() / cScale);
+#ifdef VISP_HAVE_OPENCV
+			IplImage* vpI0 = cvCreateImageHeader(cvSize(_I.getWidth(),
+					_I.getHeight()), IPL_DEPTH_8U, 1);
+			vpI0->imageData = (char*) (_I.bitmap);
+			IplImage* vpI = cvCreateImage(cvSize(_I.getWidth() / cScale,
+					_I.getHeight() / cScale), IPL_DEPTH_8U, 1);
+			cvResize(vpI0, vpI, CV_INTER_NN);
+			vpImageConvert::convert(vpI, *I);
+			cvReleaseImage(&vpI);
+			vpI0->imageData = NULL;
+			cvReleaseImageHeader(&vpI0);
+#else
+			for (unsigned int k = 0, ii = 0; k < I->getHeight(); k += 1, ii += cScale) {
+				for (unsigned int l = 0, jj = 0; l < I->getWidth(); l += 1, jj += cScale) {
+					(*I)[k][l] = _I[ii][jj];
+				}
+			}
+#endif
+			_pyramid[i] = I;
+		} else {
+			_pyramid[i] = NULL;
+		}
+	}
+}
+
+void
+vpMbPointsTracker::initPyramid(const vpImage<vpRGBa>& _I, std::vector< const vpImage<vpRGBa>* >& _pyramid)
+{
+  _pyramid.resize(scales.size());
+
+  if(scales[0]){
+    _pyramid[0] = &_I;
+  }
+  else{
+    _pyramid[0] = NULL;
+  }
+
+  for(unsigned int i=1; i<_pyramid.size(); i += 1){
+    if(scales[i]){
+      unsigned int cScale = static_cast<unsigned int>(pow(2., (int)i));
+      vpImage<vpRGBa>* I = new vpImage<vpRGBa>(_I.getHeight() / cScale, _I.getWidth() / cScale);
+#ifdef VISP_HAVE_OPENCV
+      IplImage* vpI0 = cvCreateImageHeader(cvSize(_I.getWidth(), _I.getHeight()), IPL_DEPTH_8U, 3);
+      vpI0->imageData = (char*)(_I.bitmap);
+      IplImage* vpI = cvCreateImage(cvSize(_I.getWidth() / cScale, _I.getHeight() / cScale), IPL_DEPTH_8U, 3);
+      cvResize(vpI0, vpI, CV_INTER_NN);
+      vpImageConvert::convert(vpI, *I);
+      cvReleaseImage(&vpI);
+      vpI0->imageData = NULL;
+      cvReleaseImageHeader(&vpI0);
+#else
+      for (unsigned int k = 0, ii = 0; k < I->getHeight(); k += 1, ii += cScale){
+        for (unsigned int l = 0, jj = 0; l < I->getWidth(); l += 1, jj += cScale){
+          (*I)[k][l].R = _I[ii][jj].R;
+          (*I)[k][l].G = _I[ii][jj].G;
+          (*I)[k][l].B = _I[ii][jj].B;
+        }
+      }
+#endif
+      _pyramid[i] = I;
+    }
+    else{
+      _pyramid[i] = NULL;
+    }
+  }
+}
+
+/*!
+ Clean the pyramid of image allocated with the initPyramid() method. The vector
+ has a size equal to zero at the end of the method.
+
+ \param _pyramid : The pyramid of image to clean.
+ */
+void vpMbPointsTracker::cleanPyramid(
+		std::vector<const vpImage<unsigned char>*>& _pyramid) {
+	if (_pyramid.size() > 0) {
+		_pyramid[0] = NULL;
+		for (unsigned int i = 1; i < _pyramid.size(); i += 1) {
+			if (_pyramid[i] != NULL) {
+				delete _pyramid[i];
+				_pyramid[i] = NULL;
+			}
+		}
+		_pyramid.resize(0);
+	}
+}
+
+void
+vpMbPointsTracker::cleanPyramid(std::vector< const vpImage<vpRGBa>* >& _pyramid)
+{
+  if(_pyramid.size() > 0){
+    _pyramid[0] = NULL;
+    for (unsigned int i = 1; i < _pyramid.size(); i += 1){
+      if(_pyramid[i] != NULL){
+        delete _pyramid[i];
+        _pyramid[i] = NULL;
+      }
+    }
+    _pyramid.resize(0);
+  }
+}
+
+/*!
+ Get the list of the control points tracked for the specified level.
+
+ \throw vpException::dimensionError if the parameter does not correspond to an
+ used level.
+
+ \param _level : Level corresponding to the list to return.
+ \return Pointer to the list of the lines tracked.
+ */
+std::vector<vpMbtControlPoint *>*
+vpMbPointsTracker::getPpoint(const unsigned int _level) {
+	if (_level > scales.size() || !scales[_level]) {
+		std::ostringstream oss;
+		oss << _level;
+		std::string errorMsg = "level " + oss.str()
+				+ " is not used, cannot get its distance lines.";
+		throw vpException(vpException::dimensionError, errorMsg);
+	}
+
+	return &points[_level];
+}
+
+/*!
+ Modify the camera parameters to have them corresponding to the current scale.
+ The new parameters are divided by \f$ 2^{\_scale} \f$.
+
+ \param _scale : Scale to use.
+ */
+void vpMbPointsTracker::downScale(const unsigned int _scale) {
+	const double ratio = pow(2., (int) _scale);
+	scaleLevel = _scale;
+
+	vpMatrix K = cam.get_K();
+
+	K[0][0] /= ratio;
+	K[1][1] /= ratio;
+	K[0][2] /= ratio;
+	K[1][2] /= ratio;
+
+	cam.initFromCalibrationMatrix(K);
+}
+
+/*!
+ Modify the camera parameters to have them corresponding to the current scale.
+ The new parameters are multiplied by \f$ 2^{\_scale} \f$.
+
+ \param _scale : Scale to use.
+ */
+void vpMbPointsTracker::upScale(const unsigned int _scale) {
+	const double ratio = pow(2., (int) _scale);
+	scaleLevel = 0;
+
+	vpMatrix K = cam.get_K();
+
+	K[0][0] *= ratio;
+	K[1][1] *= ratio;
+	K[0][2] *= ratio;
+	K[1][2] *= ratio;
+
+	cam.initFromCalibrationMatrix(K);
+}
+
+/*!
+ Re initialise the moving edges associated to a given level. This method is
+ used to re-initialise the level if the tracking failed on this level but
+ succedded on the other one.
+
+ \param _lvl : The level to re-initialise.
+ */
+void vpMbPointsTracker::reInitLevel(const unsigned int _lvl) {
+	unsigned int scaleLevel_1 = scaleLevel;
+	scaleLevel = _lvl;
+
+	vpMbtControlPoint *p;
+	for (int k = 0; k < points[scaleLevel].size(); k++) {
+		p = (points[scaleLevel])[k];
+		p->initControlPoint(*Ipyramid[_lvl], 0);
+
+	}
+
+	trackControlPoints(*Ipyramid[_lvl]);
+	//updateMovingEdge(*Ipyramid[_lvl]);
+	scaleLevel = scaleLevel_1;
+}
+
+
+vpMatrix vpMbPointsTracker::computeCovarianceMatrix(const vpMatrix &A, const vpColVector &x, const vpColVector &b)
+{
+  double sigma2 = ( ((b.t())*b) - ( (b.t())*A*x ) );
+  return (A.t()*A).pseudoInverse()*sigma2;
+}
+
+vpMatrix vpMbPointsTracker::computeCovarianceMatrix(const vpMatrix &A, const vpColVector &x, const vpColVector &b, const vpMatrix &W)
+{
+  double sigma2 = ( ((W*b).t())*W*b - ( ((W*b).t())*W*A*x ) );
+  return (A.t()*W*A).pseudoInverse()*sigma2;
+}
