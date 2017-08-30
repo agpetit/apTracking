@@ -364,14 +364,14 @@ vpImage<vpRGBa>* apViews::dt0(vpImage<unsigned char> *im){
     }
   }
   dtf0(out, imArg);
-  for (int y = 0; y < height; y++) {
+  /*for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
       if ((*im)[y][x]!=100)
       {
     	  (*imArg)[y][x].A!= *im[y][x];
       }
     }
-  }
+  }*/
   return imArg;
 }
 
