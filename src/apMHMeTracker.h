@@ -21,7 +21,7 @@
 
 class VISP_EXPORT apMHMeTracker : public vpTracker
 {
-protected:
+public:
 
   //! Tracking dependent variables/functions =====================
 

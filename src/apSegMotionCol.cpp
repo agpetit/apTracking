@@ -189,12 +189,12 @@ void apSegMotionCol::setSegmentationParameters(apSegmentationParameters &_seg)
 
 void apSegMotionCol::updateTrajectories(){
 
-	bool *lostTrajectory = tracker.getListOfLostFeature();
+	//bool *lostTrajectory = tracker.getListOfLostFeature();
 	int nb_lost = 0;
 
 	for(int i = 0; i < tracker.getNbPrevFeatures(); i++)
 	{
-		if(lostTrajectory[i])
+		//if(lostTrajectory[i])
 		{
 			for (int j = i - nb_lost; j < nbPointToTrack - 1; j++)
 			{
@@ -805,7 +805,7 @@ void apSegMotionCol::GMM()
     cv::Mat labelsBgd( nsamplesBgd, 1, CV_32SC1);
     cv::Mat samplesBgd( nsamplesBgd, 3, CV_32FC1 );
     cv::Mat labelsFgd( nsamplesFgd, 1, CV_32SC1 );
-    CvEMParams params;
+    //cv::EM::Params params;
     int step;
     float *data;
     float *data1;
@@ -822,16 +822,16 @@ void apSegMotionCol::GMM()
     (data+i*step)[2] = 127;
     }*/
 
-    params.covs      = NULL;
+   /* params.covs      = NULL;
     params.means     = NULL;
     params.weights   = NULL;
     params.probs     = NULL;
     params.nclusters = nGaussians;
-    params.cov_mat_type       = CvEM::COV_MAT_SPHERICAL;
-    params.start_step         = CvEM::START_AUTO_STEP;
+    params.cov_mat_type       = cv::EM::COV_MAT_SPHERICAL;
+    params.start_step         = cv::EM::START_AUTO_STEP;
     params.term_crit.max_iter = 100;
     params.term_crit.epsilon  = 0.1;
-    params.term_crit.type     = CV_TERMCRIT_ITER|CV_TERMCRIT_EPS;
+    params.term_crit.type     = CV_TERMCRIT_ITER|CV_TERMCRIT_EPS;*/
 
 
     for(int i = 0; i<nsamplesBgd;i++)
@@ -862,18 +862,18 @@ void apSegMotionCol::GMM()
 
 
     }
-    em_modelFgd.clear();
-    em_modelBgd.clear();
-    em_modelFgd.train( samplesFgd, cv::Mat(), params, &labelsFgd );
-    em_modelBgd.train( samplesBgd, cv::Mat(), params, &labelsBgd );
+    //em_modelFgd.clear();
+    //em_modelBgd.clear();
+    //em_modelFgd.train( samplesFgd, cv::Mat(), params, &labelsFgd );
+    //em_modelBgd.train( samplesBgd, cv::Mat(), params, &labelsBgd );
 	//const CvMat* m = em_modelFgd.get_means();
-    cv::Mat m = em_modelFgd.get_means();
+    //cv::Mat m = em_modelFgd.get_means();
 	for(int g=0;g<nGaussians;g++) {
 		//for(int c=0;c<3;c++) cout << m->data.db[g*3 + c] <<", ";
 		/*for(int c=0;c<3;c++) cout << m.at<double>(g,c) <<", ";
 		cout << endl;*/
 	}
-	m = em_modelBgd.get_means();
+	//m = em_modelBgd.get_means();
 	for(int g=0;g<nGaussians;g++) {
 		//for(int c=0;c<3;c++) cout << m->data.db[g*3 + c] <<", ";
 		/*for(int c=0;c<3;c++) cout << m.at<double>(g,c) <<", ";
@@ -995,8 +995,8 @@ void apSegMotionCol::computeDataEnergyGMM(vpImage<unsigned char> &I, vpImage<vpR
         	sample.at<float>(0,0) = (float)Icol[i][j].R;
         	sample.at<float>(0,1) = (float)Icol[i][j].G;
         	sample.at<float>(0,2) = (float)Icol[i][j].B;
-            em_modelFgd.predict(sample, &probsFgd );
-            em_modelBgd.predict(sample, &probsBgd );
+            //em_modelFgd.predict(sample, &probsFgd );
+            //em_modelBgd.predict(sample, &probsBgd );
             //double* wFgd = em_modelFgd.get_weights()->data.db;
             //double* wBgd = em_modelBgd.get_weights()->data.db;
             double norm = (double)1/nGaussians;

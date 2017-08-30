@@ -1315,7 +1315,7 @@ void apMbTracker::computeVVSMH(const vpImage<unsigned char>& _I) {
 				double fac = 1;
 
 				//On remplit la matrice d'interaction globale
-				for (int j = 0; j < 3; j++) {
+				for (int j = 0; j < 6; j++) {
 					L[n][j] = p->L[j];
 				}
 				error[n] = p->error; //On remplit la matrice d'erreur
@@ -1367,7 +1367,7 @@ void apMbTracker::computeVVSMH(const vpImage<unsigned char>& _I) {
 		if ((iter == 0) || compute_interaction) {
 //#pragma omp parallel for
 			for (int i = 0; i < nerror; i++) {
-				for (int j = 0; j < 3; j++) {
+				for (int j = 0; j < 6; j++) {
 					//L[i][j] = w[i]*factor[i]*L[i][j] ;
 					L[i][j] = factor[i] * L[i][j];
 				}
@@ -1400,7 +1400,7 @@ void apMbTracker::computeVVSMH(const vpImage<unsigned char>& _I) {
 		for (int k = 0; k < points[scaleLevel].size(); k++) {
 			apControlPoint *p = (points[scaleLevel])[k];
 			p->computeInteractionMatrixErrorMH(cMo, _I);
-			for (int j = 0; j < 3; j++) {
+			for (int j = 0; j < 6; j++) {
 				L[k][j] = p->L[j];
 			}
 			error[k] = p->error;
@@ -1446,7 +1446,7 @@ void apMbTracker::computeVVSMH(const vpImage<unsigned char>& _I) {
 		if ((iter == 0) || compute_interaction) {
 //#pragma omp parallel for
 			for (int i = 0; i < nerror; i++) {
-				for (int j = 0; j < 3; j++) {
+				for (int j = 0; j < 6; j++) {
 					L[i][j] = w[i] * factor[i] * L[i][j];
 				}
 			}
@@ -6734,7 +6734,7 @@ void apMbTracker::computeVVSCCDMHPrev(const vpImage<unsigned char>& _I,
 			apControlPoint *p = (points[scaleLevel])[k];
 			p->computeInteractionMatrixErrorMH(cMo, _I);
 			//p->computeInteractionMatrixError(cMo, _I);
-			for (int j = 0; j < 3; j++) {
+			for (int j = 0; j < 6; j++) {
 			        L[n][j] = p->L[j];
 /*				L[n][3] = 0;
 				L[n][4] = 0;

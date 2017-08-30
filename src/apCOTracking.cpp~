@@ -15,7 +15,7 @@
 #include "surrender/scenemanager.h"
 #include "surrender/sceneviewer.h"
 
-#include <visp/vpOpenCVGrabber.h>
+//#include <visp/vpOpenCVGrabber.h>
 #include <visp/vpVideoReader.h>
 #include <cstdlib>
 #include <visp/vpDebug.h>
@@ -252,7 +252,7 @@ int main(int argc, char **argv)
      if (!opt_object.empty())
        object = opt_object;
      else
-    	object = "spot5";
+    	object = "soyuz";
 
      if (configFile.empty())
          configFile = object + vpIoTools::path("/") + object + vpIoTools::path(".lua");
@@ -269,8 +269,8 @@ int main(int argc, char **argv)
 
       //configFile2 = object + vpIoTools::path("/") + object + vpIoTools::path("2.lua");
 
-    opath = vpIoTools::path("out") + vpIoTools::path("/image%06d.png");
-    opath1 = vpIoTools::path("out") + vpIoTools::path("/imageKalman%06d.png");
+    opath = vpIoTools::path("outPig7") + vpIoTools::path("/image%06d.png");
+    opath1 = vpIoTools::path("outPig7") + vpIoTools::path("/imageKalman%06d.png");
 
 
     // Path the views of hierarchical graph are saved
@@ -317,7 +317,7 @@ int main(int argc, char **argv)
     tracker2.getLearningParameters(learn2);*/
 
     // OpenCVGrabber to grab images from USB Camera
-    vpOpenCVGrabber grabber;
+   // vpOpenCVGrabber grabber;
 
     vpMatrix lik;
     vpMatrix outlik;
@@ -353,18 +353,23 @@ int main(int argc, char **argv)
     vpVideoReader reader;
     reader.setFileName(ipath.c_str());
     reader.setFirstFrameIndex(start_image);
-    reader.open(Id);
-    reader.acquire(Id);
+    //reader.open(Id);
+    //reader.acquire(Id);
     vpVideoReader readerRGB;
+
+    std::string filenameLiver = "/home/antoine/Documents/imagesLiverPig5/image000000.png";
+    std::string filenameLiverCol = "/home/antoine/Documents/imagesLiverPig5/imageColor000000.png";
+    vpImageIo::read(Id, filenameLiver) ;
     //if(tracker.getUseRGB())
     {
     	readerRGB.setFileName(ipath.c_str());
         readerRGB.setFirstFrameIndex(start_image);
         readerRGB.open(Icol);
-        readerRGB.acquire(Icol);
+       // readerRGB.acquire(Icol);
+    vpImageIo::read(Icol, filenameLiverCol) ;
     }
-    const int width = reader.getWidth();
-    const int height = reader.getHeight();
+    const int width = Icol.getWidth();
+    const int height = Icol.getHeight();
 
     viewer.resize(width, height);
     mgr->setApRend(&mrend);
@@ -375,6 +380,8 @@ int main(int argc, char **argv)
 
     // Depth edges map, with gradient orientation
     vpImage<unsigned char> Ior(height,width);
+
+std::cout << " witdth " << mcam.get_px() << " height " << mcam.get_py() << std::endl;
     // Normal map and texture map
     vpImage<vpRGBa> Inormd(height,width);
     // Texture edge map
@@ -450,7 +457,8 @@ int main(int argc, char **argv)
 	cout << "time2 "<< opt_detect << endl;
 
     //Automatic initialization of the tracker
-    if(opt_detect)
+    
+//if(opt_detect)
     {
 
     	// File where the graph is stored
@@ -466,7 +474,7 @@ int main(int argc, char **argv)
     	std::string transP = "transProb" + object + ".txt";
     	char *transProba = (char *)transP.c_str();
 
-    	if(opt_learn)
+    	//if(opt_learn)
     	{
     		//Learn the 3D model to build the hierarchical view graph
         	apViews views;
@@ -504,8 +512,10 @@ int main(int argc, char **argv)
     	cout << "detection time "<< t1-t0 << endl;
     	for (int k = 0; k<fr;k++)
     	    {
-        	reader.acquire(Id);
-        	readerRGB.acquire(Icol);
+        	/*reader.acquire(Id);
+        	readerRGB.acquire(Icol);*/
+    vpImageIo::read(Icol, filenameLiverCol) ;
+    vpImageIo::read(Id, filenameLiver) ;
     		}
     	tracker.setPose(cMo);
     	tracker.init(Id,cMo);
@@ -749,8 +759,6 @@ grabber.acquire(Idisplay);*/
                 timerender = t1-t0;
 				std::cout << "timerender " << t1 - t0 << std::endl;
                 a.processEvents(QEventLoop::AllEvents, 1);
-                //vpImageIo::writePNG(Inormd, "Inormd.png");
-                //vpImageIo::writePNG(Ior, "Ior.png");
                 tracker.Inormdprec = Inormd;
                 tracker.Iorprec = Ior;
                 tracker.Itexprec = Ior;
@@ -792,9 +800,13 @@ grabber.acquire(Idisplay);*/
             	for (int sp = 0; sp < sample ; sp++)
             	{
 
-                    reader.acquire(Id);
+                    //reader.acquire(Id);
+    			vpImageIo::read(Id, filenameLiver) ;
+
                     //if(tracker.getUseRGB())
-                    	readerRGB.acquire(Icol);
+
+                    	//readerRGB.acquire(Icol);
+			vpImageIo::read(Icol, filenameLiverCol) ;
                     	Icol1 = Icol;
                     	for (int i = 0; i<height; i++)
                     		for (int j = 0; j<width; j++)
@@ -970,7 +982,20 @@ grabber.acquire(Idisplay);*/
             //if(im%5==0)
             {
             vpImageIo::write(Ioverlaycol, filename4);
-            //vpImageIo::write(Ioverlay, filename5);
+
+                    	for (int i = 0; i<height; i++)
+                    		for (int j = 0; j<width; j++)
+                    		{
+                                        if(Inormd[i][j].R == 127 && Inormd[i][j].G == 127 && Inormd[i][j].B == 127)
+					{
+                    			Inormd[i][j].R = 0;
+                    			Inormd[i][j].G = 0;
+                    			Inormd[i][j].B = 0;
+					}
+
+
+                    		}
+            vpImageIo::write(Inormd, filename5);
             }
 
             im++;
@@ -978,7 +1003,7 @@ grabber.acquire(Idisplay);*/
             //A.saveData(0,plotfile0);
             //A.saveData(1,plotfile1);
         }
-        grabber.close();
+        //grabber.close();
     }
     catch ( char const *e)
     {

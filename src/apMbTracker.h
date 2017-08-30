@@ -448,6 +448,34 @@ class VISP_EXPORT apMbTracker: public vpMbTracker, public apControlPointTracker
   vpMatrix computeCovarianceMatrix(const vpMatrix &A, const vpColVector &x, const vpColVector &b, const vpMatrix &W);
   vpMatrix computeCovarianceMatrix2(const vpMatrix &A, const vpColVector &x, const vpColVector &b, const vpMatrix &W);
 
+  void initCircle(const vpPoint& p1, const vpPoint &p2, const vpPoint &p3, const double radius,
+      const int idFace=0, const std::string &name=""){};
+  /*!
+    Add a cylinder to track from two points on the axis (defining the length of
+    the cylinder) and its radius.
+
+    \param p1 : First point on the axis.
+    \param p2 : Second point on the axis.
+    \param radius : Radius of the cylinder.
+    \param idFace : Id of the face associated to the cylinder.
+    \param name : Name of the cylinder.
+  */
+  void initCylinder(const vpPoint& p1, const vpPoint &p2, const double radius, const int idFace=0,
+      const std::string &name=""){};
+
+  /*!
+    Add the lines to track from the polygon description. If the polygon has only
+    two points, it defines a single line that is always visible. If it has three or
+    more corners, it defines a face. In that case the visibility of the face is computed
+    in order to track the corresponding lines only if the face is visible.
+
+    The id of the polygon is supposed to be set prior calling this function.
+
+    \param polygon : The polygon describing the set of lines that has to be tracked.
+  */
+  void initFaceFromCorners(vpMbtPolygon &polygon){};
+  void initFaceFromLines(vpMbtPolygon &polygon){};
+
   
 };
 

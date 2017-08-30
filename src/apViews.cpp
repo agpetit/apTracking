@@ -364,14 +364,14 @@ vpImage<vpRGBa>* apViews::dt0(vpImage<unsigned char> *im){
     }
   }
   dtf0(out, imArg);
-  for (int y = 0; y < height; y++) {
+  /*for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
       if ((*im)[y][x]!=100)
       {
     	  (*imArg)[y][x].A!= *im[y][x];
       }
     }
-  }
+  }*/
   return imArg;
 }
 
@@ -1233,7 +1233,6 @@ for (int y = 0; y < Imap.getHeight(); y++){
 	  Iseg[y][x]=Imap[y][x].A;
   }
   }
-//vpImageIo::writePNG(*I00,"Icol.png");
 computeDotView2(Iseg,cog,ori,surface);
 centerView(*I00,cog);
 //centerView(*I01,cog);
