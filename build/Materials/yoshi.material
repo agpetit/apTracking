@@ -1,0 +1,126 @@
+material Color_F11noCullingID
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.276078 0.558431 0.000000 1.000000
+			specular 0.330000 0.330000 0.330000 1.000000 20.000000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material Color_C01noCullingID
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.398431 0.000000 1.000000
+			specular 0.330000 0.330000 0.330000 1.000000 20.000000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material FrontColorNoCullingID
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.800000 0.800000 1.000000
+			specular 0.330000 0.330000 0.330000 1.000000 20.000000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material Color_A02noCullingID
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.156862 0.156862 1.000000
+			specular 0.330000 0.330000 0.330000 1.000000 20.000000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material Color_E03noCullingID
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.800000 0.316862 1.000000
+			specular 0.330000 0.330000 0.330000 1.000000 20.000000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material Color_008noCullingID
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.094118 0.094118 0.094118 1.000000
+			specular 0.330000 0.330000 0.330000 1.000000 20.000000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material Color_009noCullingID
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.000000 0.000000 0.000000 1.000000
+			specular 0.330000 0.330000 0.330000 1.000000 20.000000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material Color_A01noCullingID
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.000000 0.000000 1.000000
+			specular 0.330000 0.330000 0.330000 1.000000 20.000000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material Color_000noCullingID
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.800000 0.800000 1.000000
+			specular 0.330000 0.330000 0.330000 1.000000 20.000000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}

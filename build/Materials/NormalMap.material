@@ -1,0 +1,196 @@
+vertex_program NormalsVS glsl
+{
+	source normals.vert
+	default_params
+	{
+		param_named_auto worldViewProj worldviewproj_matrix
+                param_named_auto texelOffsets texel_offsets
+	}
+}
+
+
+fragment_program NormalsFS glsl
+{
+    source normals.frag
+    //target ps_2_0
+    default_params
+    {
+                param_named_auto fNear near_clip_distance
+                param_named_auto fFar far_clip_distance
+    }
+
+}
+
+fragment_program EdgeGradFS glsl
+{
+    source EdgeGradmap.frag
+    //target ps_2_0
+    default_params
+    {
+       param_named tex int 0
+       param_named edgeTh float 0
+       //param_named tex1 int 1
+    }
+
+}
+
+fragment_program GaussianFilterFS glsl
+{
+    source GaussianFilter.frag
+    //target ps_2_0
+    default_params
+    {
+       param_named tex0 int 0
+    }
+
+}
+
+fragment_program CannyFS glsl
+{
+    source Canny.frag
+    //target ps_2_0
+    default_params
+    {
+       param_named tex0 int 0
+    }
+
+}
+
+fragment_program CannyNMSFS glsl
+{
+    source CannyNMS.frag
+    //target ps_2_0
+    default_params
+    {
+       param_named tex0 int 0
+    }
+
+}
+
+
+material NormalMap
+{
+   technique
+   {
+
+     scheme NMap
+
+      pass
+      {
+   cull_hardware none
+   cull_software none
+
+         vertex_program_ref NormalsVS
+         {
+         }
+
+         fragment_program_ref NormalsFS
+         {
+         }
+        texture_unit
+ 	 {
+        texture RT
+        tex_coord_set 0
+	tex_address_mode clamp
+	filtering trilinear
+	}
+      }
+   }
+}
+
+material NormalMap0
+{
+   technique
+   {
+      pass
+      {
+         fragment_program_ref NormalsFS
+         {
+         }
+        texture_unit
+ 	 {
+        tex_coord_set 0
+	tex_address_mode clamp
+	filtering trilinear
+	}
+      }
+   }
+}
+
+material GaussianFilter
+{
+   technique
+   {
+      pass
+      {
+         fragment_program_ref GaussianFilterFS
+         {
+         }
+         texture_unit
+ 	 {
+        tex_coord_set 0
+	tex_address_mode clamp
+	filtering trilinear
+	}
+      }
+   }
+}
+
+
+material EdgeGradMap
+{
+   technique
+   {
+      pass
+      {
+         fragment_program_ref EdgeGradFS
+         {
+         }
+         texture_unit
+ 	 {
+        tex_coord_set 0
+	tex_address_mode clamp
+	filtering trilinear
+	}
+      }
+   }
+}
+
+
+material GradMap
+{
+   technique
+   {
+      pass
+      {
+         fragment_program_ref CannyFS
+         {
+         }
+         texture_unit
+ 	 {
+        tex_coord_set 0
+	tex_address_mode clamp
+	filtering trilinear
+	}
+      }
+   }
+}
+
+material CannyOrient
+{
+   technique
+   {
+      pass
+      {
+         fragment_program_ref CannyNMSFS
+         {
+         }
+         texture_unit
+ 	 {
+        tex_coord_set 0
+	tex_address_mode clamp
+	filtering trilinear
+	}
+      }
+   }
+}

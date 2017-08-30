@@ -1,0 +1,228 @@
+material 0041_Chocolate
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.658823 0.329412 0.094118 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material 0038_Orange
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.517647 0.000000 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material 0020_Red
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.000000 0.000000 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material 0103_Blue
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.000000 0.000000 0.800000 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material 0128_White
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.800000 0.800000 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material 0055_LightGoldenrodYe
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.784314 0.784314 0.658823 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material 0137_Black
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.000000 0.000000 0.000000 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material Translucent_Glass_Blu
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 0.500000
+			diffuse 0.313726 0.467451 0.743530 0.500000
+			specular 0.250000 0.250000 0.250000 0.500000 16.250000
+			emissive 0.000000 0.000000 0.000000 0.500000
+			scene_blend alpha_blend
+			depth_write off
+		}
+	}
+}
+material 0107_MidnightBlue
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.078431 0.078431 0.351373 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material 0046_Gold
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.674510 0.000000 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material 0039_DarkOrange
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.439216 0.000000 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material Translucent_Glass_Gra
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 0.500000
+			diffuse 0.401569 0.401569 0.401569 0.500000
+			specular 0.250000 0.250000 0.250000 0.500000 16.250000
+			emissive 0.000000 0.000000 0.000000 0.500000
+			scene_blend alpha_blend
+			depth_write off
+		}
+	}
+}
+material __3DPDefaultMat_
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.800000 0.800000 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material 0044_DarkGoldenrod
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.577255 0.420392 0.034510 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material 0060_GrassGreen
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.194510 0.285490 0.015686 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material 0135_DarkGray
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.254118 0.254118 0.254118 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 16.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}

@@ -1,0 +1,133 @@
+material (null)
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.640000 0.640000 0.640000 1.000000
+			specular 0.500000 0.500000 0.500000 1.000000 12.500000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material MLI
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.186898 0.186898 0.015554 1.000000
+			specular 0.368371 0.368371 0.030311 1.000000 35.750000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material SSM
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.204000 0.204000 0.204000 1.000000
+			specular 0.338235 0.338235 0.338235 1.000000 84.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material MLI_orange
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.178591 0.088930 0.015554 1.000000
+			specular 0.363468 0.233693 0.029907 1.000000 35.750000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material black
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.000000 0.000000 0.000000 1.000000
+			specular 0.000000 0.000000 0.000000 1.000000 35.750000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material dorure
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.376296 0.370370 0.139259 1.000000
+			specular 0.235185 0.231482 0.087037 1.000000 84.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material white
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.800000 0.800000 1.000000
+			specular 0.000000 0.000000 0.000000 1.000000 12.000000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material silver
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.352941 0.352941 0.352941 1.000000
+			specular 0.245098 0.245098 0.245098 1.000000 81.250000
+			emissive 0.000000 0.000000 0.000000 1.000000
+		}
+	}
+}
+material panel
+{
+	receive_shadows on
+	technique
+	{
+		pass
+		{
+			ambient 0.500000 0.500000 0.500000 1.000000
+			diffuse 0.800000 0.800000 0.800000 1.000000
+			specular 0.250000 0.250000 0.250000 1.000000 121.750000
+			emissive 0.000000 0.000000 0.000000 1.000000
+			texture_unit
+			{
+				texture panel.png
+				tex_address_mode wrap
+				filtering trilinear
+				colour_op alpha_blend
+			}
+		}
+	}
+}
