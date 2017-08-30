@@ -457,7 +457,7 @@ std::cout << " witdth " << mcam.get_px() << " height " << mcam.get_py() << std::
 	cout << "time2 "<< opt_detect << endl;
 
     //Automatic initialization of the tracker
-    //if(opt_detect)
+    if(opt_detect)
     {
 
     	// File where the graph is stored
@@ -473,7 +473,7 @@ std::cout << " witdth " << mcam.get_px() << " height " << mcam.get_py() << std::
     	std::string transP = "transProb" + object + ".txt";
     	char *transProba = (char *)transP.c_str();
 
-    	//if(opt_learn)
+        if(opt_learn)
     	{
     		//Learn the 3D model to build the hierarchical view graph
         	apViews views;
