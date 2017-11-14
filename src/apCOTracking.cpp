@@ -71,11 +71,11 @@
 #include "apKalmanFilterSE33.h"
 #include "apKalmanFilterQuat.h"
 
-
 #include <iostream>
 #include <sstream>
 
 #include "luaconfig.h"
+#include "p_helper.h"
 
 using namespace std;
 using namespace cv;
@@ -183,6 +183,13 @@ bool getOptions(int argc, char **argv,
 
   return true;
 }
+
+typedef struct point_struct{
+
+  double x;
+  double y;
+  double z;
+}point_struct;
 
 
 int main(int argc, char **argv)
@@ -451,7 +458,9 @@ int main(int argc, char **argv)
 
     // Socket creation *****************************************************************
 
-        err = p_helper_socket::socket_create_UDP_Sender(sock_sender, 6999, /*ip_recipient*/"192.168.3.29");
+    int sock_sender, err;
+
+    err = p_helper_socket::socket_create_UDP_Sender(sock_sender, 6999, /*ip_recipient*/"192.168.3.29");
 
         /*0.05583840319  -0.9157786066  0.3977833788  0.2560252907
       0.9949306037  0.01766200412  -0.09900074455  -0.02609790375
@@ -477,12 +486,14 @@ int main(int argc, char **argv)
               xe[2] = cMo[2][3];
               xe[3] = 1;
 
+              point_struct center_pos;
+
               center_pos.x = xe[0];
               center_pos.y = xe[1];
               center_pos.z = xe[2];
 
-                  int ns = write(sock_sender, &center_pos, sizeof(center_pos));
-                  if (ns < 0) std::cout<<"Errore Sendto"<< std::endl;
+      int ns = write(sock_sender, &center_pos, sizeof(center_pos));
+      if (ns < 0) std::cout<<"Errore Sendto"<< std::endl;
 
 
     //Automatic initialization of the tracker
