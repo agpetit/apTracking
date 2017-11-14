@@ -316,9 +316,9 @@ class VISP_EXPORT apMbTracker: public vpMbTracker, public apControlPointTracker
   void init(const vpImage<unsigned char>&){};
   void init(const vpImage<unsigned char>& I, const vpHomogeneousMatrix &cMo);
   void initKltTracker(const vpImage<unsigned char>& I);
-  void initCircle(const vpPoint&, const vpPoint&, const vpPoint&, double, unsigned int){};
+  void initCircle(const vpPoint&, const vpPoint&, const vpPoint&, double, int, const string&){};
   //void initCylinder(const vpPoint&, vpPoint, double, unsigned int){};
-  void initCylinder(const vpPoint&, const vpPoint&, double, unsigned int){};
+  void initCylinder(const vpPoint&, const vpPoint&, double, int, const string&){};
   void track(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist);
   //void trackHyb(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist, const double m, apOgre ogre_);
   void trackPred(const vpImage<unsigned char> &I);
@@ -433,6 +433,8 @@ class VISP_EXPORT apMbTracker: public vpMbTracker, public apControlPointTracker
   void loadLines(const vpImage<unsigned char>& I, vector<Vec4i>& Lines, const vpImage<vpRGBa>& Inormd, const vpHomogeneousMatrix &cMo);
   void addLine(const vpImage<unsigned char> &I, vpPoint &P1, vpPoint &P2, int polygone, std::string &name);
   void initFaceFromCorners(const std::vector<vpPoint>& _corners, const unsigned int _indexFace = -1){};
+  void initFaceFromCorners(vpMbtPolygon&){};
+  void initFaceFromLines(vpMbtPolygon&){};
   void testTracking(){};
   void initPyramid(const vpImage<unsigned char>& _I, std::vector<const vpImage<unsigned char>* >& _pyramid);
   void initPyramid(const vpImage<vpRGBa>& _I, std::vector<const vpImage<vpRGBa>* >& _pyramid);

@@ -317,7 +317,7 @@ int main(int argc, char **argv)
     tracker2.getLearningParameters(learn2);*/
 
     // OpenCVGrabber to grab images from USB Camera
-    vpOpenCVGrabber grabber;
+    //vpOpenCVGrabber grabber;
 
     vpMatrix lik;
     vpMatrix outlik;
@@ -449,9 +449,45 @@ int main(int argc, char **argv)
 
 	cout << "time2 "<< opt_detect << endl;
 
+    // Socket creation *****************************************************************
+
+        err = p_helper_socket::socket_create_UDP_Sender(sock_sender, 6999, /*ip_recipient*/"192.168.3.29");
+
+        /*0.05583840319  -0.9157786066  0.3977833788  0.2560252907
+      0.9949306037  0.01766200412  -0.09900074455  -0.02609790375
+      0.08363711222  0.4012949007  0.91212238  -0.04549550763  */
+
+       cMo[0][3] = 192.169;
+       cMo[1][3] = -350;
+       cMo[2][3] = 226;
+       cMo[0][0] = -0.936702;
+       cMo[0][1] = 7.77437e-17;
+       cMo[0][2] = 0.350126;
+       cMo[1][0] = 0.350126;
+       cMo[1][1] = 3.30454e-16;
+       cMo[1][2] = 0.936702;
+       cMo[2][0] = -4.28781e-17;
+       cMo[2][1] = 1;
+       cMo[2][2] = -3.36758e-16;
+        vpColVector xc,xe;
+        xc.resize(4);
+
+              xe[0] = cMo[0][3];
+              xe[1] = cMo[1][3];
+              xe[2] = cMo[2][3];
+              xe[3] = 1;
+
+              center_pos.x = xe[0];
+              center_pos.y = xe[1];
+              center_pos.z = xe[2];
+
+                  int ns = write(sock_sender, &center_pos, sizeof(center_pos));
+                  if (ns < 0) std::cout<<"Errore Sendto"<< std::endl;
+
+
     //Automatic initialization of the tracker
 
-    //if(opt_detect)
+    if(opt_detect)
     {
 
     	// File where the graph is stored
@@ -467,7 +503,7 @@ int main(int argc, char **argv)
     	std::string transP = "transProb" + object + ".txt";
     	char *transProba = (char *)transP.c_str();
 
-        //if(opt_learn)
+        if(opt_learn)
     	{
     		//Learn the 3D model to build the hierarchical view graph
         	apViews views;
@@ -979,7 +1015,7 @@ grabber.acquire(Idisplay);*/
             //A.saveData(0,plotfile0);
             //A.saveData(1,plotfile1);
         }
-        grabber.close();
+        //grabber.close();
     }
     catch ( char const *e)
     {

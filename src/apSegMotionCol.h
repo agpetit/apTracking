@@ -235,8 +235,8 @@ public:
 
 	std::vector<vpImage<vpRGBa> > histIm;
 
-    CvEM em_modelFgd;
-    CvEM em_modelBgd;
+    cv::EM em_modelFgd;
+    cv::EM em_modelBgd;
 
 	minE minEnergy;
 

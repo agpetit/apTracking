@@ -127,6 +127,7 @@ SET(TRACKER_COMMON_FILES
     apGMM.cpp							apGMM.h
     apKltControlPoint.cpp				apKltControlPoint.h
     apHoughVoteCircle.cpp				apHoughVoteCircle.h
+    p_helper.h
     ${QT_SOURCE_FILES}                  ${QT_SOURCE_HEADERS}
     ${SURRENDER_FILES}
     ${VIBE_FILES}
