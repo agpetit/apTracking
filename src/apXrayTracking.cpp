@@ -76,8 +76,9 @@
 
 #include "luaconfig.h"
 #include "p_helper.h"
+#include <queue>
+#include <condition_variable>
 
-#include <zmq.hpp>
 
 using namespace std;
 using namespace cv;
@@ -460,12 +461,11 @@ int main(int argc, char **argv)
 
     // Socket creation *****************************************************************
 
-    int sock_sender, err;
+    zmq::context_t     m_context1(1);
 
-    err = p_helper_socket::socket_create_UDP_Sender(sock_sender, 5558, "127.0.0.1");
 
-    zmq::context_t     m_context(1);
-    zmq::socket_t      m_socket(m_context, ZMQ_PUB);
+    zmq::socket_t      m_socket(m_context1, ZMQ_PUB);
+
 
     /*string adress = "127.0.0.1";
     string port = "5558";
@@ -479,16 +479,13 @@ int main(int argc, char **argv)
 
     m_socket.bind("tcp://127.0.0.1:5555");
 
+    zmq::socket_t      m_socket1(m_context1, ZMQ_SUB);
+    m_socket1.setsockopt(ZMQ_SUBSCRIBE, "", 0);
+    m_socket1.connect("tcp://127.0.0.1:5559");
 
     /*if(d_pattern.getValue().getSelectedItem() == "request/reply")
         receiveRequest();*/
 
-    while(1)
-    {
-
-        /*0.05583840319  -0.9157786066  0.3977833788  0.2560252907
-      0.9949306037  0.01766200412  -0.09900074455  -0.02609790375
-      0.08363711222  0.4012949007  0.91212238  -0.04549550763  */
 
        // tx="192.169",ty="-350",tz="226", R00= "-0.231176", R01="2.1603e-16", R02="0.972912" , R10="0.972912", R11="1.73796e-16" , R12="0.231176", R20="-1.19147e-16" , R21="1" , R22="-2.50356e-16"
 
@@ -507,126 +504,44 @@ int main(int argc, char **argv)
         vpColVector xc,xe;
         xc.resize(4);
 
-              xc[0] = cMo[0][3];
-              xc[1] = cMo[1][3];
-              xc[2] = cMo[2][3];
-              xc[3] = 1;
+        vpRxyzVector vdelta(0.0,0.0,0.0);
+        vpTranslationVector tdelta(0,0,0);
 
-              string messageStr;
-              messageStr = std::to_string(cMo[0][3]) + " " + std::to_string(cMo[1][3]) + " " + std::to_string(cMo[2][3]) + " "
-                      + std::to_string(cMo[0][0]) + " " + std::to_string(cMo[0][1]) + " " + std::to_string(cMo[0][2]) + " "
-                      + std::to_string(cMo[1][0]) + " " + std::to_string(cMo[1][1]) + " " + std::to_string(cMo[1][2]) + " "
-                      + std::to_string(cMo[2][0]) + " " + std::to_string(cMo[2][1]) + " " + std::to_string(cMo[2][2]) + " ";
+        /*vpRxyzVector vdelta1(0.0,0,0.03);
+        vpTranslationVector tdelta1(0,-10,-5);*/
 
-              zmq::message_t message(messageStr.length());
-              std::cout << "Problem with communication" <<  messageStr.length() << std::endl;
-              memcpy(message.data(), messageStr.c_str(), messageStr.length());
+        /*vpRxyzVector vdelta1(0.005,0,0.0);
+        vpTranslationVector tdelta1(10,0,0);*/
 
-              bool status = m_socket.send(message);
+        /*vpRxyzVector vdelta1(0.00,0.01,0.02);
+        vpTranslationVector tdelta1(0,5,0);*/
 
-              if(!status)
-                 std::cout << "Problem with communication" << std::endl;
+        /*vpRxyzVector vdelta1(0.00,0.00,0.08);
+        vpTranslationVector tdelta1(-15,0,0);*/
 
-        }
+        vpRxyzVector vdelta1(0.00,0.00,0.02);
+        vpTranslationVector tdelta1(0,0,0);
 
+        /*vpRxyzVector vdelta1(0.00,0.00,0.0);
+        vpTranslationVector tdelta1(-10,0,0);*/
 
-    //Automatic initialization of the tracker
+        vpRotationMatrix Rdelta;
+        Rdelta.buildFrom(vdelta);
+        vpHomogeneousMatrix Mdelta;
+        Mdelta.buildFrom(tdelta,Rdelta);
 
-    if(opt_detect)
-    {
+        vpRotationMatrix Rdelta1;
+        Rdelta1.buildFrom(vdelta1);
+        vpHomogeneousMatrix Mdelta1;
+        Mdelta1.buildFrom(tdelta1,Rdelta1);
 
-        // File where the graph is stored
-/*    	std::string hf = "h" + object + ".txt";
-        char *hfile = (char *)hf.c_str();
-        // File to store the data (pose...) of each view at the first level
-        std::string data0f = "data" + object + "0.txt";
-        char *data0file = (char *)data0f.c_str();
-        //File to store the data (pose...) of the views at each level of the hierarchical view graph
-        std::string data1f = "data" + object + "1.txt";
-        char *data1file = (char *)data1f.c_str();*/
-        // File to store the transition probabilities between each prototype view at the last level of the hierarchy
-        std::string transP = "transProb" + object + ".txt";
-        char *transProba = (char *)transP.c_str();
+        cMo = Mdelta1*cMo*Mdelta;
 
-        if(opt_learn)
-        {
-            //Learn the 3D model to build the hierarchical view graph
-            apViews views;
-            // Initialize the view sphere
-            views.initViewSphere(learn,object);
-            //Build the view graph - the resulting views are saved and the hierarchical graph is stored in txt file (hfile)
-            views.buildViewGraph(mcam,mgr,vpath, height, width);
-        }
+        int wdth = 764;
+        int hght = 800;
 
-        int fr;
-        apDetector detector;
-        detector.init(detect,object);
-        detector.loadViews(vpath);
-        detector.setFilters(vpath, mcam);
-        detector.computeTransitionProbV(transProba);
-        detector.setSegmentationParameters(seg);
-        detector.setTracker(tracker);
-        std::cout << " Ok particle filters set - Click to detect " << std::endl;
-        //while(!vpDisplay::getClick(Id,false))
-        {
-            vpDisplay::display(Id);
-            vpDisplay::displayCharString(Id, 15, 10,
-                                         "Ready to detect - click",
-                                         vpColor::red);
-            vpDisplay::flush(Id) ;
-
-        }
-        double t0= vpTime::measureTimeMs();
-        //thld = 20;
-        detector.detect(ipath,isegpath,vpath, scpath,mcam,start_image,20,apDetector::TOP,apDetector::MEAN);
-        double t1= vpTime::measureTimeMs();
-        cMo = detector.getPose();
-        fr =  detector.getFrame();
-        //tracker.setPose(cMo);
-        cout << "detection time "<< t1-t0 << endl;
-        for (int k = 0; k<fr;k++)
-            {
-            reader.acquire(Id);
-            readerRGB.acquire(Icol);
-            }
-        tracker.setPose(cMo);
-        tracker.init(Id,cMo);
-    }
 
     cout << "detection time "<< endl;
-
-    // Manual initialization of the tracker
-    if (opt_display && opt_click_allowed && !opt_detect)
-    {
-        if (inline_init.empty())
-        {
-            while(!vpDisplay::getClick(Id,false))
-            {
-                vpDisplay::display(Id);
-                vpDisplay::displayCharString(Id, 15, 10,
-                                             "click after positioning the object",
-                                             vpColor::red);
-                vpDisplay::flush(Id) ;
-            }
-            tracker.initClick(Id, initFile.c_str(), true);
-        }
-        else
-        {
-            memcpy(cMo.data, inline_init.data(), sizeof(double) * inline_init.size());
-            tracker.setPose(cMo);
-        }
-    }
-
-       if (opt_display && opt_click_allowed && !opt_detect)
-       {
-         tracker.initClick(Id, initFile.c_str(), true);
-       }
-       /*else
-       {
-         vpHomogeneousMatrix cMoi(-0.002774173802,-0.001058705951,0.2028195729,2.06760528,0.8287820106,-0.3974327515);
-         tracker.init(Id,cMoi);
-       }*/
-
 
         vpImage<vpRGBa> Icol1(height,width);
 
@@ -644,16 +559,17 @@ int main(int argc, char **argv)
             Icol1[i][j].B = 0;//Icol2[359-i][j].B;
             Id[i][j] = 0.2126*Icol2[359-i][j].R + 0.7152*Icol2[359-i][j].G + 0.0722*Icol2[359-i][j].B;*/
 
-
         }
     //Icol = Icol1;
+
+    tracker.setPose(cMo);
 
     tracker.setIprec(Id);
     tracker.cMoprec = cMo;
     tracker.setIprecRGB(Icol);
     tracker.getPose(cMo);
     tracker.setGroundTruth(gdtpath, trueposepath, start_image);
-    tracker.initKltTracker(Id);
+    //tracker.initKltTracker(Id);
     std::cout << " ok " << std::endl;
 
     //vpDisplay::getClick(Id);
@@ -665,7 +581,8 @@ int main(int argc, char **argv)
     /*cMo.buildFrom(11.7759940348,5.8999979250,5.5547190835,-2.6525344080,-0.0000000000,1.6833495227 );
        cMo.buildFrom( -0.768532741,  6.24302505,  13.54560648,  -2.683611579,  0.003069081378,  1.629208268 );
        cMo=cMo.inverse();*/
-    //tracker.init(Id,cMo);
+
+    tracker.init(Id,cMo);
     if (opt_display)
         vpDisplay::flush(Id);
     double px = mcam.get_px() ;
@@ -762,59 +679,13 @@ grabber.acquire(Idisplay);*/
     vpPlot plotPose;
     vpPlot plotCov;
 
-    //Create a window (700 by 700) at position (100, 200) with two graphics
-      vpPlot A(2, 700, 700, 100, 200, "Curves...");
-      //The first graphic contains 1 curve and the second graphic contains 2 curves
-      A.initGraph(0,5);
-      A.initGraph(1,5);
-      //The color of the curve in the first graphic is red
-      A.setColor(0,0,vpColor::blue);
-      A.setColor(0,1,vpColor::red);
-      A.setColor(0,2,vpColor::green);
-      A.setColor(0,3,vpColor::black);
-      A.setColor(0,4,vpColor::cyan);
-
-
-
-      //The first curve in the second graphic is green
-      A.setColor(1,0,vpColor::blue);
-      //The second curve in the second graphic is blue
-      A.setColor(1,1,vpColor::red);
-      A.setColor(1,2,vpColor::green);
-      A.setColor(1,3,vpColor::black);
-      A.setColor(1,4,vpColor::cyan);
-
-
-      //Add the point (0,0) in the first graphic
-      A.plot(0,0,0,0);
-      A.plot(0,1,0,0);
-      A.plot(0,2,0,0);
-      A.plot(0,3,0,0);
-      A.plot(0,4,0,0);
-
-
-
-      //Add the point (0,1) to the first curve of the second graphic
-      A.plot(1,0,0,0);
-      //Add the point (0,2) to the second curve of the second graphic
-      A.plot(1,1,0,0);
-      A.plot(1,2,0,0);
-      A.plot(1,3,0,0);
-      A.plot(1,4,0,0);
-
-
-      vpPlot B(2, 700, 700, 100, 200, "Curves...");
-
-      vpImage<unsigned char> Ig(height,width);
-      double mtime = 0;
-      double timetrack, timerender,timeextract,timevvs, timetrack1;
-      double timeKalman = 0;
-      double t0,t1;
+    vpImage<unsigned char> Ig(height,width);
+    double mtime = 0;
+    double timetrack, timerender,timeextract,timevvs, timetrack1;
+    double timeKalman = 0;
+    double t0,t1;
     vpImage<vpRGBa> Icol2(height,width);
     Icol2 = Icol;
-
-
-
 
     // Main tracking loop
     try
@@ -826,16 +697,12 @@ grabber.acquire(Idisplay);*/
             try{
                 tracker.getPose(cMo);
                 t0= vpTime::measureTimeMs();
-                mgr->updateRTT(Inormd,Ior,&cMo);
+
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
-                a.processEvents(QEventLoop::AllEvents, 1);
                 //vpImageIo::writePNG(Inormd, "Inormd.png");
                 //vpImageIo::writePNG(Ior, "Ior.png");
-                tracker.Inormdprec = Inormd;
-                tracker.Iorprec = Ior;
-                tracker.Itexprec = Ior;
                 tracker.cMoprec = cMo;
 
             }
@@ -867,10 +734,8 @@ grabber.acquire(Idisplay);*/
             cout << "timeKalman "<<t1-t0<<endl;
             timeKalman = t1-t0;
 
-
-
             // Acquire images
-            try{
+            /*try{
                 for (int sp = 0; sp < sample ; sp++)
                 {
 
@@ -886,19 +751,15 @@ grabber.acquire(Idisplay);*/
                                 Icol1[i][j].G = Icol1[i][j].R;
                                 Icol1[i][j].B = Icol1[i][j].R;
 
-                                /*Icol1[i][j].R = Icol2[359-i][j].R;
-                                Icol1[i][j].G = 0;//Icol2[359-i][j].G;
-                                Icol1[i][j].B = 0;//Icol2[359-i][j].B;
-                                Id[i][j] = 0.2126*Icol2[359-i][j].R + 0.7152*Icol2[359-i][j].G + 0.0722*Icol2[359-i][j].B;*/
-
-
                             }
                         //Icol = Icol1;
                 }
             }
             catch(...){
                 break;
-            }
+            }*/
+
+            vpImageIo::read(Id,"socketimage.png");
             vpDisplay::display(Id);
 
             //tracker.setPose(cMo);
@@ -906,7 +767,7 @@ grabber.acquire(Idisplay);*/
             // Pose tracking
             try{
                 t0= vpTime::measureTimeMs();
-                tracker.track(Id,Icol,Inormd,Ior,Ior,tr[2]);
+                tracker.trackXray(Id, tr[2]);
 
                 //tracker.displayKltPoints(Id);
 
@@ -1002,25 +863,6 @@ grabber.acquire(Idisplay);*/
             covariance[im][23] = tracker.covarianceMatrix[5][5];
             covariance[im][24] = im;
 
-
-
-            //covariance.resize(im+1,5);
-            //std::cout << " covmatME " << covMatME << " covmat " << covMat << std::endl;
-            A.plot(0,0,im-start_image+1,sqrt(tracker.covarianceMatrixME[0][0] + tracker.covarianceMatrixME[1][1] + tracker.covarianceMatrixME[2][2]));
-            A.plot(1,0,im-start_image+1,sqrt(tracker.covarianceMatrixME[3][3] + tracker.covarianceMatrixME[4][4] + tracker.covarianceMatrixME[5][5]));
-            A.plot(0,1,im-start_image+1,sqrt(tracker.covarianceMatrixCCD[0][0] + tracker.covarianceMatrixCCD[1][1] + tracker.covarianceMatrixCCD[2][2]));
-            A.plot(1,1,im-start_image+1,sqrt(tracker.covarianceMatrixCCD[3][3] + tracker.covarianceMatrixCCD[4][4] + tracker.covarianceMatrixCCD[5][5]));
-            A.plot(0,2,im-start_image+1,sqrt(tracker.covarianceMatrixKLT[0][0] + tracker.covarianceMatrixKLT[1][1] + tracker.covarianceMatrixKLT[2][2]));
-            std::cout << " lktl " <<tracker.covarianceMatrixKLT[0][0]+ tracker.covarianceMatrixKLT[1][1]+ tracker.covarianceMatrixKLT[2][2]<< std::endl;
-
-            A.plot(1,2,im-start_image+1,sqrt(tracker.covarianceMatrixKLT[3][3] + tracker.covarianceMatrixKLT[4][4] + tracker.covarianceMatrixKLT[5][5]));
-            A.plot(0,3,im-start_image+1,sqrt(tracker.covarianceMatrix[0][0] + tracker.covarianceMatrix[1][1] + tracker.covarianceMatrix[2][2]));
-            A.plot(1,3,im-start_image+1,sqrt(tracker.covarianceMatrix[3][3] + tracker.covarianceMatrix[4][4] + tracker.covarianceMatrix[5][5]));
-            if(useKalmanFilter)
-            {
-            A.plot(0,4,im-start_image+1,sqrt(filt.PvEst[0][0] + filt.PvEst[1][1] + filt.PvEst[2][2]));
-            A.plot(1,4,im-start_image+1,sqrt(filt.PvEst[3][3] + filt.PvEst[4][4] + filt.PvEst[5][5]));
-            }
 
             //covariance[im][0] = covMat[0][0] + covMat[1][1] + covMat[2][2];
             //covariance[im][1] = covMat[2][2] + covMat[3][3] + covMat[4][4];

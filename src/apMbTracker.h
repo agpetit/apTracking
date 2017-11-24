@@ -63,6 +63,15 @@
 #include "apDetection.h"
 #include "apLearn.h"
 #include "apSegmentation.h"
+
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <fstream>
+#include "serialization.h"
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+
+#include <zmq.hpp>
 using namespace cv;
 
 struct apKLTTrackerParameters
@@ -254,6 +263,12 @@ class VISP_EXPORT apMbTracker: public vpMbTracker, public apControlPointTracker
 
 	vpHomogeneousMatrix c0Mo;
 	vpHomogeneousMatrix ctTc0;
+
+private:
+
+    zmq::context_t     m_context{1};
+    zmq::socket_t      *m_socketSub;
+    zmq::socket_t      *m_socketPub;
   
  public:
 
@@ -323,6 +338,7 @@ class VISP_EXPORT apMbTracker: public vpMbTracker, public apControlPointTracker
   //void trackHyb(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist, const double m, apOgre ogre_);
   void trackPred(const vpImage<unsigned char> &I);
   void track(const vpImage<unsigned char>& I){};
+  void trackXray(const vpImage<unsigned char>& I, double dist);
   void track(const vpImage<unsigned char> &I, const vpImage<double> &Igrad, const vpImage<double> &Igradx, const vpImage<double> & Igrady, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist);
   void display(const vpImage<unsigned char>&, const vpHomogeneousMatrix&, const vpCameraParameters&, const vpColor&, unsigned int, bool){};
   void display(const vpImage<unsigned char>& I, const vpHomogeneousMatrix &cMo, const vpCameraParameters &cam, const vpColor& col , const unsigned int l=1);
@@ -399,6 +415,7 @@ class VISP_EXPORT apMbTracker: public vpMbTracker, public apControlPointTracker
   void computeVVS(const vpImage<unsigned char>& _I);
   //void computeVVSHyb(const vpImage<unsigned char>& _I, apOgre ogre_);
   void computeVVSMH(const vpImage<unsigned char>& _I);
+  void computeVVSPhotometric(const vpImage<unsigned char>& _I);
   void computeVVSCorr(const vpImage<unsigned char>& I, const vpImage<double>& Igrad, const vpImage<double>& Igradx, const vpImage<double>& Igrady);
   void computeVVSHybrid(const vpImage<unsigned char>& I, const vpImage<double>& Igrad, const vpImage<double>& Igradx, const vpImage<double>& Igrady);
   void computeVVSPointsLinesMH(const vpImage<unsigned char>& _I);
