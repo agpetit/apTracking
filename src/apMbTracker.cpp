@@ -511,9 +511,13 @@ void
  int nbc = wdth;
  vpImage<unsigned char> imG(hght,wdth);
  vpImage<unsigned char> Igd(hght,wdth);
+  vpImage<unsigned char> Igdgroundtruth(hght,wdth);
  vpImage<unsigned char> Ig(hght,wdth);
  vpImage<unsigned char> Idiff(hght,wdth);
  vpColVector e;
+
+ vpImageIo::read(Igdgroundtruth, "socketimage10.png");
+
 
  /*for (int i=3; i < nbr-3 ; i++)
  {
@@ -550,7 +554,7 @@ void
  vpColVector errorT(nerror+nerrorG);
  vpDisplayX displayo;
  displayo.init(Idiff, 10, 10, "display");
- double mu = 0.003;
+ double mu = 0.000;
  vpMatrix diagHsd(6,6);
  vpMatrix diagLTL(6,6);
  std::cout << " cmo " << cMo << std::endl;
@@ -563,7 +567,7 @@ void
  H = ((mu * diagHsd) + Hsd).pseudoInverse();
 
  /*** First phase ***/
-  vpImageTools::imageDifference(Ig,Igd,Idiff);
+  vpImageTools::imageDifference(Ig,Igdgroundtruth,Idiff);
 
   vpDisplay::display(Idiff);
   vpDisplay::flush(Idiff);
@@ -584,15 +588,37 @@ void
   writer2.open(Ig);
   writer3.open(Idiff);
 
-  while ( reloop == true && iter<300)
+  vpHomogeneousMatrix cMo1 = cMo;
+
+  vpHomogeneousMatrix cMo0;
+
+  vpRotationMatrix R0;
+  vpTranslationVector t0;
+
+  while ( reloop == true && iter<200)
  {
+      R0[0][0] = cMo[0][0];
+      R0[0][1] = cMo[0][1];
+      R0[0][2] = cMo[0][2];
+      R0[1][0] = cMo[1][0];
+      R0[1][1] = cMo[1][1];
+      R0[1][2] = cMo[1][2];
+      R0[2][0] = cMo[2][0];
+      R0[2][1] = cMo[2][1];
+      R0[2][2] = cMo[2][2];
 
+      t0[0]=-cMo[0][3];
+      t0[1]=-cMo[1][3];
+      t0[2]=-cMo[2][3];
 
+      t0 = R0.inverse()*t0;
+
+      cMo0.buildFrom(t0,R0);
       string messageStr;
-      messageStr = std::to_string(cMo[0][3]) + " " + std::to_string(cMo[1][3]) + " " + std::to_string(cMo[2][3]) + " "
-              + std::to_string(cMo[0][0]) + " " + std::to_string(cMo[0][1]) + " " + std::to_string(cMo[0][2]) + " "
-              + std::to_string(cMo[1][0]) + " " + std::to_string(cMo[1][1]) + " " + std::to_string(cMo[1][2]) + " "
-              + std::to_string(cMo[2][0]) + " " + std::to_string(cMo[2][1]) + " " + std::to_string(cMo[2][2]) + " ";
+      messageStr = std::to_string(cMo0[0][3]) + " " + std::to_string(cMo0[1][3]) + " " + std::to_string(cMo0[2][3]) + " "
+              + std::to_string(cMo0[0][0]) + " " + std::to_string(cMo0[0][1]) + " " + std::to_string(cMo0[0][2]) + " "
+              + std::to_string(cMo0[1][0]) + " " + std::to_string(cMo0[1][1]) + " " + std::to_string(cMo0[1][2]) + " "
+              + std::to_string(cMo0[2][0]) + " " + std::to_string(cMo0[2][1]) + " " + std::to_string(cMo0[2][2]) + " ";
 
       zmq::message_t message(messageStr.length());
       std::cout << "Problem with communication" <<  messageStr.length() << std::endl;
@@ -603,13 +629,14 @@ void
       if(!status)
          std::cout << "Problem with communication" << std::endl;
 
+               std::cout << " ok send " << std::endl;
+
          cv::Mat  img;
          cv::Mat img1 = Mat::zeros( hght,wdth, CV_8UC1);
          /*int  imgSize = img.total()*img.elemSize();
          uchar sockData[imgSize];
          int bytes;*/
 
-         std::cout << " ok send " << std::endl;
 
          zmq::message_t message1;
 
@@ -637,32 +664,37 @@ void
          }
         }
 
-       cv::imwrite("socketimage1.png", img1);
+       cv::imwrite("socketimage100.png", img1);
          }
 
  cMo.extract(tr);
 
- //sI.update(Ig.getHeight(), Ig.getWidth(),tr[2]);
+ sI.init(Ig.getHeight(), Ig.getWidth(),tr[2]);
  vpImageConvert::convert(img1,Ig);
  sI.buildFrom(Ig);
+       sI.interaction(Lsd);
  sI.error(sId, errorG);
 
- vpImageTools::imageDifference(Ig,Igd,Idiff);
-  vpDisplay::display(Idiff);
+ vpImageTools::imageDifference(Ig,Igdgroundtruth,Idiff);
+ vpDisplay::display(Idiff);
  vpDisplay::flush(Idiff);
 
- //vpImageIo::write(Idiff, "Idiff.png");
+ vpImageIo::write(Idiff, "Idiff.png");
 
 
- if (iter >2){
+ if (iter >1){
 
      writer1.saveFrame(Igd);
      writer2.saveFrame(Ig);
      writer3.saveFrame(Idiff);
- H = ((mu * diagHsd) + Hsd).pseudoInverse();
+     Hsd = Lsd.AtA();
+     diagHsd.eye(6);
+     for(int i = 0 ; i < 6 ; i++) diagHsd[i][i] = Hsd[i][i];
+
+     H = ((mu * diagHsd) + Hsd).pseudoInverse();
  //	compute the control law
  e = H * Lsd.t() *errorG;
- v =  -0.5*e;
+v =  -1*e;
  cMo =  vpExponentialMap::direct(v).inverse() * cMo;
 
  std::cout << " v " << v << std::endl;
@@ -670,6 +702,7 @@ void
 
  iter++;
  }
+  std::cout << " cmo diff0 " << cMo1.inverse()*cMo << std::endl;
   getchar();
  std::cout << "\t First minimization in " << iter << " iteration00 " << std::endl ;
 

@@ -459,35 +459,12 @@ int main(int argc, char **argv)
 
 	cout << "time2 "<< opt_detect << endl;
 
-    // Socket creation *****************************************************************
-
-    zmq::context_t     m_context1(1);
-
-
-    zmq::socket_t      m_socket(m_context1, ZMQ_PUB);
-
-
-    /*string adress = "127.0.0.1";
-    string port = "5558";
-    adress.insert(adress.length(), port);*/
-
-
-    //if(d_pattern.getValue().getSelectedItem() == "publish/subscribe")
-         //m_socket = new zmq::socket_t(m_context, ZMQ_PUB);
-   /* else
-        m_socket = new zmq::socket_t(m_context, ZMQ_REP);*/
-
-    m_socket.bind("tcp://127.0.0.1:5555");
-
-    zmq::socket_t      m_socket1(m_context1, ZMQ_SUB);
-    m_socket1.setsockopt(ZMQ_SUBSCRIBE, "", 0);
-    m_socket1.connect("tcp://127.0.0.1:5559");
-
-    /*if(d_pattern.getValue().getSelectedItem() == "request/reply")
-        receiveRequest();*/
-
-
        // tx="192.169",ty="-350",tz="226", R00= "-0.231176", R01="2.1603e-16", R02="0.972912" , R10="0.972912", R11="1.73796e-16" , R12="0.231176", R20="-1.19147e-16" , R21="1" , R22="-2.50356e-16"
+
+    /*-7.372876909e-17  1  -1.766268742e-16  226
+    0.231176  -1.5479766e-16  -0.972912  -192.169
+    -0.972912  -1.1256366e-16  -0.231176  350
+    0  0  0  1 */
 
        cMo[0][3] = 192.169;
        cMo[1][3] = -350;
@@ -501,29 +478,89 @@ int main(int argc, char **argv)
        cMo[2][0] = -1.19147e-16;
        cMo[2][1] = 1;
        cMo[2][2] = -2.50356e-16;
-        vpColVector xc,xe;
-        xc.resize(4);
+
+       cMo[0][3] =-175.4532513;
+       cMo[1][3] = -239.2093021 ;
+       cMo[2][3] = 350;
+       cMo[0][0] = -0.231176;
+       cMo[0][1] = 2.1603e-16;
+       cMo[0][2] = 0.972912;
+       cMo[1][0] = 0.972912;
+       cMo[1][1] = 1.73796e-16;
+       cMo[1][2] = 0.231176;
+       cMo[2][0] = -1.19147e-16;
+       cMo[2][1] = 1;
+       cMo[2][2] = -2.50356e-16;
+
+
+   /* -0.231176  0.972912  -1.19147e-16  384.9440607
+    2.1603e-16  1.73796e-16  1  -226
+    0.972912  0.231176  -2.50356e-16  -106.0519261
+    0  0  0  1*/
+
+       /*cMo[0][3] = 384.9440607 ;
+       cMo[1][3] = -226;
+       cMo[2][3] = -106.0519261;
+       cMo[0][0] = -0.231176;
+       cMo[0][1] = 2.1603e-16;
+       cMo[0][2] = 0.972912;
+       cMo[1][0] = 0.972912;
+       cMo[1][1] = 1.73796e-16;
+       cMo[1][2] = 0.231176;
+       cMo[2][0] = -1.19147e-16;
+       cMo[2][1] = 1;
+       cMo[2][2] = -2.50356e-16;*/
+
+
+
+      /* std::cout << " cmo inv " << cMo.inverse() << std::endl;
+            getchar();*/
+
+    /*vpRotationMatrix R0;
+           R0[0][0] = -0.231176;
+           R0[0][1] = 2.1603e-16;
+           R0[0][2] = 0.972912;
+           R0[1][0] = 0.972912;
+           R0[1][1] = 1.73796e-16;
+           R0[1][2] = 0.231176;
+           R0[2][0] = -1.19147e-16;
+           R0[2][1] = 1;
+           R0[2][2] = -2.50356e-16;
+
+    vpTranslationVector ta(-192.169,350,-226);*/
+
+       /*cMo[0][3] = -236 ;
+       cMo[1][3] = 192.169;
+       cMo[2][3] = 350;
+       cMo[0][0] = 1.049915526e-16;
+       cMo[0][1] = -1;
+       cMo[0][2] = 3.099296783e-16;
+       cMo[1][0] = -0.231176;
+       cMo[1][1] = 2.7726234e-16;
+       cMo[1][2] = 0.972912;
+       cMo[2][0] = -0.972912 ;
+       cMo[2][1] =  -1.73796e-16;
+       cMo[2][2] = -0.231176 ;*/
+
+
+      /* -1.333024474e-16  1  -1.907823217e-16  226
+       0.231176  -1.5479766e-16  -0.972912  -192.169
+       -0.972912  -1.73796e-16  -0.231176  350
+       0  0  0  1 */
+
+       /*1.049915526e-16  -1  3.099296783e-16  -226
+       -0.231176  2.7726234e-16  0.972912  192.169
+       -0.972912  -1.73796e-16  -0.231176  350*/
+
+        //std::cout << " cmo inv " << R0*ta << std::endl;
+             // getchar();
 
         vpRxyzVector vdelta(0.0,0.0,0.0);
         vpTranslationVector tdelta(0,0,0);
 
-        /*vpRxyzVector vdelta1(0.0,0,0.03);
-        vpTranslationVector tdelta1(0,-10,-5);*/
+        vpRxyzVector vdelta1(0.,0.0,-0.0);
+        vpTranslationVector tdelta1(0,0,+550);
 
-        /*vpRxyzVector vdelta1(0.005,0,0.0);
-        vpTranslationVector tdelta1(10,0,0);*/
-
-        /*vpRxyzVector vdelta1(0.00,0.01,0.02);
-        vpTranslationVector tdelta1(0,5,0);*/
-
-        /*vpRxyzVector vdelta1(0.00,0.00,0.08);
-        vpTranslationVector tdelta1(-15,0,0);*/
-
-        vpRxyzVector vdelta1(0.00,0.00,0.02);
-        vpTranslationVector tdelta1(0,0,0);
-
-        /*vpRxyzVector vdelta1(0.00,0.00,0.0);
-        vpTranslationVector tdelta1(-10,0,0);*/
 
         vpRotationMatrix Rdelta;
         Rdelta.buildFrom(vdelta);
@@ -535,7 +572,10 @@ int main(int argc, char **argv)
         vpHomogeneousMatrix Mdelta1;
         Mdelta1.buildFrom(tdelta1,Rdelta1);
 
+
         cMo = Mdelta1*cMo*Mdelta;
+
+        std::cout << " cmo " << cMo << std::endl;
 
         int wdth = 764;
         int hght = 800;
@@ -759,7 +799,7 @@ grabber.acquire(Idisplay);*/
                 break;
             }*/
 
-            vpImageIo::read(Id,"socketimage.png");
+            vpImageIo::read(Id,"socketimage10.png");
             vpDisplay::display(Id);
 
             //tracker.setPose(cMo);
