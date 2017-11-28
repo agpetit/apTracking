@@ -479,6 +479,8 @@ int main(int argc, char **argv)
        cMo[2][1] = 1;
        cMo[2][2] = -2.50356e-16;
 
+       // pose simulated image, amera frame
+
        cMo[0][3] =-175.4532513;
        cMo[1][3] = -239.2093021 ;
        cMo[2][3] = 350;
@@ -491,6 +493,21 @@ int main(int argc, char **argv)
        cMo[2][0] = -1.19147e-16;
        cMo[2][1] = 1;
        cMo[2][2] = -2.50356e-16;
+
+       // pose real image -222.375 154.59 379.542 [0.989822 -3.09578e-17 0.142311,0.136547 0.281733 -0.949727,-0.0400937 0.959493 0.278865
+
+       cMo[0][3] =-222.375;
+       cMo[1][3] = 154.59;
+       cMo[2][3] = 379.542;
+       cMo[0][0] = 0.989822;
+       cMo[0][1] = -3.09578e-17;
+       cMo[0][2] = 0.142311;
+       cMo[1][0] = 0.136547;
+       cMo[1][1] = 0.281733;
+       cMo[1][2] = -0.949727;
+       cMo[2][0] = -0.0400937;
+       cMo[2][1] = 0.959493;
+       cMo[2][2] = 0.278865;
 
 
    /* -0.231176  0.972912  -1.19147e-16  384.9440607
@@ -555,11 +572,11 @@ int main(int argc, char **argv)
         //std::cout << " cmo inv " << R0*ta << std::endl;
              // getchar();
 
-        vpRxyzVector vdelta(0.0,0.0,0.0);
+        vpRxyzVector vdelta(0.0,0.0,-0.1);
         vpTranslationVector tdelta(0,0,0);
 
         vpRxyzVector vdelta1(0.,0.0,-0.0);
-        vpTranslationVector tdelta1(0,0,+550);
+        vpTranslationVector tdelta1(0,0,0);
 
 
         vpRotationMatrix Rdelta;
@@ -799,7 +816,8 @@ grabber.acquire(Idisplay);*/
                 break;
             }*/
 
-            vpImageIo::read(Id,"socketimage10.png");
+            //vpImageIo::read(Id,"socketimage10.png");
+            vpImageIo::read(Id,"imagePig3.png");
             vpDisplay::display(Id);
 
             //tracker.setPose(cMo);

@@ -516,7 +516,7 @@ void
  vpImage<unsigned char> Idiff(hght,wdth);
  vpColVector e;
 
- vpImageIo::read(Igdgroundtruth, "socketimage10.png");
+ vpImageIo::read(Igdgroundtruth, "imagePig3.png");
 
 
  /*for (int i=3; i < nbr-3 ; i++)
@@ -595,8 +595,9 @@ void
   vpRotationMatrix R0;
   vpTranslationVector t0;
 
-  while ( reloop == true && iter<200)
+  while ( reloop == true && iter<700)
  {
+      double t00= vpTime::measureTimeMs();
       R0[0][0] = cMo[0][0];
       R0[0][1] = cMo[0][1];
       R0[0][2] = cMo[0][2];
@@ -694,7 +695,7 @@ void
      H = ((mu * diagHsd) + Hsd).pseudoInverse();
  //	compute the control law
  e = H * Lsd.t() *errorG;
-v =  -1*e;
+v =  -2*e;
  cMo =  vpExponentialMap::direct(v).inverse() * cMo;
 
  std::cout << " v " << v << std::endl;
