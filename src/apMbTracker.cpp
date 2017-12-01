@@ -7681,6 +7681,165 @@ void apMbTracker::track(const vpImage<unsigned char> &I, const vpImage<
 }
 
 
+/*!
+ Compute each state of the tracking procedure for all the feature sets.
+
+ If the tracking is considered as failed an exception is thrown.
+
+ \param I : The image.
+ */
+
+void apMbTracker::trackDef(const vpImage<unsigned char> &I, const vpImage<
+                vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd, const vpImage<
+                unsigned char>& Ior, const vpImage<unsigned char>& Itex,
+                const double dist) {
+        initPyramid(I, Ipyramid);
+        initPyramid(Iprec, Ipyramidprec);
+        switch (trackingType) {
+        case CCD_SH:
+        case CCD_MH:
+        case CCD_LINES_MH:
+        case CCD_MH_KLT:
+        case CCD_LINES_MH_KLT:
+                initPyramid(IRGB, IRGBpyramid);
+        }
+
+        for (int lvl = (scales.size() - 1); lvl >= 0; lvl -= 1) {
+                if (scales[lvl]) {
+                        vpHomogeneousMatrix cMo_1 = cMo;
+                        try {
+                                downScale(lvl);
+                                double t0 = vpTime::measureTimeMs();
+                                try {
+                                        switch (trackingType) {
+                                        case POINTS_SH:
+                                        case POINTS_MH:
+                                                extractControlPoints(*Ipyramid[lvl], Inormd, Ior, Itex,
+                                                                dist);
+                                                break;
+                                        case LINES_MH:
+                                                extractControlPointsLines(*Ipyramid[lvl], Inormd, Ior,
+                                                                Itex, dist);
+                                                break;
+                                        case CCD_SH:
+                                        case CCD_MH:
+                                                extractControlPointsCCD(*Ipyramid[lvl], Inormd, Ior,
+                                                                Itex, dist);
+                                                break;
+                                        case CCD_MH_KLT:
+                                                extractControlPointsCCD(*Ipyramid[lvl], Inormd, Ior,
+                                                                Itex, dist);
+                                                extractKltControlPointsFAST(*Ipyramid[lvl],Inormd, Ior, Itex, dist);
+                                                break;
+                                        }
+                                } catch (...) {
+                                        vpTRACE("Error in points extraction");
+                                }
+
+                                double t1 = vpTime::measureTimeMs();
+                                std::cout << "timeextract " << t1 - t0 << std::endl;
+                                timeextract = t1 - t0;
+                                double t2 = vpTime::measureTimeMs();
+                                try {
+                                        switch (trackingType) {
+                                        case POINTS_SH:
+                                        case CCD_SH:
+                                                trackControlPoints(*Ipyramid[lvl]);
+                                                break;
+                                        case POINTS_MH:
+                                        case CCD_MH:
+                                                trackControlPointsMH(*Ipyramid[lvl]);
+                                                break;
+                                        case CCD_MH_KLT:
+                                                trackControlPointsMH(*Ipyramid[lvl]);
+                                                trackKltControlPoints(*Ipyramid[lvl]);
+                                                break;
+                                        }
+                                } catch (...) {
+                                        vpTRACE("Error in tracking");
+                                        throw;
+                                }
+                                double t3 = vpTime::measureTimeMs();
+                                std::cout << "timetrack " << t3 - t2 << std::endl;
+                                timetrack = t3-t2;
+
+                                try {
+                                        double t4 = vpTime::measureTimeMs();
+                                        switch (trackingType) {
+                                        case POINTS_SH:
+                                                exportCorrespondencesEdges(*Ipyramid[lvl]);
+                                                break;
+                                        /*case POINTS_MH:
+                                                exportCorrespondencesEdgesMH(*Ipyramid[lvl]);
+                                                break;
+                                        case CCD_SH:
+                                                exportCorrespondencesEdgesCCD(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                                break;
+                                        case CCD_MH:
+                                                exportCorrespondencesEdgesCCDMH(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                                break;
+                                        case CCD_MH_KLT:
+                                                if (kltPoints[lvl].size() > 2)
+                                                exportCorrespondencesEdgesCCDMHKlt(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                                else exportCorrespondencesEdgesCCDMH(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                            break;*/
+                                        }
+                                        double t5 = vpTime::measureTimeMs();
+                                        std::cout << "timeExportCorrespondences " << t5 - t4 << std::endl;
+                                        timevvs = t5-t4;
+                                } catch (...) {
+                                        vpTRACE("Error in computeVVS");
+                                        throw vpException(vpException::fatalError,
+                                                        "Error in computeVVS");
+                                }
+                                // try
+                                // {
+                                // testTracking();
+                                // }
+                                // catch(...)
+                                // {
+                                // throw vpTrackingException(vpTrackingException::fatalError, "test Tracking fail");
+                                // }
+
+                                try {
+                                        //displayControlPoints();
+                                } catch (...) {
+                                        vpTRACE("Error in moving edge updating");
+                                        throw;
+                                }
+
+                        } catch (...) {
+                                if (lvl != 0) {
+                                        cMo = cMo_1;
+                                        reInitLevel(lvl);
+                                        upScale(lvl);
+                                } else {
+                                        upScale(lvl);
+                                        throw;
+                                }
+                        }
+                }
+        }
+
+        cleanPyramid(Ipyramid);
+        switch (trackingType) {
+        case CCD_SH:
+        case CCD_MH:
+        case CCD_LINES_MH:
+        case CCD_MH_KLT:
+        case CCD_LINES_MH_KLT:
+                cleanPyramid(IRGBpyramid);
+                CCDTracker.clearCCDTracker();
+        }
+        cleanPyramid(Ipyramidprec);
+        Iprec = I;
+        IprecRGB = IRGB;
+
+        frame++;
+        frame0++;
+}
+
+
 /*void apMbTracker::track(const vpImage<unsigned char> &I, const vpImage<
 		vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd, const vpImage<
 		unsigned char>& Ior, const vpImage<unsigned char>& Itex,
@@ -8503,6 +8662,44 @@ void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 	//kltTracker.initTracking(frame_);
 }
 
+typedef struct point3d{
+
+  double x;
+  double y;
+  double z;
+}point3d;
+
+typedef struct point2d{
+
+  int i;
+  int j;
+}point2d;
+
+/*!
+ Export 3D-2d correspondences in the image.
+
+ \param I : the image.
+ */
+void apMbTracker::exportCorrespondencesEdges(const vpImage<unsigned char> &I) {
+
+std::vector <std::pair <point3d,point2d>> correspondences;
+
+//#pragma omp parallel for
+        for (int k = 0; k < points[scaleLevel].size(); k++)
+        {
+            vpPointSite site = points[scaleLevel][k]->s;
+            std::pair <point3d,point2d> correspondence;
+            point3d p3d = correspondence.first;
+            p3d.x = points[scaleLevel][k]->cpointo.get_oX();
+            p3d.y = points[scaleLevel][k]->cpointo.get_oY();
+            p3d.z = points[scaleLevel][k]->cpointo.get_oZ();
+
+            point2d p2d = correspondence.second;
+            p2d.i = site.i;
+            p2d.j = site.j;
+        }
+}
+
 /*!
  Initialize the control points thanks to a given pose of the camera.
 
@@ -8523,6 +8720,7 @@ void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 
  }
  }*/
+
 
 /*!
  Track the control points in the image.
@@ -8771,6 +8969,7 @@ void process1(const vpImage<vpRGBa>& Inormd, vpImage<unsigned char>& Ilap) {
 			}
 	}
 }
+
 
 /*!
  Extract 3D control points from the depth edges, the texture or color edges, given the depth buffer and the normal map

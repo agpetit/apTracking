@@ -336,6 +336,7 @@ private:
   void initCylinder(const vpPoint&, const vpPoint&, double, int, const string&){};
   void track(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist);
   //void trackHyb(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist, const double m, apOgre ogre_);
+  void trackDef(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist);
   void trackPred(const vpImage<unsigned char> &I);
   void track(const vpImage<unsigned char>& I){};
   void trackXray(const vpImage<unsigned char>& I, double dist);
@@ -433,6 +434,7 @@ private:
   void computeVVSCCDKltMHPrevFAST(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void computeVVSLinesCCDKltMHPrev(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
 
+  void exportCorrespondencesEdges(const vpImage<unsigned char> &I);
   //void initControlPoints(const vpImage<unsigned char> &I, const vpHomogeneousMatrix &_cMo) ;
   void trackControlPoints(const vpImage<unsigned char> &I);
   void trackControlPointsPred(const vpImage<unsigned char> &I);
