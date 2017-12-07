@@ -330,6 +330,8 @@ int main(int argc, char **argv)
     mgrAR->setAspectRatio(width * mcam.get_py() / (height * mcam.get_px()));
     mgrAR->load(modelFileAR);
 
+getchar();
+
     vpImage<unsigned char> Id;
     vpImage<unsigned char> Id1;
     vpImage<vpRGBa> Icol,IC;
@@ -851,7 +853,7 @@ grabber.acquire(Idisplay);*/
             im++;
         }
 
-        grabber.close();
+        //grabber.close();
     }
     catch ( char const *e)
     {

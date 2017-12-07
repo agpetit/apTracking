@@ -317,7 +317,7 @@ int main(int argc, char **argv)
     tracker2.getLearningParameters(learn2);*/
 
     // OpenCVGrabber to grab images from USB Camera
-    vpOpenCVGrabber grabber;
+    //vpOpenCVGrabber grabber;
 
     vpMatrix lik;
     vpMatrix outlik;
@@ -451,7 +451,7 @@ int main(int argc, char **argv)
 
     //Automatic initialization of the tracker
 
-    //if(opt_detect)
+    if(opt_detect)
     {
 
     	// File where the graph is stored
@@ -467,7 +467,7 @@ int main(int argc, char **argv)
     	std::string transP = "transProb" + object + ".txt";
     	char *transProba = (char *)transP.c_str();
 
-        //if(opt_learn)
+        if(opt_learn)
     	{
     		//Learn the 3D model to build the hierarchical view graph
         	apViews views;
@@ -979,7 +979,7 @@ grabber.acquire(Idisplay);*/
             //A.saveData(0,plotfile0);
             //A.saveData(1,plotfile1);
         }
-        grabber.close();
+        //grabber.close();
     }
     catch ( char const *e)
     {

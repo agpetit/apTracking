@@ -649,7 +649,7 @@ grabber.acquire(Idisplay);*/
     int meant = 1;
 
     // OpenCVGrabber to grab images from USB Camera
-    vpOpenCVGrabber grabber;
+    //vpOpenCVGrabber grabber;
 
 
     vpImage<vpRGBa> Iar(height,width), Inormd0(height,width), Inormd1(height,width);
@@ -853,7 +853,7 @@ grabber.acquire(Idisplay);*/
             im++;
         }
 
-        grabber.close();
+        //grabber.close();
     }
     catch ( char const *e)
     {
