@@ -43,6 +43,9 @@ if(OPENMP_FOUND)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif(OPENMP_FOUND)
 
+find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
+
+
 LINK_DIRECTORIES(${GLEW_LIBRARY_DIR})
 
 LINK_DIRECTORIES(${VIBE_DIR})
@@ -127,6 +130,9 @@ SET(TRACKER_COMMON_FILES
     apGMM.cpp							apGMM.h
     apKltControlPoint.cpp				apKltControlPoint.h
     apHoughVoteCircle.cpp				apHoughVoteCircle.h
+    p_helper.h
+    serialization.h
+    zhelpers.h
     ${QT_SOURCE_FILES}                  ${QT_SOURCE_HEADERS}
     ${SURRENDER_FILES}
     ${VIBE_FILES}
@@ -144,20 +150,25 @@ SET(TRACKER_COMMON_FILES
 #    ${TRACKER_COMMON_FILES}
 #  )
   
-ADD_EXECUTABLE(apCOTracking
-    apCOTracking.cpp
+#ADD_EXECUTABLE(apCOTracking
+#    apCOTracking.cpp
+#    ${TRACKER_COMMON_FILES}
+#  )
+
+ADD_EXECUTABLE(apXrayTracking
+    apXrayTracking.cpp
     ${TRACKER_COMMON_FILES}
   )
   
-  ADD_EXECUTABLE(apCOAR
-    apCOAR.cpp
-    ${TRACKER_COMMON_FILES}
-  )
+#  ADD_EXECUTABLE(apCOAR
+#    apCOAR.cpp
+#    ${TRACKER_COMMON_FILES}
+#  )
 
-  ADD_EXECUTABLE(apCOAR_osg
-    apCOAR_osg.cpp
-    ${TRACKER_COMMON_FILES}
-  )
+#  ADD_EXECUTABLE(apCOAR_osg
+#    apCOAR_osg.cpp
+#    ${TRACKER_COMMON_FILES}
+#  )
   
   
 #TARGET_LINK_LIBRARIES(apCorrTracking
@@ -176,26 +187,34 @@ ADD_EXECUTABLE(apCOTracking
 #    ${GLEW_LIBRARY}
 #  )
   
-  TARGET_LINK_LIBRARIES(apCOTracking
+#  TARGET_LINK_LIBRARIES(apCOTracking
+#        ${OPENGL_LIBRARIES}
+#    ${OPENSCENEGRAPH_LIBRARIES}
+#    ${QT_LIBRARIES}
+#    ${GLEW_LIBRARY}
+#    ${LUA_LIBRARIES} -lzmq
+#  )
+
+  TARGET_LINK_LIBRARIES(apXrayTracking
         ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
     ${QT_LIBRARIES}
     ${GLEW_LIBRARY}
-    ${LUA_LIBRARIES}
+    ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
   )
   
-    TARGET_LINK_LIBRARIES(apCOAR
-        ${OPENGL_LIBRARIES}
-    ${OPENSCENEGRAPH_LIBRARIES}
-    ${QT_LIBRARIES}
-    ${GLEW_LIBRARY}
-    ${LUA_LIBRARIES}
-  )
+#    TARGET_LINK_LIBRARIES(apCOAR
+#        ${OPENGL_LIBRARIES}
+#    ${OPENSCENEGRAPH_LIBRARIES}
+#    ${QT_LIBRARIES}
+#    ${GLEW_LIBRARY}
+#    ${LUA_LIBRARIES}
+#  )
 
-    TARGET_LINK_LIBRARIES(apCOAR_osg
-        ${OPENGL_LIBRARIES}
-    ${OPENSCENEGRAPH_LIBRARIES}
-    ${QT_LIBRARIES}
-    ${GLEW_LIBRARY}
-    ${LUA_LIBRARIES}
-  )
+#    TARGET_LINK_LIBRARIES(apCOAR_osg
+#        ${OPENGL_LIBRARIES}
+#    ${OPENSCENEGRAPH_LIBRARIES}
+#    ${QT_LIBRARIES}
+#    ${GLEW_LIBRARY}
+#    ${LUA_LIBRARIES}
+#  )

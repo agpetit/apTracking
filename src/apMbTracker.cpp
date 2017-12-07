@@ -23,6 +23,7 @@
 
 #include <visp/vpException.h>
 #include <visp/vpTrackingException.h>
+#include <visp/vpVideoWriter.h>
 
 #include "apMbTracker.h"
 #include "apControlPoint.h"
@@ -448,6 +449,267 @@ void apMbTracker::computeVVS(const vpImage<unsigned char>& _I) {
 	//   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
 	//    std::cout << "error: " << (residu_1 - r) << std::endl;
 }
+
+void load( cv::Mat & mat, const char * data_str )
+{
+    std::stringstream ss;
+    ss << data_str;
+
+    boost::archive::text_iarchive tia( ss );
+    tia >> mat;
+}
+
+void
+ apMbTracker::computeVVSPhotometric(const vpImage<unsigned char>& _I)
+ {
+ double residu_1 =1e3;
+ double r =1e3-1;
+ vpMatrix LTL;
+ vpColVector LTR;
+
+ // compute the interaction matrix and its pseudo inverse
+ apControlPoint *p ;
+
+ vpColVector w;
+ vpColVector weighted_error;
+ vpColVector factor;
+
+ vpTranslationVector tr;
+ cMo.extract(tr);
+
+ unsigned int iter = 0;
+
+ //Nombre de moving edges
+ int nbrow  = 0;
+ vpFeatureLine fli;
+
+ vpMatrix L(nbrow,6), Lsd, LT;
+ // matrice d'interaction a la position desiree
+ vpMatrix Hsd;  // hessien a la position desiree
+ vpMatrix H ; // Hessien utilise pour le levenberg-Marquartd
+
+ vpColVector errorG ;
+
+ // compute the error vector
+ vpColVector error(nbrow);
+ int nerror = error.getRows();
+ int nerrorG;
+ vpColVector v ;
+
+ double limite = 3; //Une limite de 3 pixels
+ limite = limite / cam.get_px(); //Transformation limite pixel en limite metre.
+
+ //Parametre pour la premiere phase d'asservissement
+ double e_prev = 0, e_cur, e_next;
+ bool reloop = true;
+ double count = 0;
+
+ int hght = _I.getHeight();
+ int wdth = _I.getWidth();
+
+ int nbr =hght;
+ int nbc = wdth;
+ vpImage<unsigned char> imG(hght,wdth);
+ vpImage<unsigned char> Igd(hght,wdth);
+  vpImage<unsigned char> Igdgroundtruth(hght,wdth);
+ vpImage<unsigned char> Ig(hght,wdth);
+ vpImage<unsigned char> Idiff(hght,wdth);
+ vpColVector e;
+
+ vpImageIo::read(Igdgroundtruth, "imagePig3.png");
+
+
+ /*for (int i=3; i < nbr-3 ; i++)
+ {
+ //   cout << i << endl ;
+ for (int j = 3 ; j < nbc-3; j++)
+ {
+ // cout << dim_s <<" " <<l <<"  " <<i << "  " << j <<endl ;
+ double Igf =   vpImageFilter::gaussianFilter(_I,i,j) ;
+ imG[i][j] = Igf ;
+
+ }
+ }*/
+
+ /* for (int i=150; i < 350 ; i++)
+ {
+ for (int j = 150 ; j < 550; j++)
+ {
+ // cout << dim_s <<" " <<l <<"  " <<i << "  " << j <<endl ;
+ double Ix =   1 * vpImageFilter::sobelFilterX(imG,i,j);
+ double Iy =   1 * vpImageFilter::sobelFilterY(imG,i,j);
+ Igd[i][j]= (unsigned char)sqrt(vpMath::sqr(Ix)+vpMath::sqr(Iy));
+ //I2[i][j] = (unsigned char)Igrad[i][j];
+ }
+ }*/
+
+ Igd = _I;
+
+ sId.init(imG.getHeight(), imG.getWidth(), tr[2]);
+ sI.init(imG.getHeight(), imG.getWidth(), tr[2]);
+ sId.buildFrom(Igd);
+ sId.interaction(Lsd);
+ //Lsd=2*Lsd;
+ nerrorG = Lsd.getRows();
+ vpColVector errorT(nerror+nerrorG);
+ vpDisplayX displayo;
+ displayo.init(Idiff, 10, 10, "display");
+ double mu = 0.000;
+ vpMatrix diagHsd(6,6);
+ vpMatrix diagLTL(6,6);
+ std::cout << " cmo " << cMo << std::endl;
+
+
+ Hsd = Lsd.AtA();
+ diagHsd.eye(6);
+ for(int i = 0 ; i < 6 ; i++) diagHsd[i][i] = Hsd[i][i];
+
+ H = ((mu * diagHsd) + Hsd).pseudoInverse();
+
+ /*** First phase ***/
+  vpImageTools::imageDifference(Ig,Igdgroundtruth,Idiff);
+
+  vpDisplay::display(Idiff);
+  vpDisplay::flush(Idiff);
+
+  vpVideoWriter writer1;
+  writer1.setCodec( CV_FOURCC('P','I','M','1') );
+  writer1.setFileName("I_d.mpg");
+
+  vpVideoWriter writer2;
+  writer2.setCodec( CV_FOURCC('P','I','M','1') );
+  writer2.setFileName("I.mpg");
+
+  vpVideoWriter writer3;
+  writer3.setCodec( CV_FOURCC('P','I','M','1') );
+  writer3.setFileName("I_diff.mpg");
+
+  writer1.open(Igd);
+  writer2.open(Ig);
+  writer3.open(Idiff);
+
+  vpHomogeneousMatrix cMo1 = cMo;
+
+  vpHomogeneousMatrix cMo0;
+
+  vpRotationMatrix R0;
+  vpTranslationVector t0;
+
+  while ( reloop == true && iter<700)
+ {
+      double t00= vpTime::measureTimeMs();
+      R0[0][0] = cMo[0][0];
+      R0[0][1] = cMo[0][1];
+      R0[0][2] = cMo[0][2];
+      R0[1][0] = cMo[1][0];
+      R0[1][1] = cMo[1][1];
+      R0[1][2] = cMo[1][2];
+      R0[2][0] = cMo[2][0];
+      R0[2][1] = cMo[2][1];
+      R0[2][2] = cMo[2][2];
+
+      t0[0]=-cMo[0][3];
+      t0[1]=-cMo[1][3];
+      t0[2]=-cMo[2][3];
+
+      t0 = R0.inverse()*t0;
+
+      cMo0.buildFrom(t0,R0);
+      string messageStr;
+      messageStr = std::to_string(cMo0[0][3]) + " " + std::to_string(cMo0[1][3]) + " " + std::to_string(cMo0[2][3]) + " "
+              + std::to_string(cMo0[0][0]) + " " + std::to_string(cMo0[0][1]) + " " + std::to_string(cMo0[0][2]) + " "
+              + std::to_string(cMo0[1][0]) + " " + std::to_string(cMo0[1][1]) + " " + std::to_string(cMo0[1][2]) + " "
+              + std::to_string(cMo0[2][0]) + " " + std::to_string(cMo0[2][1]) + " " + std::to_string(cMo0[2][2]) + " ";
+
+      zmq::message_t message(messageStr.length());
+      std::cout << "Problem with communication" <<  messageStr.length() << std::endl;
+      memcpy(message.data(), messageStr.c_str(), messageStr.length());
+
+      bool status = m_socketPub->send(message);
+
+      if(!status)
+         std::cout << "Problem with communication" << std::endl;
+
+               std::cout << " ok send " << std::endl;
+
+         cv::Mat  img;
+         cv::Mat img1 = Mat::zeros( hght,wdth, CV_8UC1);
+         /*int  imgSize = img.total()*img.elemSize();
+         uchar sockData[imgSize];
+         int bytes;*/
+
+
+         zmq::message_t message1;
+
+         bool status1 = m_socketSub->recv(&message1);
+         if(status1){
+         std::string rpl = std::string(static_cast<char*>(message1.data()), message1.size());
+         const char *cstr = rpl.c_str();
+        load(img,cstr);
+
+        // memcpy(img.data, message1.data(), imgSize);
+
+         std::cout << " ok receive " << std::endl;
+
+         /*for (int i = 0; i < imgSize; i += bytes) {
+         bytes=m_socket1.recv(sockData +i) == 0;
+         }*/
+
+       // Assign pixel value to img
+
+       int ptr=0;
+       for (int i = 0;  i < img1.rows; i++) {
+        for (int j = 0; j < img1.cols; j++) {
+         img1.at<uchar>(i,j) = img.at<uchar>(0,i*img1.cols+j);
+         ptr=ptr+3;
+         }
+        }
+
+       cv::imwrite("socketimage100.png", img1);
+         }
+
+ cMo.extract(tr);
+
+ sI.init(Ig.getHeight(), Ig.getWidth(),tr[2]);
+ vpImageConvert::convert(img1,Ig);
+ sI.buildFrom(Ig);
+       sI.interaction(Lsd);
+ sI.error(sId, errorG);
+
+ vpImageTools::imageDifference(Ig,Igdgroundtruth,Idiff);
+ vpDisplay::display(Idiff);
+ vpDisplay::flush(Idiff);
+
+ vpImageIo::write(Idiff, "Idiff.png");
+
+
+ if (iter >1){
+
+     writer1.saveFrame(Igd);
+     writer2.saveFrame(Ig);
+     writer3.saveFrame(Idiff);
+     Hsd = Lsd.AtA();
+     diagHsd.eye(6);
+     for(int i = 0 ; i < 6 ; i++) diagHsd[i][i] = Hsd[i][i];
+
+     H = ((mu * diagHsd) + Hsd).pseudoInverse();
+ //	compute the control law
+ e = H * Lsd.t() *errorG;
+v =  -2*e;
+ cMo =  vpExponentialMap::direct(v).inverse() * cMo;
+
+ std::cout << " v " << v << std::endl;
+}
+
+ iter++;
+ }
+  std::cout << " cmo diff0 " << cMo1.inverse()*cMo << std::endl;
+  getchar();
+ std::cout << "\t First minimization in " << iter << " iteration00 " << std::endl ;
+
+ //   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
+ //    std::cout << "error: " << (residu_1 - r) << std::endl;
+ }
 
 /*void
  apMbTracker::computeVVSHyb(const vpImage<unsigned char>& _I, 	apOgre ogre_)
@@ -7419,6 +7681,165 @@ void apMbTracker::track(const vpImage<unsigned char> &I, const vpImage<
 }
 
 
+/*!
+ Compute each state of the tracking procedure for all the feature sets.
+
+ If the tracking is considered as failed an exception is thrown.
+
+ \param I : The image.
+ */
+
+void apMbTracker::trackDef(const vpImage<unsigned char> &I, const vpImage<
+                vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd, const vpImage<
+                unsigned char>& Ior, const vpImage<unsigned char>& Itex,
+                const double dist) {
+        initPyramid(I, Ipyramid);
+        initPyramid(Iprec, Ipyramidprec);
+        switch (trackingType) {
+        case CCD_SH:
+        case CCD_MH:
+        case CCD_LINES_MH:
+        case CCD_MH_KLT:
+        case CCD_LINES_MH_KLT:
+                initPyramid(IRGB, IRGBpyramid);
+        }
+
+        for (int lvl = (scales.size() - 1); lvl >= 0; lvl -= 1) {
+                if (scales[lvl]) {
+                        vpHomogeneousMatrix cMo_1 = cMo;
+                        try {
+                                downScale(lvl);
+                                double t0 = vpTime::measureTimeMs();
+                                try {
+                                        switch (trackingType) {
+                                        case POINTS_SH:
+                                        case POINTS_MH:
+                                                extractControlPoints(*Ipyramid[lvl], Inormd, Ior, Itex,
+                                                                dist);
+                                                break;
+                                        case LINES_MH:
+                                                extractControlPointsLines(*Ipyramid[lvl], Inormd, Ior,
+                                                                Itex, dist);
+                                                break;
+                                        case CCD_SH:
+                                        case CCD_MH:
+                                                extractControlPointsCCD(*Ipyramid[lvl], Inormd, Ior,
+                                                                Itex, dist);
+                                                break;
+                                        case CCD_MH_KLT:
+                                                extractControlPointsCCD(*Ipyramid[lvl], Inormd, Ior,
+                                                                Itex, dist);
+                                                extractKltControlPointsFAST(*Ipyramid[lvl],Inormd, Ior, Itex, dist);
+                                                break;
+                                        }
+                                } catch (...) {
+                                        vpTRACE("Error in points extraction");
+                                }
+
+                                double t1 = vpTime::measureTimeMs();
+                                std::cout << "timeextract " << t1 - t0 << std::endl;
+                                timeextract = t1 - t0;
+                                double t2 = vpTime::measureTimeMs();
+                                try {
+                                        switch (trackingType) {
+                                        case POINTS_SH:
+                                        case CCD_SH:
+                                                trackControlPoints(*Ipyramid[lvl]);
+                                                break;
+                                        case POINTS_MH:
+                                        case CCD_MH:
+                                                trackControlPointsMH(*Ipyramid[lvl]);
+                                                break;
+                                        case CCD_MH_KLT:
+                                                trackControlPointsMH(*Ipyramid[lvl]);
+                                                trackKltControlPoints(*Ipyramid[lvl]);
+                                                break;
+                                        }
+                                } catch (...) {
+                                        vpTRACE("Error in tracking");
+                                        throw;
+                                }
+                                double t3 = vpTime::measureTimeMs();
+                                std::cout << "timetrack " << t3 - t2 << std::endl;
+                                timetrack = t3-t2;
+
+                                try {
+                                        double t4 = vpTime::measureTimeMs();
+                                        switch (trackingType) {
+                                        case POINTS_SH:
+                                                exportCorrespondencesEdges(*Ipyramid[lvl]);
+                                                break;
+                                        /*case POINTS_MH:
+                                                exportCorrespondencesEdgesMH(*Ipyramid[lvl]);
+                                                break;
+                                        case CCD_SH:
+                                                exportCorrespondencesEdgesCCD(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                                break;
+                                        case CCD_MH:
+                                                exportCorrespondencesEdgesCCDMH(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                                break;
+                                        case CCD_MH_KLT:
+                                                if (kltPoints[lvl].size() > 2)
+                                                exportCorrespondencesEdgesCCDMHKlt(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                                else exportCorrespondencesEdgesCCDMH(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                            break;*/
+                                        }
+                                        double t5 = vpTime::measureTimeMs();
+                                        std::cout << "timeExportCorrespondences " << t5 - t4 << std::endl;
+                                        timevvs = t5-t4;
+                                } catch (...) {
+                                        vpTRACE("Error in computeVVS");
+                                        throw vpException(vpException::fatalError,
+                                                        "Error in computeVVS");
+                                }
+                                // try
+                                // {
+                                // testTracking();
+                                // }
+                                // catch(...)
+                                // {
+                                // throw vpTrackingException(vpTrackingException::fatalError, "test Tracking fail");
+                                // }
+
+                                try {
+                                        //displayControlPoints();
+                                } catch (...) {
+                                        vpTRACE("Error in moving edge updating");
+                                        throw;
+                                }
+
+                        } catch (...) {
+                                if (lvl != 0) {
+                                        cMo = cMo_1;
+                                        reInitLevel(lvl);
+                                        upScale(lvl);
+                                } else {
+                                        upScale(lvl);
+                                        throw;
+                                }
+                        }
+                }
+        }
+
+        cleanPyramid(Ipyramid);
+        switch (trackingType) {
+        case CCD_SH:
+        case CCD_MH:
+        case CCD_LINES_MH:
+        case CCD_MH_KLT:
+        case CCD_LINES_MH_KLT:
+                cleanPyramid(IRGBpyramid);
+                CCDTracker.clearCCDTracker();
+        }
+        cleanPyramid(Ipyramidprec);
+        Iprec = I;
+        IprecRGB = IRGB;
+
+        frame++;
+        frame0++;
+}
+
+
 /*void apMbTracker::track(const vpImage<unsigned char> &I, const vpImage<
 		vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd, const vpImage<
 		unsigned char>& Ior, const vpImage<unsigned char>& Itex,
@@ -7669,6 +8090,46 @@ void apMbTracker::track(const vpImage<unsigned char> &I, const vpImage<
 	Iprec = I;
 }
 
+void apMbTracker::trackXray(const vpImage<unsigned char> &I, double dist) {
+    initPyramid(I, Ipyramid);
+    initPyramid(Iprec, Ipyramidprec);
+
+    for (int lvl = (scales.size() - 1); lvl >= 0; lvl -= 1) {
+        if (scales[lvl]) {
+            vpHomogeneousMatrix cMo_1 = cMo;
+            try {
+                downScale(lvl);
+
+                try {
+                    double t4 = vpTime::measureTimeMs();
+                    computeVVSPhotometric(*Ipyramid[lvl]);
+                    double t5 = vpTime::measureTimeMs();
+                    std::cout << "timeVVS " << t5 - t4 << std::endl;
+                } catch (...) {
+                    vpTRACE("Error in computeVVS");
+                    throw vpException(vpException::fatalError,
+                            "Error in computeVVS");
+                }
+
+            } catch (...) {
+                if (lvl != 0) {
+                    cMo = cMo_1;
+                    reInitLevel(lvl);
+                    upScale(lvl);
+                } else {
+                    upScale(lvl);
+                    throw;
+                }
+            }
+        }
+    }
+
+    cleanPyramid(Ipyramid);
+    cleanPyramid(Ipyramidprec);
+    Iprec = I;
+}
+
+
 /*!
  Compute each state of the tracking procedure for all the feature sets for the prediction phase.
 
@@ -7763,6 +8224,13 @@ void apMbTracker::init(const vpImage<unsigned char>& I,
 	sI.init(I.getHeight(), I.getWidth(), 1);
 	sId.setCameraParameters(cam);
 	sI.setCameraParameters(cam);
+
+    m_socketPub =new zmq::socket_t(m_context, ZMQ_PUB);
+    m_socketPub->bind("tcp://127.0.0.1:6666");
+
+    m_socketSub =new zmq::socket_t(m_context, ZMQ_SUB);
+    m_socketSub->setsockopt(ZMQ_SUBSCRIBE, "", 0);
+    m_socketSub->connect("tcp://127.0.0.1:6667");
 	/*apControlPoint *p;
 	 vpColVector norm(3);
 	 norm[0]=1;
@@ -7779,10 +8247,11 @@ void apMbTracker::init(const vpImage<unsigned char>& I,
 	 p->buildPoint(0,0,a,0.0,norm,cMo);
 	 points_1[i]+=p;
 	 }
-	 }*/
+     }*/
 	//bool a = false;
 	//initPyramid(I, Ipyramid);
 	Iprec = I;
+
 }
 
 
@@ -8193,6 +8662,44 @@ void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 	//kltTracker.initTracking(frame_);
 }
 
+typedef struct point3d{
+
+  double x;
+  double y;
+  double z;
+}point3d;
+
+typedef struct point2d{
+
+  int i;
+  int j;
+}point2d;
+
+/*!
+ Export 3D-2d correspondences in the image.
+
+ \param I : the image.
+ */
+void apMbTracker::exportCorrespondencesEdges(const vpImage<unsigned char> &I) {
+
+std::vector <std::pair <point3d,point2d>> correspondences;
+
+//#pragma omp parallel for
+        for (int k = 0; k < points[scaleLevel].size(); k++)
+        {
+            vpPointSite site = points[scaleLevel][k]->s;
+            std::pair <point3d,point2d> correspondence;
+            point3d p3d = correspondence.first;
+            p3d.x = points[scaleLevel][k]->cpointo.get_oX();
+            p3d.y = points[scaleLevel][k]->cpointo.get_oY();
+            p3d.z = points[scaleLevel][k]->cpointo.get_oZ();
+
+            point2d p2d = correspondence.second;
+            p2d.i = site.i;
+            p2d.j = site.j;
+        }
+}
+
 /*!
  Initialize the control points thanks to a given pose of the camera.
 
@@ -8213,6 +8720,7 @@ void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 
  }
  }*/
+
 
 /*!
  Track the control points in the image.
@@ -8461,6 +8969,7 @@ void process1(const vpImage<vpRGBa>& Inormd, vpImage<unsigned char>& Ilap) {
 			}
 	}
 }
+
 
 /*!
  Extract 3D control points from the depth edges, the texture or color edges, given the depth buffer and the normal map
