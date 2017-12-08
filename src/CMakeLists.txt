@@ -45,6 +45,12 @@ endif(OPENMP_FOUND)
 
 find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 
+set (OpenIGTLink_DIR /usr/local CACHE PATH "Path to OpenIGTLink's install dir")
+find_package(OpenIGTLink REQUIRED)
+include_directories(${OpenIGTLink_INCLUDE_DIRS} .)
+link_directories(${OpenIGTLink_LIBRARY_DIRS})
+set(IGTLink_LIBRARIES ${OpenIGTLink_LIBRARIES})
+
 
 LINK_DIRECTORIES(${GLEW_LIBRARY_DIR})
 
@@ -200,7 +206,7 @@ ADD_EXECUTABLE(apXrayTracking
     ${OPENSCENEGRAPH_LIBRARIES}
     ${QT_LIBRARIES}
     ${GLEW_LIBRARY}
-    ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
+    ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY ${IGTLink_LIBRARIES}}
   )
   
 #    TARGET_LINK_LIBRARIES(apCOAR
