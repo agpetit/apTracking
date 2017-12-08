@@ -79,7 +79,7 @@
 #include <queue>
 #include <condition_variable>
 
-#include <igtlStringMessage.h>
+//#include <igtlStringMessage.h>
 
 
 using namespace std;

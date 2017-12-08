@@ -8675,6 +8675,7 @@ typedef struct point2d{
   int j;
 }point2d;
 
+
 /*!
  Export 3D-2d correspondences in the image.
 
