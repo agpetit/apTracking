@@ -274,6 +274,149 @@ namespace luxifer
         fsaa_fshader->loadShaderSourceFromFile("Materials/FSAA.frag");
     }
 
+    void SceneManager::loadFromSocket()
+    {
+        pContext->makeCurrent();
+        clear();
+        scene_node = ModelLoader::loadFromSocket();
+
+        const int _w = image_w;
+        const int _h = image_h;
+
+
+
+        // The buffer which contain local 3D fragment normal
+        normal_buffer = new Texture2D;
+        normal_buffer->setInternalFormat(GL_RGBA16);
+        normal_buffer->setFilter(Texture2D::MIN_FILTER, Texture2D::NEAREST);
+        normal_buffer->setFilter(Texture2D::MAG_FILTER, Texture2D::NEAREST);
+        normal_buffer->setWrap(Texture2D::WRAP_S, Texture2D::CLAMP_TO_EDGE);
+        normal_buffer->setWrap(Texture2D::WRAP_T, Texture2D::CLAMP_TO_EDGE);
+        normal_buffer->setTextureSize(_w, _h);
+
+        normal_buffer_big = new Texture2D;
+        normal_buffer_big->setInternalFormat(GL_RGBA32F);
+        normal_buffer_big->setFilter(Texture2D::MIN_FILTER, Texture2D::NEAREST);
+        normal_buffer_big->setFilter(Texture2D::MAG_FILTER, Texture2D::NEAREST);
+        normal_buffer_big->setWrap(Texture2D::WRAP_S, Texture2D::CLAMP_TO_EDGE);
+        normal_buffer_big->setWrap(Texture2D::WRAP_T, Texture2D::CLAMP_TO_EDGE);
+        normal_buffer_big->setTextureSize(_w * 2, _h * 2);
+
+        // The buffer which contain local 3D fragment normal
+        edge_buffer = new Texture2D;
+        edge_buffer->setInternalFormat(GL_RGBA8);
+        edge_buffer->setFilter(Texture2D::MIN_FILTER, Texture2D::NEAREST);
+        edge_buffer->setFilter(Texture2D::MAG_FILTER, Texture2D::NEAREST);
+        edge_buffer->setWrap(Texture2D::WRAP_S, Texture2D::CLAMP_TO_EDGE);
+        edge_buffer->setWrap(Texture2D::WRAP_T, Texture2D::CLAMP_TO_EDGE);
+        edge_buffer->setTextureSize(_w, _h);
+
+        // The buffer we're rendering to
+        color_buffer = new Texture2D;
+        color_buffer->setInternalFormat(GL_RGBA8);
+        color_buffer->setFilter(Texture2D::MIN_FILTER, Texture2D::LINEAR);
+        color_buffer->setFilter(Texture2D::MAG_FILTER, Texture2D::LINEAR);
+        color_buffer->setWrap(Texture2D::WRAP_S, Texture2D::CLAMP_TO_EDGE);
+        color_buffer->setWrap(Texture2D::WRAP_T, Texture2D::CLAMP_TO_EDGE);
+        color_buffer->setTextureSize(_w, _h);
+
+        pFBO_postproc = new FBO(GL_TEXTURE_2D, pContext->getTextureID(color_buffer), _w, _h);
+
+        pFBO_tmp = new FBO(_w, _h, GL_RGB8);
+
+        // Make a camera for the viewer
+        color_cam = new Camera(pContext, color_buffer);
+        color_cam->setFOV(fov);
+        color_cam->setAspectRatio(double(_w) / double(_h));
+        ref_ptr<Group> color_cam_grp = new Group;
+        color_cam_grp->addChild(scene_node);
+        color_cam->setScene(color_cam_grp);
+
+        /*osg::PositionAttitudeTransform *lightTransform;
+        osg::Geode *lightMarker;
+
+        lightMarker = new Geode();
+        //lightMarker->addDrawable(new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(), 1)));
+        lightMarker->getOrCreateStateSet()->setAttribute(createSimpleMaterial(osg::Vec4(1.0, 0.0, 0.0, 1.0)));
+
+
+        osg::StateSet *lightStateSet;
+        lightStateSet = color_cam_grp->getOrCreateStateSet();
+        lightsource = new LightSource();
+        lightsource->setLight(createLight(Vec4(1.0, 0.0, 0.0, 1.0)));
+        lightsource->setLocalStateSetModes(StateAttribute::ON);
+        lightsource->setStateSetModes(*lightStateSet, StateAttribute::ON);
+
+        lightTransform = new PositionAttitudeTransform();
+        lightTransform->addChild(lightsource);
+        lightTransform->addChild(lightMarker);
+        lightTransform->setPosition(Vec3(0, 0, -5));
+        //lightTransform->setScale(Vec3(0.1,0.1,0.1));
+
+        color_cam_grp->addChild(lightTransform);
+        color_cam->setScene(color_cam_grp);*/
+
+        ref_ptr<Program> color_program = new Program;
+        ref_ptr<Shader> color_vshader = new Shader(Shader::VERTEX);
+        ref_ptr<Shader> color_fshader = new Shader(Shader::FRAGMENT);
+        color_program->addShader(color_vshader);
+        color_program->addShader(color_fshader);
+        color_vshader->loadShaderSourceFromFile("Materials/colors.vert");
+        color_fshader->loadShaderSourceFromFile("Materials/colors.frag");
+        color_cam_grp->getOrCreateStateSet()->setAttributeAndModes(color_program, StateAttribute::ON | StateAttribute::OVERRIDE);
+
+        // Make a camera to compute local normals for local lighting effects (spots, raytracing, ...)
+        normal_cam = new Camera(pContext, normal_buffer_big);
+        normal_cam->setFOV(fov);
+        normal_cam->setAspectRatio(double(_w) / double(_h));
+        ref_ptr<Group> normal_cam_grp = new Group;
+        normal_cam_grp->addChild(scene_node);
+        normal_cam->setScene(normal_cam_grp);
+
+        //normal_cam->setBackground(normal_buffer);
+
+        ref_ptr<Program> normal_program = new Program;
+        ref_ptr<Shader> normal_vshader = new Shader(Shader::VERTEX);
+        ref_ptr<Shader> normal_fshader = new Shader(Shader::FRAGMENT);
+        normal_program->addShader(normal_vshader);
+        normal_program->addShader(normal_fshader);
+        normal_vshader->loadShaderSourceFromFile("Materials/normals.vert");
+        normal_fshader->loadShaderSourceFromFile("Materials/normals.frag");
+        normal_cam_grp->getOrCreateStateSet()->setAttributeAndModes(normal_program, StateAttribute::ON | StateAttribute::OVERRIDE);
+        u_fNear = new osg::Uniform("fNear", 0.0f);
+        u_fFar = new osg::Uniform("fFar", 0.0f);
+        normal_cam_grp->getOrCreateStateSet()->addUniform(u_fNear);
+        normal_cam_grp->getOrCreateStateSet()->addUniform(u_fFar);
+
+        /*compositor_program1 = new Program;
+        ref_ptr<Shader> compositor_fshader1 = new Shader(Shader::FRAGMENT);
+        //compositor_program1->addShader(compositor_vshader);
+        compositor_program1->addShader(compositor_fshader1);
+        compositor_fshader1->loadShaderSourceFromFile("Materials/EdgeGradmap.frag");*/
+
+        compositor_program = new Program;
+        ref_ptr<Shader> compositor_vshader = new Shader(Shader::VERTEX);
+        ref_ptr<Shader> compositor_fshader = new Shader(Shader::FRAGMENT);
+        //ref_ptr<Shader> compositor_fshader1 = new Shader(Shader::FRAGMENT);
+        //ref_ptr<Shader> compositor_vshader1 = new Shader(Shader::VERTEX);
+        //compositor_program->addShader(compositor_vshader1);
+        //compositor_program->addShader(compositor_fshader1);
+        compositor_program->addShader(compositor_vshader);
+        compositor_program->addShader(compositor_fshader);
+        //compositor_vshader1->loadShaderSourceFromFile("Materials/GaussianFilter.vert");
+        //compositor_fshader1->loadShaderSourceFromFile("Materials/GaussianFilter.frag");
+        compositor_vshader->loadShaderSourceFromFile("Materials/EdgeGradmap.vert");
+        compositor_fshader->loadShaderSourceFromFile("Materials/EdgeGradmap.frag");
+
+        fsaa_program = new Program;
+        ref_ptr<Shader> fsaa_vshader = new Shader(Shader::VERTEX);
+        ref_ptr<Shader> fsaa_fshader = new Shader(Shader::FRAGMENT);
+        fsaa_program->addShader(fsaa_vshader);
+        fsaa_program->addShader(fsaa_fshader);
+        fsaa_vshader->loadShaderSourceFromFile("Materials/FSAA.vert");
+        fsaa_fshader->loadShaderSourceFromFile("Materials/FSAA.frag");
+    }
+
     osg::Vec3d SceneManager::getCameraPosition()
     {
         return -camera_matrix.getTrans();

@@ -78,6 +78,284 @@ namespace luxifer
         return osgDB::readNodeFile(filename);
     }
 
+    ref_ptr<Node> ModelLoader::loadFromSocket()
+    {
+
+
+        /*ref_ptr<Group> model = new Group;
+        model->setName("model");
+
+        ref_ptr<Group> group = new Group;
+        model->addChild(group);
+
+        ref_ptr<Geode> geode = new Geode;
+        group->addChild(geode);
+
+        ref_ptr<Geometry> geom = new Geometry;
+        geode->addDrawable(geom);
+
+        ref_ptr<Vec3Array> v_vertex = new Vec3Array;
+        ref_ptr<Vec3Array> v_normal = new Vec3Array;
+        ref_ptr<Vec2Array> v_tcoord = new Vec2Array;
+        ref_ptr<DrawElementsUInt> v_index = new DrawElementsUInt(GL_TRIANGLES);
+
+        geom->setVertexArray(v_vertex);
+        geom->setNormalArray(v_normal);
+        geom->setTexCoordArray(0, v_tcoord);
+        geom->addPrimitiveSet(v_index);
+
+        string line;
+        string mtlname;
+
+
+        vector<Vec3> vertex;
+        vector<Vec3> normal;
+        vector<Vec2> tcoord;
+
+        vector<unsigned int> idx;
+        vector<bool> normal_is_null;
+        map<tuple<int,int,int>, unsigned int> m_vtx;
+
+        bool b_smooth = true;
+
+        while(getline(file, line) && !file.eof())
+        {
+            // Skip empty lines
+            if (line.empty())
+                continue;
+
+            switch(line[0])
+            {
+            case '#':
+                break;
+            case 'v':       // Vertex data
+                {
+                    float x, y, z, w;
+                    int n;
+                    // Points
+                    if ((n = parseFormat(line.c_str(), "v %f %f %f %f", x, y, z, w)) > 0)
+                    {
+                        switch(n)
+                        {
+                        case 1: vertex.push_back(Vec3(x,0.f,0.f));  break;
+                        case 2: vertex.push_back(Vec3(x,y,0.f));  break;
+                        case 3: vertex.push_back(Vec3(x,y,z));  break;
+                        case 4: vertex.push_back(Vec3(x/w,y/w,z/w));  break;
+                        }
+                    }
+                    // Normals
+                    else if ((n = parseFormat(line.c_str(), "vn %f %f %f", x, y, z)) > 0)
+                    {
+                        switch(n)
+                        {
+                        case 1: normal.push_back(Vec3(x,0.f,0.f));  break;
+                        case 2: normal.push_back(Vec3(x,y,0.f));  break;
+                        case 3: normal.push_back(Vec3(x,y,z));  break;
+                        }
+                    }
+                    // Texture coordinates
+                    else if ((n = parseFormat(line.c_str(), "vt %f %f %f", x, y, z)) > 0)
+                    {
+                        switch(n)
+                        {
+                        case 1: tcoord.push_back(Vec2(x,0.f));  break;
+                        case 2:
+                        case 3: tcoord.push_back(Vec2(x,y));  break;
+                        }
+                    }
+                }
+                break;
+            case 'f':
+                if (left(line, 2) == "f ")
+                {
+                    size_t pos = 2;
+                    idx.clear();
+                    const size_t line_length = line.size();
+                    const char *p_data = line.c_str();
+                    while(pos < line_length)
+                    {
+                        while(pos < line_length && p_data[pos] == ' ')
+                            ++pos;
+                        if (pos == line_length)
+                            break;
+                        int v, vt, vn;
+                        int n;
+                        if (parseFormat(p_data + pos, "%d//%d", v, vn) == 2)
+                        {
+                            if (v < 0)  v += vertex.size();
+                            if (vn < 0) vn += normal.size();
+                            vt = -1;
+                        }
+                        else if ((n = parseFormat(p_data + pos, "%d/%d/%d", v, vt, vn)) > 0)
+                        {
+                            switch(n)
+                            {
+                            case 1:
+                                if (v < 0)  v += vertex.size();
+                                vt = -1;
+                                vn = -1;
+                                break;
+                            case 2:
+                                if (v < 0)  v += vertex.size();
+                                if (vt < 0) vt += tcoord.size();
+                                vn = -1;
+                                break;
+                            case 3:
+                                if (v < 0)  v += vertex.size();
+                                if (vn < 0) vn += normal.size();
+                                if (vt < 0) vt += tcoord.size();
+                                break;
+                            }
+                        }
+                        else
+                            break;
+                        const tuple<int,int,int> tp = make_tuple(v, vt, vn);
+                        map<tuple<int,int,int>, unsigned int >::const_iterator it = b_smooth ? m_vtx.find(tp) : m_vtx.end();
+                        if (it == m_vtx.end())
+                        {
+                            if (b_smooth)
+                                m_vtx[tp] = v_vertex->size();
+                            idx.push_back(v_vertex->size());
+                            --v;
+                            --vt;
+                            --vn;
+                            v_vertex->push_back(vertex[v]);
+                            if (vt >= 0)
+                                v_tcoord->push_back(tcoord[vt]);
+                            else
+                                v_tcoord->push_back(Vec2(0,0));
+                            if (vn >= 0)
+                            {
+                                v_normal->push_back(normal[vn]);
+                                normal_is_null.push_back(false);
+                            }
+                            else
+                            {
+                                normal_is_null.push_back(true);
+                                v_normal->push_back(Vec3(0,0,0));
+                            }
+                        }
+                        else
+                            idx.push_back(it->second);
+
+                        while(pos < line_length && p_data[pos] != ' ')
+                            ++pos;
+                    }
+                    if (idx.size() < 3)
+                        break;
+                    // Triangulate
+                    for(size_t i = 2 ; i < idx.size() ; ++i)
+                    {
+                        v_index->addElement(idx[0]);
+                        v_index->addElement(idx[i - 1]);
+                        v_index->addElement(idx[i]);
+                    }
+                }
+                break;
+            case 'l':
+            case 'p':
+                break;
+            case 's':
+                if (line == "s off")
+                {
+                    b_smooth = false;
+                }
+                else if (left(line, 2) == "s ")
+                {
+                    const string smoothing_group_name = line.substr(2);
+                    b_smooth = true;
+                }
+                break;
+            case 'g':
+//                if (left(line, 2) == "g ")
+//                {
+//                    const string group_name = line.substr(2);
+//                    group->setName(group_name);
+//                }
+                break;
+            case 'o':
+                if (left(line, 2) == "o ")
+                {
+                    const string object_name = line.substr(2);
+
+                    if (geode->getNumDrawables() == 1 && geom->getNumPrimitiveSets() == 1 && v_index->getNumIndices() == 0)
+                    {
+                        geode->setName(object_name);
+                    }
+                    else
+                    {
+                        postProcess(v_vertex, v_normal, v_tcoord, v_index, normal_is_null);
+
+                        geode = new Geode;
+                        geode->setName(object_name);
+                        group->addChild(geode);
+
+                        geom = new Geometry;
+                        geode->addDrawable(geom);
+
+                        v_vertex = new Vec3Array;
+                        v_normal = new Vec3Array;
+                        v_tcoord = new Vec2Array;
+                        v_index = new DrawElementsUInt(GL_TRIANGLES);
+
+                        geom->setVertexArray(v_vertex);
+                        geom->setNormalArray(v_normal);
+                        geom->setTexCoordArray(0, v_tcoord);
+                        geom->addPrimitiveSet(v_index);
+                    }
+                    normal_is_null.clear();
+                    m_vtx.clear();
+                    setMaterial(mtlname, geom);
+                }
+                break;
+            case 'u':
+                if (left(line, 7) == "usemtl ")
+                {
+                    mtlname = line.substr(7);
+
+                    if (geom->getNumPrimitiveSets() == 1 && v_index->getNumIndices() == 0)
+                    {
+                    }
+                    else
+                    {
+                        postProcess(v_vertex, v_normal, v_tcoord, v_index, normal_is_null);
+
+                        geom = new Geometry;
+                        geode->addDrawable(geom);
+
+                        v_vertex = new Vec3Array;
+                        v_normal = new Vec3Array;
+                        v_tcoord = new Vec2Array;
+                        v_index = new DrawElementsUInt(GL_TRIANGLES);
+
+                        geom->setVertexArray(v_vertex);
+                        geom->setNormalArray(v_normal);
+                        geom->setTexCoordArray(0, v_tcoord);
+                        geom->addPrimitiveSet(v_index);
+                    }
+                    normal_is_null.clear();
+                    m_vtx.clear();
+                    setMaterial(mtlname, geom);
+                }
+                break;
+            case 'm':
+                if (left(line, 7) == "mtllib ")
+                {
+                    const string libname = line.substr(7);
+                    loadMaterialLib(makePathRelativeTo(libname, extractPath(filename)));
+                }
+                break;
+            }
+            line.clear();
+        }
+
+        postProcess(v_vertex, v_normal, v_tcoord, v_index, normal_is_null);
+
+        model->computeBound();
+
+        return model;*/
+    }
+
     ref_ptr<Node> ModelLoader::loadOFF(const std::string &filename)
     {
         ref_ptr<Group> model = new Group;

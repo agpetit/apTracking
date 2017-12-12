@@ -79,8 +79,6 @@
 #include <queue>
 #include <condition_variable>
 
-//#include <igtlStringMessage.h>
-
 
 using namespace std;
 using namespace cv;

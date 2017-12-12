@@ -53,6 +53,8 @@ namespace luxifer
         void setMaterial(const std::string &mtlname, osg::ref_ptr<osg::Geometry> geom);
     public:
         static osg::ref_ptr<osg::Node> load(const std::string &filename);
+        static osg::ref_ptr<osg::Node> loadFromSocket();
+
 
     private:
         std::map<std::string, Material> materials;

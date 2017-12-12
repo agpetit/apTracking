@@ -48,6 +48,8 @@ namespace luxifer
           */
         void load(const std::string &filename);
 
+        void loadFromSocket();
+
 
         //! \brief Returns a node which describes the scene
         osg::ref_ptr<osg::Node> getSceneNode();

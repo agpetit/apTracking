@@ -8675,6 +8675,20 @@ typedef struct point2d{
   int j;
 }point2d;
 
+/*void savepair(char *buffer, const std::pair<point3d, point2d> &pair) {
+    memcpy(buffer, &pair.first.x, sizeof(double));
+    memcpy(buffer + sizeof(double), &pair.first.y, sizeof(double));
+    memcpy(buffer + sizeof(double), &pair.first.z, sizeof(double));
+    memcpy(buffer + sizeof(double), &pair.second.i, sizeof(int));
+    memcpy(buffer + sizeof(int), &pair.second.j, sizeof(int));
+
+}*/
+
+void savepair(std::string &message, const std::pair<point3d, point2d> &pair) {
+    message = std::to_string(pair.first.x) + " " + std::to_string(pair.first.y) + " " + std::to_string(pair.first.z) + " "
+            + std::to_string(pair.second.i) + " " + std::to_string(pair.second.j) + " ";
+}
+
 
 /*!
  Export 3D-2d correspondences in the image.
@@ -8685,20 +8699,44 @@ void apMbTracker::exportCorrespondencesEdges(const vpImage<unsigned char> &I) {
 
 std::vector <std::pair <point3d,point2d>> correspondences;
 
+string messageStr;
+string messagePair;
+
+int length = 0;
+
 //#pragma omp parallel for
         for (int k = 0; k < points[scaleLevel].size(); k++)
         {
             vpPointSite site = points[scaleLevel][k]->s;
             std::pair <point3d,point2d> correspondence;
-            point3d p3d = correspondence.first;
+            point3d p3d;
             p3d.x = points[scaleLevel][k]->cpointo.get_oX();
             p3d.y = points[scaleLevel][k]->cpointo.get_oY();
             p3d.z = points[scaleLevel][k]->cpointo.get_oZ();
 
-            point2d p2d = correspondence.second;
+            point2d p2d;
             p2d.i = site.i;
             p2d.j = site.j;
+
+            correspondence.first = p3d;
+            correspondence.second = p2d;
+
+            correspondences.push_back(correspondence);
+
+
+            //savepair(buffer,correspondence);
+            savepair(messagePair,correspondence);
+            messageStr += messagePair;
+            length += messagePair.length();
         }
+
+        zmq::message_t message(length);
+
+        memcpy(message.data(), messageStr.c_str(), length);
+
+        bool status = m_socketPub->send(message);
+        std::cout << "Problem with communication" <<  messageStr.length() << std::endl;
+
 }
 
 /*!
