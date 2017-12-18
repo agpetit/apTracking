@@ -139,31 +139,6 @@ apMbTracker::~apMbTracker() {
 	lines.resize(0);
 }
 
-typedef struct point3d{
-
-  double x;
-  double y;
-  double z;
-}point3d;
-
-typedef struct point2d{
-
-  int i;
-  int j;
-}point2d;
-
-typedef struct triangle{
-
-  int v1;
-  int n1;
-
-  int v2;
-  int n2;
-
-  int v3;
-  int n3;
-
-}triangle;
 
 /*void
  apMbTracker::setOgre(const exampleVpAROgre &ogre_)
@@ -490,8 +465,15 @@ void loadImage( cv::Mat & mat, const char * data_str )
 }
 
 
-void loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles, const char * data_str )
+void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles)
 {
+
+    zmq::message_t message1;
+
+    bool status1 = m_socketSub->recv(&message1);
+    if(status1){
+    std::string rpl = std::string(static_cast<char*>(message1.data()), message1.size());
+    const char *cstr = rpl.c_str();
 
     ifstream file;//(filename.c_str(), ios_base::in);
     float x, y, z, w;
@@ -500,7 +482,7 @@ void loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<poin
 
     //if ((n = parseFormat(line.c_str(), "v %f %f %f %f", x, y, z, w)) > 0)
     std::stringstream stream;
-    stream << data_str;
+    stream << cstr;
 
    // for( size_t i=0; i<stream.length(); i++)
         //char c = stream[i];
@@ -565,6 +547,7 @@ void loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<poin
                  triangles.push_back(tri);
 
              }
+         }
 
 
 }
@@ -8781,7 +8764,7 @@ void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 
 }*/
 
-void savepair(std::string &message, const std::pair<point3d, point2d> &pair) {
+void apMbTracker::savepair(std::string &message, const std::pair<point3d, point2d> &pair) {
     message = std::to_string(pair.first.x) + " " + std::to_string(pair.first.y) + " " + std::to_string(pair.first.z) + " "
             + std::to_string(pair.second.i) + " " + std::to_string(pair.second.j) + " ";
 }

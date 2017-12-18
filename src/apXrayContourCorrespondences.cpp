@@ -196,6 +196,9 @@ typedef struct point_struct{
 }point_struct;
 
 
+
+
+
 int main(int argc, char **argv)
 {
     QApplication a(argc, argv);
@@ -382,7 +385,6 @@ int main(int argc, char **argv)
     mgr->setImageSize(width, height);
     mgr->setFOV(atan((height * 0.5) / mcam.get_py()) * 360.0 / M_PI);
     mgr->setAspectRatio(width * mcam.get_py() / (height * mcam.get_px()));
-    mgr->load(modelFile);
 
     // Depth edges map, with gradient orientation
     vpImage<unsigned char> Ior(height,width);
@@ -745,6 +747,11 @@ grabber.acquire(Idisplay);*/
     vpImage<vpRGBa> Icol2(height,width);
     Icol2 = Icol;
 
+    cv::Mat image;
+    std::vector<point3d> vertices;
+    std::vector<point3d> normals;
+    std::vector<triangle> triangles;
+
     // Main tracking loop
     try
     {
@@ -753,14 +760,20 @@ grabber.acquire(Idisplay);*/
 
             // Render the 3D model, get the depth edges, normal and texture maps
             try{
-                tracker.getPose(cMo);
-                t0= vpTime::measureTimeMs();
 
+                tracker.loadImagePoseMesh(image, cMo, vertices, normals, triangles);
+
+                mgr->load(vertices, normals, triangles);
+                mgr->updateRTT(Inormd,Ior,&cMo);
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
+                a.processEvents(QEventLoop::AllEvents, 1);
                 //vpImageIo::writePNG(Inormd, "Inormd.png");
                 //vpImageIo::writePNG(Ior, "Ior.png");
+                tracker.Inormdprec = Inormd;
+                tracker.Iorprec = Ior;
+                tracker.Itexprec = Ior;
                 tracker.cMoprec = cMo;
 
             }

@@ -71,6 +71,9 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
+
+#include "structures.h"
+
 #include <zmq.hpp>
 using namespace cv;
 
@@ -114,6 +117,7 @@ struct apKLTTrackerParameters
   int useharris;
   int pyramidlevels;
 };
+
 
 
 /*!
@@ -326,6 +330,8 @@ private:
   void loadConfigFile(const std::string& _filename);
   void loadConfigFile(const char* filename);
   void loadModel(const char* cad_name);
+  void  loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
+  void savepair(std::string &message, const std::pair<point3d, point2d> &pair);
   //void loadLines(const vpImage<unsigned char>& I, vector<Vec4i>& Lines, const vpMatrix &Zc, const vpHomogeneousMatrix &cMo);
   //void resetLines();
   void init(const vpImage<unsigned char>&){};

@@ -74,8 +74,7 @@ namespace luxifer
         {
             ModelLoader loader;
             return loader.loadOFF(filename);
-        }
-        return osgDB::readNodeFile(filename);
+        }        return osgDB::readNodeFile(filename);
     }
 
     ref_ptr<Node> ModelLoader::load(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles)

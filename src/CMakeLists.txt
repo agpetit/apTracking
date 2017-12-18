@@ -94,6 +94,7 @@ SET(SURRENDER_FILES
 ADD_DEFINITIONS( -std=gnu++0x)
 
 SET(TRACKER_COMMON_FILES
+    structures.h
     luaconfig.cpp                       luaconfig.h
     apEdgeMap.cpp                       apEdgeMap.h
     apLineExtractor.cpp                 apLineExtractor.h
@@ -165,6 +166,11 @@ ADD_EXECUTABLE(apXrayTracking
     apXrayTracking.cpp
     ${TRACKER_COMMON_FILES}
   )
+
+ADD_EXECUTABLE(apXrayContourCorrespondences
+    apXrayTracking.cpp
+    ${TRACKER_COMMON_FILES}
+  )
   
 #  ADD_EXECUTABLE(apCOAR
 #    apCOAR.cpp
@@ -202,6 +208,14 @@ ADD_EXECUTABLE(apXrayTracking
 #  )
 
   TARGET_LINK_LIBRARIES(apXrayTracking
+        ${OPENGL_LIBRARIES}
+    ${OPENSCENEGRAPH_LIBRARIES}
+    ${QT_LIBRARIES}
+    ${GLEW_LIBRARY}
+    ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
+  )
+
+  TARGET_LINK_LIBRARIES(apXrayContourCorrespondences
         ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
     ${QT_LIBRARIES}
