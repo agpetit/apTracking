@@ -168,7 +168,7 @@ ADD_EXECUTABLE(apXrayTracking
   )
 
 ADD_EXECUTABLE(apXrayContourCorrespondences
-    apXrayTracking.cpp
+    apXrayContourCorrespondences.cpp
     ${TRACKER_COMMON_FILES}
   )
   

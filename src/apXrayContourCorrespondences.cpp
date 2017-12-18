@@ -788,50 +788,8 @@ grabber.acquire(Idisplay);*/
             vpDisplay::flush(Icol);
             vpDisplay::getImage(Icol,Ioverlaycol);
 
-            t0= vpTime::measureTimeMs();
-
-            if(useKalmanFilter)
-            {
-                filt.cMoEst = cMo;
-                filt.predictPose();
-                filt.getPredPose(cMo);
-                tracker.setPose(cMo);
-                tracker.predictKLT = true;
-                mgr->updateRTT(Inormd,Ior,&cMo);
-                a.processEvents(QEventLoop::AllEvents, 1);
-            }
-
-            t1= vpTime::measureTimeMs();
-            cout << "timeKalman "<<t1-t0<<endl;
-            timeKalman = t1-t0;
-
-            // Acquire images
-            /*try{
-                for (int sp = 0; sp < sample ; sp++)
-                {
-
-                    reader.acquire(Id);
-                    //if(tracker.getUseRGB())
-                        readerRGB.acquire(Icol);
-                        Icol1 = Icol;
-                        for (int i = 0; i<height; i++)
-                            for (int j = 0; j<width; j++)
-                            {
-
-                                Icol1[i][j].R = 0.2126*Icol[i][j].R + 0.7152*Icol[i][j].G + 0.0722*Icol[i][j].B;
-                                Icol1[i][j].G = Icol1[i][j].R;
-                                Icol1[i][j].B = Icol1[i][j].R;
-
-                            }
-                        //Icol = Icol1;
-                }
-            }
-            catch(...){
-                break;
-            }*/
-
             //vpImageIo::read(Id,"socketimage10.png");
-            vpImageIo::read(Id,"imagePig3.png");
+            vpImageConvert::convert(image,Id);
             vpDisplay::display(Id);
 
             //tracker.setPose(cMo);
@@ -839,11 +797,8 @@ grabber.acquire(Idisplay);*/
             // Pose tracking
             try{
                 t0= vpTime::measureTimeMs();
-                tracker.trackXray(Id, tr[2]);
+                tracker.trackDef(Id,Icol,Inormd,Ior,Ior,tr[2]);
 
-                //tracker.displayKltPoints(Id);
-
-                //tracker.track(Id, Igrad, Igradx, Igrady, Inormd, Ior, Ior, tr[2]);
                 {
                     tracker.getCovarianceMatrix(covMat);
                     tracker.getCovarianceMatrixME(covMatME);
