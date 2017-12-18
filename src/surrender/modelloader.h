@@ -8,6 +8,27 @@
 #include <string>
 #include <map>
 
+
+typedef struct point3d{
+
+  double x;
+  double y;
+  double z;
+}point3d;
+
+typedef struct triangle{
+
+  int v1;
+  int n1;
+
+  int v2;
+  int n2;
+
+  int v3;
+  int n3;
+
+}triangle;
+
 namespace luxifer
 {
     /** \brief An interface which handles loading 3D meshes
@@ -43,6 +64,7 @@ namespace luxifer
 
         osg::ref_ptr<osg::Node> loadOBJ(const std::string &filename);
         osg::ref_ptr<osg::Node> loadOFF(const std::string &filename);
+        osg::ref_ptr<osg::Node> loadExt(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
 
         void loadMaterialLib(const std::string &libname);
         void postProcess(osg::ref_ptr<osg::Vec3Array> v_vertex,
@@ -53,7 +75,7 @@ namespace luxifer
         void setMaterial(const std::string &mtlname, osg::ref_ptr<osg::Geometry> geom);
     public:
         static osg::ref_ptr<osg::Node> load(const std::string &filename);
-        static osg::ref_ptr<osg::Node> loadFromSocket();
+        static osg::ref_ptr<osg::Node> load(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
 
 
     private:

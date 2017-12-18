@@ -78,11 +78,19 @@ namespace luxifer
         return osgDB::readNodeFile(filename);
     }
 
-    ref_ptr<Node> ModelLoader::loadFromSocket()
+    ref_ptr<Node> ModelLoader::load(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles)
+    {
+
+            ModelLoader loader;
+            return loader.loadExt(vertices, normals, triangles);
+    }
+
+
+    ref_ptr<Node> ModelLoader::loadExt(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles)
     {
 
 
-        /*ref_ptr<Group> model = new Group;
+        ref_ptr<Group> model = new Group;
         model->setName("model");
 
         ref_ptr<Group> group = new Group;
@@ -107,6 +115,8 @@ namespace luxifer
         string line;
         string mtlname;
 
+        materials[mtlname] = Material();
+        setMaterial(mtlname, geom);
 
         vector<Vec3> vertex;
         vector<Vec3> normal;
@@ -118,165 +128,137 @@ namespace luxifer
 
         bool b_smooth = true;
 
-        while(getline(file, line) && !file.eof())
+        for (int i ; i < vertices.size(); i++)
         {
-            // Skip empty lines
-            if (line.empty())
-                continue;
+            vertex.push_back(Vec3(vertices[i].x, vertices[i].y, vertices[i].z));
+            normal.push_back(Vec3(normals[i].x, normals[i].y, normals[i].z));
+        }
 
-            switch(line[0])
-            {
-            case '#':
-                break;
-            case 'v':       // Vertex data
-                {
-                    float x, y, z, w;
-                    int n;
-                    // Points
-                    if ((n = parseFormat(line.c_str(), "v %f %f %f %f", x, y, z, w)) > 0)
-                    {
-                        switch(n)
-                        {
-                        case 1: vertex.push_back(Vec3(x,0.f,0.f));  break;
-                        case 2: vertex.push_back(Vec3(x,y,0.f));  break;
-                        case 3: vertex.push_back(Vec3(x,y,z));  break;
-                        case 4: vertex.push_back(Vec3(x/w,y/w,z/w));  break;
-                        }
-                    }
-                    // Normals
-                    else if ((n = parseFormat(line.c_str(), "vn %f %f %f", x, y, z)) > 0)
-                    {
-                        switch(n)
-                        {
-                        case 1: normal.push_back(Vec3(x,0.f,0.f));  break;
-                        case 2: normal.push_back(Vec3(x,y,0.f));  break;
-                        case 3: normal.push_back(Vec3(x,y,z));  break;
-                        }
-                    }
-                    // Texture coordinates
-                    else if ((n = parseFormat(line.c_str(), "vt %f %f %f", x, y, z)) > 0)
-                    {
-                        switch(n)
-                        {
-                        case 1: tcoord.push_back(Vec2(x,0.f));  break;
-                        case 2:
-                        case 3: tcoord.push_back(Vec2(x,y));  break;
-                        }
-                    }
-                }
-                break;
-            case 'f':
-                if (left(line, 2) == "f ")
-                {
-                    size_t pos = 2;
-                    idx.clear();
-                    const size_t line_length = line.size();
-                    const char *p_data = line.c_str();
-                    while(pos < line_length)
-                    {
-                        while(pos < line_length && p_data[pos] == ' ')
-                            ++pos;
-                        if (pos == line_length)
-                            break;
-                        int v, vt, vn;
-                        int n;
-                        if (parseFormat(p_data + pos, "%d//%d", v, vn) == 2)
-                        {
-                            if (v < 0)  v += vertex.size();
-                            if (vn < 0) vn += normal.size();
-                            vt = -1;
-                        }
-                        else if ((n = parseFormat(p_data + pos, "%d/%d/%d", v, vt, vn)) > 0)
-                        {
-                            switch(n)
-                            {
-                            case 1:
-                                if (v < 0)  v += vertex.size();
-                                vt = -1;
-                                vn = -1;
-                                break;
-                            case 2:
-                                if (v < 0)  v += vertex.size();
-                                if (vt < 0) vt += tcoord.size();
-                                vn = -1;
-                                break;
-                            case 3:
-                                if (v < 0)  v += vertex.size();
-                                if (vn < 0) vn += normal.size();
-                                if (vt < 0) vt += tcoord.size();
-                                break;
-                            }
-                        }
-                        else
-                            break;
-                        const tuple<int,int,int> tp = make_tuple(v, vt, vn);
-                        map<tuple<int,int,int>, unsigned int >::const_iterator it = b_smooth ? m_vtx.find(tp) : m_vtx.end();
-                        if (it == m_vtx.end())
-                        {
-                            if (b_smooth)
-                                m_vtx[tp] = v_vertex->size();
-                            idx.push_back(v_vertex->size());
-                            --v;
-                            --vt;
-                            --vn;
-                            v_vertex->push_back(vertex[v]);
-                            if (vt >= 0)
-                                v_tcoord->push_back(tcoord[vt]);
-                            else
-                                v_tcoord->push_back(Vec2(0,0));
-                            if (vn >= 0)
-                            {
-                                v_normal->push_back(normal[vn]);
-                                normal_is_null.push_back(false);
-                            }
-                            else
-                            {
-                                normal_is_null.push_back(true);
-                                v_normal->push_back(Vec3(0,0,0));
-                            }
-                        }
-                        else
-                            idx.push_back(it->second);
+        for (int i ; i < triangles.size(); i++)
+        {
+          int v1, vt1, vn1;
+          int v2, vt2, vn2;
+          int v3, vt3, vn3;
 
-                        while(pos < line_length && p_data[pos] != ' ')
-                            ++pos;
-                    }
-                    if (idx.size() < 3)
-                        break;
-                    // Triangulate
-                    for(size_t i = 2 ; i < idx.size() ; ++i)
-                    {
-                        v_index->addElement(idx[0]);
-                        v_index->addElement(idx[i - 1]);
-                        v_index->addElement(idx[i]);
-                    }
-                }
-                break;
-            case 'l':
-            case 'p':
-                break;
-            case 's':
-                if (line == "s off")
-                {
-                    b_smooth = false;
-                }
-                else if (left(line, 2) == "s ")
-                {
-                    const string smoothing_group_name = line.substr(2);
-                    b_smooth = true;
-                }
-                break;
-            case 'g':
-//                if (left(line, 2) == "g ")
-//                {
-//                    const string group_name = line.substr(2);
-//                    group->setName(group_name);
-//                }
-                break;
-            case 'o':
-                if (left(line, 2) == "o ")
-                {
-                    const string object_name = line.substr(2);
+          vt1 = -1;
+          v1 = triangles[i].v1;
+          vn1 = triangles[i].n1;
+
+          vt2 = -1;
+          v2 = triangles[i].v2;
+          vn2 = triangles[i].n2;
+
+          vt3 = -1;
+          v3 = triangles[i].v3;
+          vn3 = triangles[i].n3;
+
+          const tuple<int,int,int> tp1 = make_tuple(v1, vt1, vn1);
+          map<tuple<int,int,int>, unsigned int >::const_iterator it1 = b_smooth ? m_vtx.find(tp1) : m_vtx.end();
+          if (it1 == m_vtx.end())
+          {
+              if (b_smooth)
+                  m_vtx[tp1] = v_vertex->size();
+              idx.push_back(v_vertex->size());
+              --v1;
+              --vt1;
+              --vn1;
+              v_vertex->push_back(vertex[v1]);
+              if (vt1 >= 0)
+                  v_tcoord->push_back(tcoord[vt1]);
+              else
+                  v_tcoord->push_back(Vec2(0,0));
+              if (vn1 >= 0)
+              {
+                  v_normal->push_back(normal[vn1]);
+                  normal_is_null.push_back(false);
+              }
+              else
+              {
+                  normal_is_null.push_back(true);
+                  v_normal->push_back(Vec3(0,0,0));
+              }
+          }
+          else
+              idx.push_back(it1->second);
+
+          for(size_t i = 2 ; i < idx.size() ; ++i)
+          {
+              v_index->addElement(idx[0]);
+              v_index->addElement(idx[i - 1]);
+              v_index->addElement(idx[i]);
+          }
+
+          const tuple<int,int,int> tp2 = make_tuple(v2, vt2, vn2);
+          map<tuple<int,int,int>, unsigned int >::const_iterator it2 = b_smooth ? m_vtx.find(tp2) : m_vtx.end();
+          if (it2 == m_vtx.end())
+          {
+              if (b_smooth)
+                  m_vtx[tp2] = v_vertex->size();
+              idx.push_back(v_vertex->size());
+              --v2;
+              --vt2;
+              --vn2;
+              v_vertex->push_back(vertex[v2]);
+              if (vt2 >= 0)
+                  v_tcoord->push_back(tcoord[vt2]);
+              else
+                  v_tcoord->push_back(Vec2(0,0));
+              if (vn2 >= 0)
+              {
+                  v_normal->push_back(normal[vn2]);
+                  normal_is_null.push_back(false);
+              }
+              else
+              {
+                  normal_is_null.push_back(true);
+                  v_normal->push_back(Vec3(0,0,0));
+              }
+          }
+          else
+              idx.push_back(it2->second);
+
+          const tuple<int,int,int> tp3 = make_tuple(v3, vt3, vn3);
+          map<tuple<int,int,int>, unsigned int >::const_iterator it3 = b_smooth ? m_vtx.find(tp3) : m_vtx.end();
+          if (it3 == m_vtx.end())
+          {
+              if (b_smooth)
+                  m_vtx[tp3] = v_vertex->size();
+              idx.push_back(v_vertex->size());
+              --v3;
+              --vt3;
+              --vn3;
+              v_vertex->push_back(vertex[v3]);
+              if (vt3 >= 0)
+                  v_tcoord->push_back(tcoord[vt3]);
+              else
+                  v_tcoord->push_back(Vec2(0,0));
+              if (vn3 >= 0)
+              {
+                  v_normal->push_back(normal[vn3]);
+                  normal_is_null.push_back(false);
+              }
+              else
+              {
+                  normal_is_null.push_back(true);
+                  v_normal->push_back(Vec3(0,0,0));
+              }
+          }
+          else
+              idx.push_back(it3->second);
+
+          for(size_t i = 2 ; i < idx.size() ; ++i)
+          {
+              v_index->addElement(idx[0]);
+              v_index->addElement(idx[i - 1]);
+              v_index->addElement(idx[i]);
+          }
+
+
+
+        }
+
+
+                    const string object_name = "deformablemesh";
 
                     if (geode->getNumDrawables() == 1 && geom->getNumPrimitiveSets() == 1 && v_index->getNumIndices() == 0)
                     {
@@ -306,54 +288,12 @@ namespace luxifer
                     normal_is_null.clear();
                     m_vtx.clear();
                     setMaterial(mtlname, geom);
-                }
-                break;
-            case 'u':
-                if (left(line, 7) == "usemtl ")
-                {
-                    mtlname = line.substr(7);
-
-                    if (geom->getNumPrimitiveSets() == 1 && v_index->getNumIndices() == 0)
-                    {
-                    }
-                    else
-                    {
-                        postProcess(v_vertex, v_normal, v_tcoord, v_index, normal_is_null);
-
-                        geom = new Geometry;
-                        geode->addDrawable(geom);
-
-                        v_vertex = new Vec3Array;
-                        v_normal = new Vec3Array;
-                        v_tcoord = new Vec2Array;
-                        v_index = new DrawElementsUInt(GL_TRIANGLES);
-
-                        geom->setVertexArray(v_vertex);
-                        geom->setNormalArray(v_normal);
-                        geom->setTexCoordArray(0, v_tcoord);
-                        geom->addPrimitiveSet(v_index);
-                    }
-                    normal_is_null.clear();
-                    m_vtx.clear();
-                    setMaterial(mtlname, geom);
-                }
-                break;
-            case 'm':
-                if (left(line, 7) == "mtllib ")
-                {
-                    const string libname = line.substr(7);
-                    loadMaterialLib(makePathRelativeTo(libname, extractPath(filename)));
-                }
-                break;
-            }
-            line.clear();
-        }
 
         postProcess(v_vertex, v_normal, v_tcoord, v_index, normal_is_null);
 
         model->computeBound();
 
-        return model;*/
+        return model;
     }
 
     ref_ptr<Node> ModelLoader::loadOFF(const std::string &filename)

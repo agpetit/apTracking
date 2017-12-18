@@ -274,11 +274,11 @@ namespace luxifer
         fsaa_fshader->loadShaderSourceFromFile("Materials/FSAA.frag");
     }
 
-    void SceneManager::loadFromSocket()
+    void SceneManager::load(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles)
     {
         pContext->makeCurrent();
         clear();
-        scene_node = ModelLoader::loadFromSocket();
+        scene_node = ModelLoader::load(vertices, normals, triangles);
 
         const int _w = image_w;
         const int _h = image_h;

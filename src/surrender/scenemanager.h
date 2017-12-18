@@ -17,9 +17,11 @@
 #include <QObject>
 #include <visp/vpImage.h>
 #include <osg/LightSource>
+#include "modelloader.h"
 
 class vpHomogeneousMatrix;
 class apRend;
+
 
 namespace luxifer
 {
@@ -48,7 +50,7 @@ namespace luxifer
           */
         void load(const std::string &filename);
 
-        void loadFromSocket();
+        void load(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
 
 
         //! \brief Returns a node which describes the scene

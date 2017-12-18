@@ -30,6 +30,10 @@
 #include "apKltControlPoint.h"
 //#include "apViews.h"
 
+#include <fstream>
+#include <cstring>
+#include <cstdio>
+#include <iostream>
 
 #include "luaconfig.h"
 
@@ -134,6 +138,32 @@ apMbTracker::~apMbTracker() {
 	}
 	lines.resize(0);
 }
+
+typedef struct point3d{
+
+  double x;
+  double y;
+  double z;
+}point3d;
+
+typedef struct point2d{
+
+  int i;
+  int j;
+}point2d;
+
+typedef struct triangle{
+
+  int v1;
+  int n1;
+
+  int v2;
+  int n2;
+
+  int v3;
+  int n3;
+
+}triangle;
 
 /*void
  apMbTracker::setOgre(const exampleVpAROgre &ogre_)
@@ -450,13 +480,93 @@ void apMbTracker::computeVVS(const vpImage<unsigned char>& _I) {
 	//    std::cout << "error: " << (residu_1 - r) << std::endl;
 }
 
-void load( cv::Mat & mat, const char * data_str )
+void loadImage( cv::Mat & mat, const char * data_str )
 {
     std::stringstream ss;
     ss << data_str;
 
     boost::archive::text_iarchive tia( ss );
     tia >> mat;
+}
+
+
+void loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles, const char * data_str )
+{
+
+    ifstream file;//(filename.c_str(), ios_base::in);
+    float x, y, z, w;
+    string line;
+    int n;
+
+    //if ((n = parseFormat(line.c_str(), "v %f %f %f %f", x, y, z, w)) > 0)
+    std::stringstream stream;
+    stream << data_str;
+
+   // for( size_t i=0; i<stream.length(); i++)
+        //char c = stream[i];
+        //if( c == '[' ) i++;
+
+        if (stream.peek() == '[')
+            stream.ignore();
+
+            //while (stream[i] != ']')
+             for (int j = 0; j < 4; j++)
+                 for (int k = 0; k < 4; k++)
+             stream >> cMo[j][k];
+
+             if (stream.peek() == ']')
+                 stream.ignore();
+
+             int npoints = 0;
+
+             for (int j = 0; j < npoints;j++)
+
+             while (stream.peek()!=';')
+             {
+                 point3d vertex;
+
+                 stream >> vertex.x;
+                 stream >> vertex.y;
+                 stream >> vertex.z;
+
+                 //if ()
+                     npoints ++;
+                 //else stream.ignore();
+
+                 vertices.push_back(vertex);
+
+             }
+             stream.ignore();
+
+             while (stream.peek()!=';')
+             {
+                 point3d normal;
+
+                 stream >> normal.x;
+                 stream >> normal.y;
+                 stream >> normal.z;
+
+                 normals.push_back(normal);
+
+             }
+             stream.ignore();
+
+             while (stream.peek()!=';')
+             {
+                 triangle tri;
+
+                 stream >> tri.v1;
+                 tri.n1 = tri.v1;
+                 stream >> tri.v2;
+                 tri.n2 = tri.v2;
+                 stream >> tri.v3;
+                 tri.n3 = tri.v3;
+
+                 triangles.push_back(tri);
+
+             }
+
+
 }
 
 void
@@ -645,7 +755,7 @@ void
          if(status1){
          std::string rpl = std::string(static_cast<char*>(message1.data()), message1.size());
          const char *cstr = rpl.c_str();
-        load(img,cstr);
+        loadImage(img,cstr);
 
         // memcpy(img.data, message1.data(), imgSize);
 
@@ -8661,19 +8771,6 @@ void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 	//   std::cout << "ok 1 " << std::endl;
 	//kltTracker.initTracking(frame_);
 }
-
-typedef struct point3d{
-
-  double x;
-  double y;
-  double z;
-}point3d;
-
-typedef struct point2d{
-
-  int i;
-  int j;
-}point2d;
 
 /*void savepair(char *buffer, const std::pair<point3d, point2d> &pair) {
     memcpy(buffer, &pair.first.x, sizeof(double));
