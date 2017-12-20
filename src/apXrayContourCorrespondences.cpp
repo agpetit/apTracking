@@ -195,10 +195,6 @@ typedef struct point_struct{
   double z;
 }point_struct;
 
-
-
-
-
 int main(int argc, char **argv)
 {
     QApplication a(argc, argv);
@@ -269,7 +265,7 @@ int main(int argc, char **argv)
     	object = "soyuz";
 
      if (configFile.empty())
-         configFile = object + vpIoTools::path("/") + object + vpIoTools::path(".lua");
+      configFile = object + vpIoTools::path("/") + object + vpIoTools::path(".lua");
       modelFile = object + vpIoTools::path("/")+ object + vpIoTools::path(".obj");
       initFile = object + vpIoTools::path("/") + object;
 
@@ -764,7 +760,30 @@ grabber.acquire(Idisplay);*/
                 tracker.loadImagePoseMesh(image, cMo, vertices, normals, triangles);
 
                 mgr->load(vertices, normals, triangles);
+
+                cMo[0][0] = 1;
+                cMo[0][1] = 0;
+                cMo[0][2] = 0;
+
+                cMo[1][0] = 0;
+                cMo[1][1] = 1;
+                cMo[1][2] = 0;
+
+                cMo[2][0] = 0;
+                cMo[2][1] = 0;
+                cMo[2][2] = 1;
+
+                cMo[2][3] = 20;
+
+                t0= vpTime::measureTimeMs();
+
+                std::cout << "cmo " << cMo << std::endl;
+
                 mgr->updateRTT(Inormd,Ior,&cMo);
+
+                vpImageIo::write(Inormd, "Inormd.png");
+                vpImageIo::write(Ior, "Ior.png");
+
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
@@ -795,6 +814,8 @@ grabber.acquire(Idisplay);*/
             //tracker.setPose(cMo);
             cMo.extract(tr);
             // Pose tracking
+
+                            getchar();
             try{
                 t0= vpTime::measureTimeMs();
                 tracker.trackDef(Id,Icol,Inormd,Ior,Ior,tr[2]);

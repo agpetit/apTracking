@@ -127,14 +127,17 @@ namespace luxifer
 
         bool b_smooth = true;
 
-        for (int i ; i < vertices.size(); i++)
+        for (int i = 0 ; i < vertices.size(); i++)
         {
             vertex.push_back(Vec3(vertices[i].x, vertices[i].y, vertices[i].z));
             normal.push_back(Vec3(normals[i].x, normals[i].y, normals[i].z));
         }
 
-        for (int i ; i < triangles.size(); i++)
+        std::cout << " size vertices " << vertices.size() << " size triangles " << triangles.size() << std::endl;
+
+        for (int i = 0 ; i < triangles.size(); i++)
         {
+          idx.clear();
           int v1, vt1, vn1;
           int v2, vt2, vn2;
           int v3, vt3, vn3;
@@ -151,6 +154,9 @@ namespace luxifer
           v3 = triangles[i].v3;
           vn3 = triangles[i].n3;
 
+         std::cout << " v1 " << v1 << " vn1 " << vn1 << std::endl;
+
+
           const tuple<int,int,int> tp1 = make_tuple(v1, vt1, vn1);
           map<tuple<int,int,int>, unsigned int >::const_iterator it1 = b_smooth ? m_vtx.find(tp1) : m_vtx.end();
           if (it1 == m_vtx.end())
@@ -158,9 +164,6 @@ namespace luxifer
               if (b_smooth)
                   m_vtx[tp1] = v_vertex->size();
               idx.push_back(v_vertex->size());
-              --v1;
-              --vt1;
-              --vn1;
               v_vertex->push_back(vertex[v1]);
               if (vt1 >= 0)
                   v_tcoord->push_back(tcoord[vt1]);
@@ -176,16 +179,11 @@ namespace luxifer
                   normal_is_null.push_back(true);
                   v_normal->push_back(Vec3(0,0,0));
               }
+
+              //std::cout << " v1 " << v1 << " vn1 " << vn1 << std::endl;
           }
           else
               idx.push_back(it1->second);
-
-          for(size_t i = 2 ; i < idx.size() ; ++i)
-          {
-              v_index->addElement(idx[0]);
-              v_index->addElement(idx[i - 1]);
-              v_index->addElement(idx[i]);
-          }
 
           const tuple<int,int,int> tp2 = make_tuple(v2, vt2, vn2);
           map<tuple<int,int,int>, unsigned int >::const_iterator it2 = b_smooth ? m_vtx.find(tp2) : m_vtx.end();
@@ -194,9 +192,6 @@ namespace luxifer
               if (b_smooth)
                   m_vtx[tp2] = v_vertex->size();
               idx.push_back(v_vertex->size());
-              --v2;
-              --vt2;
-              --vn2;
               v_vertex->push_back(vertex[v2]);
               if (vt2 >= 0)
                   v_tcoord->push_back(tcoord[vt2]);
@@ -223,9 +218,6 @@ namespace luxifer
               if (b_smooth)
                   m_vtx[tp3] = v_vertex->size();
               idx.push_back(v_vertex->size());
-              --v3;
-              --vt3;
-              --vn3;
               v_vertex->push_back(vertex[v3]);
               if (vt3 >= 0)
                   v_tcoord->push_back(tcoord[vt3]);
@@ -256,10 +248,11 @@ namespace luxifer
 
         }
 
+        std::cout << " ok load mesh " << std::endl;
 
-                    const string object_name = "deformablemesh";
+        const string object_name = "deformablemesh";
 
-                    if (geode->getNumDrawables() == 1 && geom->getNumPrimitiveSets() == 1 && v_index->getNumIndices() == 0)
+                    /*if (geode->getNumDrawables() == 1 && geom->getNumPrimitiveSets() == 1 && v_index->getNumIndices() == 0)
                     {
                         geode->setName(object_name);
                     }
@@ -286,11 +279,11 @@ namespace luxifer
                     }
                     normal_is_null.clear();
                     m_vtx.clear();
-                    setMaterial(mtlname, geom);
+                    setMaterial(mtlname, geom);*/
 
         postProcess(v_vertex, v_normal, v_tcoord, v_index, normal_is_null);
 
-        model->computeBound();
+        //model->computeBound();
 
         return model;
     }

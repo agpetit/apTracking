@@ -471,6 +471,8 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
     zmq::message_t message1;
 
     bool status1 = m_socketSub->recv(&message1);
+
+    std::cout << " status 1 " << status1 << std::endl;
     if(status1){
     std::string rpl = std::string(static_cast<char*>(message1.data()), message1.size());
     const char *cstr = rpl.c_str();
@@ -492,16 +494,17 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
             stream.ignore();
 
             //while (stream[i] != ']')
-             for (int j = 0; j < 4; j++)
-                 for (int k = 0; k < 4; k++)
+             for (int j = 0; j < 3; j++)
+                 for (int k = 0; k < 4; k++){
              stream >> cMo[j][k];
-
-             if (stream.peek() == ']')
+             if (stream.peek() == ',')
+                 stream.ignore();
+             std::cout << " cmo " << cMo[j][k] << std::endl;
+                 }
+                 stream.ignore();
                  stream.ignore();
 
              int npoints = 0;
-
-             for (int j = 0; j < npoints;j++)
 
              while (stream.peek()!=';')
              {
@@ -511,9 +514,8 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
                  stream >> vertex.y;
                  stream >> vertex.z;
 
-                 //if ()
-                     npoints ++;
-                 //else stream.ignore();
+                 std::cout << " vertex " <<  vertex.x << " " <<  vertex.y << " " <<  vertex.z << std::endl;
+                 npoints ++;
 
                  vertices.push_back(vertex);
 
@@ -527,6 +529,8 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
                  stream >> normal.x;
                  stream >> normal.y;
                  stream >> normal.z;
+
+                 std::cout << " normals " <<  normal.x << " " <<  normal.y << " " <<  normal.z << std::endl;
 
                  normals.push_back(normal);
 
@@ -544,6 +548,7 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
                  stream >> tri.v3;
                  tri.n3 = tri.v3;
 
+                 std::cout << " triangle " <<  tri.v1 << " " <<  tri.v2  << " " <<  tri.v3 << std::endl;
                  triangles.push_back(tri);
 
              }
