@@ -7867,10 +7867,10 @@ void apMbTracker::trackDef(const vpImage<unsigned char> &I, const vpImage<
                                         case POINTS_SH:
                                                 exportCorrespondencesEdges(*Ipyramid[lvl]);
                                                 break;
-                                        /*case POINTS_MH:
-                                                exportCorrespondencesEdgesMH(*Ipyramid[lvl]);
+                                        case POINTS_MH:
+                                                exportCorrespondencesEdges(*Ipyramid[lvl]);
                                                 break;
-                                        case CCD_SH:
+                                        /*case CCD_SH:
                                                 exportCorrespondencesEdgesCCD(*Ipyramid[lvl], *IRGBpyramid[lvl]);
                                                 break;
                                         case CCD_MH:

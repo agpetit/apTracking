@@ -342,12 +342,12 @@ int main(int argc, char **argv)
     vpDisplayX display2;
     if (opt_display)
     {
-        display1.init(Id, 10, 10, "Test tracking");
+        display1.init(Id, 10, 10, "Test tracking L");
         vpDisplay::display(Id) ;
         vpDisplay::flush(Id);
         //if(tracker.getUseRGB())
         {
-        display2.init(Icol, 10, 1000, "Test tracking");
+        display2.init(Icol, 10, 1000, "Test tracking RGB");
         vpDisplay::display(Icol) ;
         vpDisplay::flush(Icol);
         }
@@ -355,7 +355,19 @@ int main(int argc, char **argv)
 
     vpHomogeneousMatrix cMo, cMo2, cMoFilt;
 
-    cout << "detection time "<< endl;
+    cMo[0][0] = 1;
+    cMo[0][1] = 0;
+    cMo[0][2] = 0;
+
+    cMo[1][0] = 0;
+    cMo[1][1] = 1;
+    cMo[1][2] = 0;
+
+    cMo[2][0] = 0;
+    cMo[2][1] = 0;
+    cMo[2][2] = 1;
+
+    cMo[2][3] = 3.6;
 
      vpImage<vpRGBa> Icol1(height,width);
 
@@ -433,9 +445,12 @@ int main(int argc, char **argv)
             // Render the 3D model, get the depth edges, normal and texture maps
             try{
 
+                if (im == 0)
+                {
                 tracker.loadImagePoseMesh(image, cMo, vertices, normals, triangles);
 
                 mgr->load(vertices, normals, triangles);
+
 
                 cMo[0][0] = 1;
                 cMo[0][1] = 0;
@@ -449,11 +464,12 @@ int main(int argc, char **argv)
                 cMo[2][1] = 0;
                 cMo[2][2] = 1;
 
-                cMo[2][3] = 4;
+                cMo[2][3] = 3.6;
 
                 t0= vpTime::measureTimeMs();
 
                 std::cout << "cmo " << cMo << std::endl;
+                }
 
                 mgr->updateRTT(Inormd,Ior,&cMo);
 
@@ -481,14 +497,13 @@ int main(int argc, char **argv)
             vpDisplay::getImage(Icol,Ioverlaycol);
 
             //vpImageIo::read(Id,"socketimage10.png");
-            vpImageConvert::convert(image,Id);
+           //vpImageConvert::convert(image,Id);
             vpDisplay::display(Id);
 
             //tracker.setPose(cMo);
             cMo.extract(tr);
             // Pose tracking
 
-                            getchar();
             try{
                 t0= vpTime::measureTimeMs();
                 tracker.trackDef(Id,Icol,Inormd,Ior,Ior,tr[2]);
@@ -512,7 +527,6 @@ int main(int argc, char **argv)
             tracker.display(Id,cMo,mcam,vpColor::green,1);
 
             std::cout<<" cMo out" << cMo <<std::endl;
-            std::cout<<" cMo filt" << cMoFilt <<std::endl;
 
             cMo.extract(tr);
             cMo.extract(R);
@@ -535,7 +549,7 @@ int main(int argc, char **argv)
             //if(im%5==0)
             {
             //vpImageIo::write(Ioverlaycol, filename4);
-            //vpImageIo::write(Ioverlay, filename5);
+            vpImageIo::write(Ioverlay, "edgematching.png");
             }
 
             im++;

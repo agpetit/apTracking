@@ -830,7 +830,8 @@ vpImagePoint ip;
 			{
 				ip.set_i( list_query_pixels[max_rank].i );
 				ip.set_j( list_query_pixels[max_rank].j );
-			  //vpDisplay::displayPoint(I, ip, vpColor::blue);
+                           //vpDisplay::displayPoint(I, ip, vpColor::blue);
+                            vpDisplay::displayCross(I, ip, 3, vpColor::blue);
 			}
 
 			*this = list_query_pixels[max_rank] ;//The vpMeSite is replaced by the vpMeSite of max likelihood
@@ -846,7 +847,7 @@ vpImagePoint ip;
 		}
 		else //none of the query sites is better than the threshold
 		{
-			if ((selectDisplay==RANGE_RESULT)||(selectDisplay==RESULT))
+                        if ((selectDisplay==RANGE_RESULT)||(selectDisplay==RESULT))
 			{
 				vpDisplay::displayPoint(I, list_query_pixels[max_rank].i,list_query_pixels[max_rank].j, vpColor::green);
 			}
