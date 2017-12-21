@@ -154,8 +154,7 @@ namespace luxifer
           v3 = triangles[i].v3;
           vn3 = triangles[i].n3;
 
-         std::cout << " v1 " << v1 << " vn1 " << vn1 << std::endl;
-
+         //std::cout << " v1 " << v1 << " vn1 " << vn1 << std::endl;
 
           const tuple<int,int,int> tp1 = make_tuple(v1, vt1, vn1);
           map<tuple<int,int,int>, unsigned int >::const_iterator it1 = b_smooth ? m_vtx.find(tp1) : m_vtx.end();

@@ -355,6 +355,7 @@ int main(int argc, char **argv)
 
     vpHomogeneousMatrix cMo, cMo2, cMoFilt;
 
+
     cMo[0][0] = 1;
     cMo[0][1] = 0;
     cMo[0][2] = 0;
@@ -367,7 +368,9 @@ int main(int argc, char **argv)
     cMo[2][1] = 0;
     cMo[2][2] = 1;
 
-    cMo[2][3] = 3.6;
+    cMo[2][3] = 60;
+    cMo[0][3] = 0;
+    cMo[1][3] = 0;
 
      vpImage<vpRGBa> Icol1(height,width);
 
@@ -448,11 +451,11 @@ int main(int argc, char **argv)
                 if (im == 0)
                 {
                 tracker.loadImagePoseMesh(image, cMo, vertices, normals, triangles);
+                tracker.setPose(cMo);
 
                 mgr->load(vertices, normals, triangles);
 
-
-                cMo[0][0] = 1;
+                /*cMo[0][0] = 1;
                 cMo[0][1] = 0;
                 cMo[0][2] = 0;
 
@@ -464,7 +467,9 @@ int main(int argc, char **argv)
                 cMo[2][1] = 0;
                 cMo[2][2] = 1;
 
-                cMo[2][3] = 3.6;
+                cMo[2][3] = 60;
+                cMo[0][3] = 0;
+                cMo[1][3] = 0;*/
 
                 t0= vpTime::measureTimeMs();
 

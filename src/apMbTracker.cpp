@@ -486,6 +486,12 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
     std::stringstream stream;
     stream << cstr;
 
+    vpCameraParameters camparam;
+    vpRotationMatrix R0;
+    vpTranslationVector t0,t;
+    vpMatrix intrinsic;
+    intrinsic.resize(3,3);
+
    // for( size_t i=0; i<stream.length(); i++)
         //char c = stream[i];
         //if( c == '[' ) i++;
@@ -495,14 +501,48 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
 
             //while (stream[i] != ']')
              for (int j = 0; j < 3; j++)
-                 for (int k = 0; k < 4; k++){
-             stream >> cMo[j][k];
+                 for (int k = 0; k < 3; k++){
+             stream >> intrinsic[j][k];
              if (stream.peek() == ',')
                  stream.ignore();
-             std::cout << " cmo " << cMo[j][k] << std::endl;
+             std::cout << " camparam " << intrinsic[j][k] << std::endl;
                  }
                  stream.ignore();
                  stream.ignore();
+
+        if (stream.peek() == '[')
+            stream.ignore();
+
+            for (int j = 0; j < 3; j++)
+                for (int k = 0; k < 3; k++){
+                 stream >> R0[j][k];
+                 if (stream.peek() == ',')
+                     stream.ignore();
+                 std::cout << " rotation " << R0[j][k] << std::endl;
+                }
+                stream.ignore();
+                stream.ignore();
+
+        if (stream.peek() == '[')
+            stream.ignore();
+
+            for (int k = 0; k < 3; k++){
+                stream >> t0[k];
+                if (stream.peek() == ',')
+                    stream.ignore();
+                std::cout << " translation " << t0[k] << std::endl;
+                }
+                stream.ignore();
+                stream.ignore();
+
+                t[0]=-t0[0];
+                t[1]=-t0[1];
+                t[2]=-t0[2];
+
+                t0 = R0*t;
+
+                         cMo.buildFrom(t0,R0);
+
 
              int npoints = 0;
 
@@ -514,7 +554,7 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
                  stream >> vertex.y;
                  stream >> vertex.z;
 
-                 std::cout << " vertex " <<  vertex.x << " " <<  vertex.y << " " <<  vertex.z << std::endl;
+                 //std::cout << " vertex " <<  vertex.x << " " <<  vertex.y << " " <<  vertex.z << std::endl;
                  npoints ++;
 
                  vertices.push_back(vertex);
@@ -530,7 +570,7 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
                  stream >> normal.y;
                  stream >> normal.z;
 
-                 std::cout << " normals " <<  normal.x << " " <<  normal.y << " " <<  normal.z << std::endl;
+                 //std::cout << " normals " <<  normal.x << " " <<  normal.y << " " <<  normal.z << std::endl;
 
                  normals.push_back(normal);
 
@@ -548,7 +588,7 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
                  stream >> tri.v3;
                  tri.n3 = tri.v3;
 
-                 std::cout << " triangle " <<  tri.v1 << " " <<  tri.v2  << " " <<  tri.v3 << std::endl;
+                 //std::cout << " triangle " <<  tri.v1 << " " <<  tri.v2  << " " <<  tri.v3 << std::endl;
                  triangles.push_back(tri);
 
              }
@@ -8774,13 +8814,21 @@ void apMbTracker::savepair(std::string &message, const std::pair<point3d, point2
             + std::to_string(pair.second.i) + " " + std::to_string(pair.second.j) + " ";
 }
 
+void apMbTracker::save3dpoint(std::string &message, const point3d &point3d) {
+    message = std::to_string(point3d.x) + " " + std::to_string(point3d.y) + " " + std::to_string(point3d.z) + " ";
+}
+
+void apMbTracker::save2dpoint(std::string &message, const point2d &point2d) {
+    message = std::to_string(point2d.i) + " " + std::to_string(point2d.j) + " ";
+}
+
 
 /*!
  Export 3D-2d correspondences in the image.
 
  \param I : the image.
  */
-void apMbTracker::exportCorrespondencesEdges(const vpImage<unsigned char> &I) {
+/*void apMbTracker::exportCorrespondencesEdges(const vpImage<unsigned char> &I) {
 
 std::vector <std::pair <point3d,point2d>> correspondences;
 
@@ -8818,6 +8866,73 @@ int length = 0;
         zmq::message_t message(length);
 
         memcpy(message.data(), messageStr.c_str(), length);
+
+        bool status = m_socketPub->send(message);
+        std::cout << "Problem with communication" <<  messageStr.length() << std::endl;
+
+}*/
+
+/*!
+ Export 3D-2d correspondences in the image.
+
+ \param I : the image.
+ */
+void apMbTracker::exportCorrespondencesEdges(const vpImage<unsigned char> &I) {
+
+std::vector <std::pair <point3d,point2d>> correspondences;
+
+
+string messageStr;
+string messagePoint3d;
+string messagePoint2d;
+
+int length = 0;
+
+//#pragma omp parallel for
+        for (int k = 0; k < points[scaleLevel].size(); k++)
+        {
+            vpPointSite site = points[scaleLevel][k]->s;
+            std::pair <point3d,point2d> correspondence;
+            point3d p3d;
+            p3d.x = points[scaleLevel][k]->cpointo.get_oX();
+            p3d.y = points[scaleLevel][k]->cpointo.get_oY();
+            p3d.z = points[scaleLevel][k]->cpointo.get_oZ();
+
+            point2d p2d;
+            p2d.i = site.i;
+            p2d.j = site.j;
+
+            correspondence.first = p3d;
+            correspondence.second = p2d;
+
+            correspondences.push_back(correspondence);
+
+            save3dpoint(messagePoint3d,p3d);
+            messageStr += messagePoint3d;
+            length += messagePoint3d.length();
+
+        }
+
+        messageStr += ";";
+
+        for (int k = 0; k < points[scaleLevel].size(); k++)
+        {
+            vpPointSite site = points[scaleLevel][k]->s;
+
+            point2d p2d;
+            p2d.i = site.i;
+            p2d.j = site.j;
+
+            save2dpoint(messagePoint2d,p2d);
+            messageStr += messagePoint2d;
+            length += messagePoint2d.length();
+
+        }
+        zmq::message_t message(length);
+
+        memcpy(message.data(), messageStr.c_str(), length);
+
+        std::cout << " message correspondences " << messageStr << std::endl;
 
         bool status = m_socketPub->send(message);
         std::cout << "Problem with communication" <<  messageStr.length() << std::endl;

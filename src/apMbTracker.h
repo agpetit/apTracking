@@ -332,6 +332,8 @@ private:
   void loadModel(const char* cad_name);
   void  loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
   void savepair(std::string &message, const std::pair<point3d, point2d> &pair);
+  void save3dpoint(std::string &message, const point3d &point3d);
+  void save2dpoint(std::string &message, const point2d &point2d);
   //void loadLines(const vpImage<unsigned char>& I, vector<Vec4i>& Lines, const vpMatrix &Zc, const vpHomogeneousMatrix &cMo);
   //void resetLines();
   void init(const vpImage<unsigned char>&){};

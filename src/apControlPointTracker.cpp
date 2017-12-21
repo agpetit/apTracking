@@ -39,7 +39,7 @@ apControlPointTracker::apControlPointTracker()
 
   init();
   me = NULL ;
-  display_point = true ;
+  display_point = false ;
   nGoodElement = 0;
   query_range = 0;
   seuil = 0;
