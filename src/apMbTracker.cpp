@@ -465,6 +465,179 @@ void loadImage( cv::Mat & mat, const char * data_str )
 }
 
 
+void desserializeuc(std::istream &in,cv::Mat &s)
+{
+    std::string tmpDelim;
+    uchar *buff = (uchar *)(s.data);
+    bool read = true;
+    while (read)
+    {
+      in >> tmpDelim;
+      if (tmpDelim == "[") continue;
+      if (tmpDelim.find(']') != std::string::npos)
+        break;
+      else
+      {
+        *buff = atoi(tmpDelim.c_str());
+        buff++;
+      }
+
+    }
+          //std::cout << " img " << s << std::endl;
+}
+
+void desserializec(std::istream &in,cv::Mat &s)
+{
+    std::string tmpDelim;
+     char *buff = (char *)(s.data);
+    bool read = true;
+    while (read)
+    {
+      in >> tmpDelim;
+      if (tmpDelim == "[") continue;
+      if (tmpDelim.find(']') != std::string::npos)
+        break;
+      else
+      {
+        *buff = atoi(tmpDelim.c_str());
+        buff++;
+      }
+    }
+}
+
+void desserializeus(std::istream &in,cv::Mat &s)
+{
+    std::string tmpDelim;
+    ushort *buff = (ushort *)(s.data);
+    bool read = true;
+    while (read)
+    {
+      in >> tmpDelim;
+      if (tmpDelim == "[") continue;
+      if (tmpDelim.find(']') != std::string::npos)
+        break;
+      else
+      {
+        *buff = atoi(tmpDelim.c_str());
+        buff++;
+      }
+    }
+}
+
+void desserializes(std::istream &in,cv::Mat &s)
+{
+    std::string tmpDelim;
+    ushort *buff = (ushort *)(s.data);
+    bool read = true;
+    while (read)
+    {
+      in >> tmpDelim;
+      if (tmpDelim == "[") continue;
+      if (tmpDelim.find(']') != std::string::npos)
+        break;
+      else
+      {
+        *buff = atoi(tmpDelim.c_str());
+        buff++;
+      }
+    }
+}
+
+void desserializei(std::istream &in,cv::Mat &s)
+{
+    std::string tmpDelim;
+    short *buff = (short *)(s.data);
+    bool read = true;
+    while (read)
+    {
+      in >> tmpDelim;
+      if (tmpDelim == "[") continue;
+      if (tmpDelim.find(']') != std::string::npos)
+        break;
+      else
+      {
+        *buff = atoi(tmpDelim.c_str());
+        buff++;
+      }
+    }
+}
+
+void desserializef(std::istream &in,cv::Mat &s)
+{
+    std::string tmpDelim;
+    float *buff = (float *)(s.data);
+    bool read = true;
+    while (read)
+    {
+      in >> tmpDelim;
+      if (tmpDelim == "[") continue;
+      if (tmpDelim.find(']') != std::string::npos)
+        break;
+      else
+      {
+        *buff = atof(tmpDelim.c_str());
+        buff++;
+      }
+    }
+}
+
+void desserialized(std::istream &in,cv::Mat &s)
+{
+  std::string tmpDelim;
+  double *buff = (double *)(s.data);
+  bool read = true;
+  while (read)
+  {
+    in >> tmpDelim;
+    if (tmpDelim == "[") continue;
+    if (tmpDelim.find(']') != std::string::npos)
+      break;
+    else
+    {
+      *buff = atof(tmpDelim.c_str());
+      buff++;
+    }
+  }
+}
+
+
+void desserialize(std::istream &in, cv::Mat &s)
+{
+  int rows, cols, type;
+
+  in >> rows >> cols >> type;
+
+  //std::cout << " rows " << rows << " cols " << cols << " type " << type << std::endl;
+  s.create(rows, cols, type);
+  //std::cout << " rows " << rows << " cols " << cols << " type " << type << std::endl;
+
+  switch (s.depth())
+  {
+    case CV_8U:
+      desserializeuc(in,s);
+      break;
+    case CV_8S:
+      desserializec(in,s);
+      break;
+    case CV_16U:
+      desserializeus(in,s);
+      break;
+    case CV_16S:
+      desserializes(in,s);
+      break;
+    case CV_32S:
+      desserializei(in,s);
+      break;
+    case CV_32F:
+      desserializef(in,s);
+      break;
+    case CV_64F:
+      desserialized(in,s);
+      break;
+  }
+}
+
+
 void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles)
 {
 
@@ -496,6 +669,7 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
         //char c = stream[i];
         //if( c == '[' ) i++;
 
+
         if (stream.peek() == '[')
             stream.ignore();
 
@@ -505,7 +679,7 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
              stream >> intrinsic[j][k];
              if (stream.peek() == ',')
                  stream.ignore();
-             std::cout << " camparam " << intrinsic[j][k] << std::endl;
+             //std::cout << " camparam " << intrinsic[j][k] << std::endl;
                  }
                  stream.ignore();
                  stream.ignore();
@@ -518,7 +692,7 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
                  stream >> R0[j][k];
                  if (stream.peek() == ',')
                      stream.ignore();
-                 std::cout << " rotation " << R0[j][k] << std::endl;
+                 //std::cout << " rotation " << R0[j][k] << std::endl;
                 }
                 stream.ignore();
                 stream.ignore();
@@ -530,7 +704,7 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
                 stream >> t0[k];
                 if (stream.peek() == ',')
                     stream.ignore();
-                std::cout << " translation " << t0[k] << std::endl;
+                //std::cout << " translation " << t0[k] << std::endl;
                 }
                 stream.ignore();
                 stream.ignore();
@@ -541,10 +715,14 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
 
                 t0 = R0*t;
 
-                         cMo.buildFrom(t0,R0);
-
+                cMo.buildFrom(t0,R0);
 
              int npoints = 0;
+
+             desserialize(stream,mat);
+
+             stream.ignore();
+             stream.ignore();
 
              while (stream.peek()!=';')
              {
@@ -554,8 +732,10 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
                  stream >> vertex.y;
                  stream >> vertex.z;
 
+
                  //std::cout << " vertex " <<  vertex.x << " " <<  vertex.y << " " <<  vertex.z << std::endl;
                  npoints ++;
+
 
                  vertices.push_back(vertex);
 
@@ -8932,7 +9112,7 @@ int length = 0;
 
         memcpy(message.data(), messageStr.c_str(), length);
 
-        std::cout << " message correspondences " << messageStr << std::endl;
+        //std::cout << " message correspondences " << messageStr << std::endl;
 
         bool status = m_socketPub->send(message);
         std::cout << "Problem with communication" <<  messageStr.length() << std::endl;

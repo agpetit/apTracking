@@ -269,6 +269,9 @@ int main(int argc, char **argv)
       modelFile = object + vpIoTools::path("/")+ object + vpIoTools::path(".obj");
       initFile = object + vpIoTools::path("/") + object;
 
+      opath = vpIoTools::path("out0") + vpIoTools::path("/image%06d.png");
+      opath1 = vpIoTools::path("out0") + vpIoTools::path("/imageKalman%06d.png");
+
 
     apMbTracker tracker;
     // Set tracking and rendering parameters
@@ -290,9 +293,12 @@ int main(int argc, char **argv)
     viewer.show();
     viewer.move(200, 200);
 
-    vpImage<unsigned char> Id;
-    vpImage<unsigned char> Id1;
-    vpImage<vpRGBa> Icol;
+    const int width = 320;
+    const int height = 320;
+
+    vpImage<unsigned char> Id(height,width);
+    vpImage<unsigned char> Id1(height,width);
+    vpImage<vpRGBa> Icol(height,width);
     vpImage<vpRGBa> Ioverlay;
     vpImage<vpRGBa> Ioverlaycol;
 
@@ -300,22 +306,8 @@ int main(int argc, char **argv)
       grabber.open(Id);
       grabber.acquire(Id);*/
 
-    //VideoReader to read images from disk
-    vpVideoReader reader;
-    reader.setFileName(ipath.c_str());
-    reader.setFirstFrameIndex(start_image);
-    reader.open(Id);
-    reader.acquire(Id);
-    vpVideoReader readerRGB;
-    //if(tracker.getUseRGB())
-    {
-    	readerRGB.setFileName(ipath.c_str());
-        readerRGB.setFirstFrameIndex(start_image);
-        readerRGB.open(Icol);
-        readerRGB.acquire(Icol);
-    }
-    const int width = reader.getWidth();
-    const int height = reader.getHeight();
+    /*const int width = reader.getWidth();
+    const int height = reader.getHeight();*/
 
     viewer.resize(width, height);
     mgr->setApRend(&mrend);
@@ -340,6 +332,7 @@ int main(int argc, char **argv)
     // Main window creation and displaying
     vpDisplayX display1;
     vpDisplayX display2;
+
     if (opt_display)
     {
         display1.init(Id, 10, 10, "Test tracking L");
@@ -354,7 +347,6 @@ int main(int argc, char **argv)
     }
 
     vpHomogeneousMatrix cMo, cMo2, cMoFilt;
-
 
     cMo[0][0] = 1;
     cMo[0][1] = 0;
@@ -384,7 +376,7 @@ int main(int argc, char **argv)
             Icol1[i][j].B = Icol1[i][j].R;
 
         }
-    //Icol = Icol1;
+    Icol = Icol1;
 
     tracker.setPose(cMo);
     tracker.setIprec(Id);
@@ -432,7 +424,7 @@ int main(int argc, char **argv)
     double timeKalman = 0;
     double t0,t1;
     vpImage<vpRGBa> Icol2(height,width);
-    Icol2 = Icol;
+    //Icol2 = Icol;
 
     cv::Mat image;
     std::vector<point3d> vertices;
@@ -453,23 +445,10 @@ int main(int argc, char **argv)
                 tracker.loadImagePoseMesh(image, cMo, vertices, normals, triangles);
                 tracker.setPose(cMo);
 
+                vpImageConvert::convert(image,Id);
+                vpImageConvert::convert(image,Icol);
+
                 mgr->load(vertices, normals, triangles);
-
-                /*cMo[0][0] = 1;
-                cMo[0][1] = 0;
-                cMo[0][2] = 0;
-
-                cMo[1][0] = 0;
-                cMo[1][1] = 1;
-                cMo[1][2] = 0;
-
-                cMo[2][0] = 0;
-                cMo[2][1] = 0;
-                cMo[2][2] = 1;
-
-                cMo[2][3] = 60;
-                cMo[0][3] = 0;
-                cMo[1][3] = 0;*/
 
                 t0= vpTime::measureTimeMs();
 
@@ -502,7 +481,7 @@ int main(int argc, char **argv)
             vpDisplay::getImage(Icol,Ioverlaycol);
 
             //vpImageIo::read(Id,"socketimage10.png");
-           //vpImageConvert::convert(image,Id);
+            vpImageConvert::convert(image,Id);
             vpDisplay::display(Id);
 
             //tracker.setPose(cMo);
@@ -554,7 +533,7 @@ int main(int argc, char **argv)
             //if(im%5==0)
             {
             //vpImageIo::write(Ioverlaycol, filename4);
-            vpImageIo::write(Ioverlay, "edgematching.png");
+            vpImageIo::write(Ioverlay, filename5);
             }
 
             im++;
