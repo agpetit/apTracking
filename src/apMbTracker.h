@@ -181,13 +181,10 @@ class VISP_EXPORT apMbTracker: public vpMbTracker, public apControlPointTracker
     std::vector< std::map< int, apMbtDistanceLineMH> > newLinesLm;
     std::vector< std::map< int, apMbtDistanceLineMH> > linesLm;
 
-
     vpKltOpencv kltTracker;
 
     std::vector<std::map<int, apKltControlPoint> > kltPoints;
     std::vector<std::map<int, int> > kltPointsInd;
-
-
 
     std::vector<vpHomogeneousMatrix> pose_vect;
     int nbdraw;
@@ -287,6 +284,7 @@ private:
     bool predictKLT;
 
     vpHomogeneousMatrix cMoprec;
+    vpHomogeneousMatrix opMo;
 
     vpImage<vpRGBa> Inormdprec;
     vpImage<unsigned char> Iorprec;

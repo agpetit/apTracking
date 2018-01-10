@@ -9077,9 +9077,20 @@ int length = 0;
             vpPointSite site = points[scaleLevel][k]->s;
             std::pair <point3d,point2d> correspondence;
             point3d p3d;
-            p3d.x = points[scaleLevel][k]->cpointo.get_oX();
-            p3d.y = points[scaleLevel][k]->cpointo.get_oY();
-            p3d.z = points[scaleLevel][k]->cpointo.get_oZ();
+
+            vpColVector vertexop(4);
+            vpColVector vertex(4);
+
+            vertexop[0] = points[scaleLevel][k]->cpointo.get_oX();
+            vertexop[1] = points[scaleLevel][k]->cpointo.get_oY();
+            vertexop[2] = points[scaleLevel][k]->cpointo.get_oZ();
+            vertexop[3] = 1;
+
+            vertex = opMo.inverse()*vertexop;
+
+            p3d.x = vertex[0];
+            p3d.y = vertex[1];
+            p3d.z = vertex[2];
 
             point2d p2d;
             p2d.i = site.i;

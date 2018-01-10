@@ -430,6 +430,13 @@ int main(int argc, char **argv)
     std::vector<point3d> normals;
     std::vector<triangle> triangles;
 
+    vpRotationMatrix Rop;
+    Rop.setIdentity();
+
+    vpTranslationVector top;
+
+    vpHomogeneousMatrix opMo;
+
     // Main tracking loop
     try
     {
@@ -441,8 +448,44 @@ int main(int argc, char **argv)
 
                 if (im == 0)
                 {
+
+                    double CoMZ = 0;
+                    vpColVector CoM(4);
+                    vpColVector CoMCam(4);
+
+                    for (int kk = 0; kk < vertices.size(); kk++)
+                    {
+                    double x,y,z;
+                    CoM[0] += vertices[kk].x/(double) vertices.size();
+                    CoM[1] += vertices[kk].y/(double) vertices.size();
+                    CoM[2] += vertices[kk].z/(double) vertices.size();
+                    CoM[3] = 1;
+                    }
+
+                    top[0] = CoM[0];
+                    top[1] = CoM[1];
+                    top[2] = CoM[2];
+
+                    opMo.buildFrom(top,Rop);
+                    cMo = cMo*opMo.inverse();
+
+                    for (int kk = 0; kk < vertices.size(); kk++)
+                    {
+                    vertices[kk].x -= CoM[0];
+                    vertices[kk].y -= CoM[1];
+                    vertices[kk].z -= CoM[2];
+                    CoMCam = cMo*CoM;
+                    CoMZ += CoMCam[2];
+                    }
+
+                    CoMZ /= (double) vertices.size();
+
+
+                    std::cout << " cmoz " << CoMZ << std::endl;
+
                 tracker.loadImagePoseMesh(image, cMo, vertices, normals, triangles);
                 tracker.setPose(cMo);
+                tracker.opMo = opMo;
 
                 vpImageConvert::convert(image,Id);
                 vpImageConvert::convert(image,Icol);
@@ -486,30 +529,10 @@ int main(int argc, char **argv)
             cMo.extract(tr);
             // Pose tracking
 
-            double CoMZ = 0;
-            vpColVector CoM(4);
-            vpColVector CoMCam(4);
-            for (int kk = 0; kk < vertices.size(); kk++)
-            {
-            double x,y,z;
-            CoM[0] = vertices[kk].x;
-            CoM[1] = vertices[kk].y;
-            CoM[2] = vertices[kk].z;
-            CoM[3] = 1;
-            CoMCam = cMo*CoM;
-
-            CoMZ += CoMCam[2];
-            }
-
-            CoMZ /= (double) vertices.size();
-
-            std::cout << " cmoz " << CoMZ << std::endl;
-
-
             try{
                 t0= vpTime::measureTimeMs();
 
-                tracker.trackDef(Id,Icol,Inormd,Ior,Ior,CoMZ);
+                tracker.trackDef(Id,Icol,Inormd,Ior,Ior,tr[2]);
                 t1= vpTime::measureTimeMs();
                 {
                 meantime += (t1-t0);
