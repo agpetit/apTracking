@@ -9088,9 +9088,9 @@ int length = 0;
 
             vertex = opMo.inverse()*vertexop;
 
-            p3d.x = vertex[0]*100;
-            p3d.y = vertex[1]*100;
-            p3d.z = vertex[2]*100;
+            p3d.x = vertex[0];
+            p3d.y = vertex[1];
+            p3d.z = vertex[2];
 
             point2d p2d;
             p2d.i = site.i;

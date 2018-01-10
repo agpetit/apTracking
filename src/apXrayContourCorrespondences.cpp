@@ -449,52 +449,41 @@ int main(int argc, char **argv)
                 if (im == 0)
                 {
 
-                    double CoMZ = 0;
-                    vpColVector CoM(4);
-                    vpColVector CoMCam(4);
-
-                    for (int kk = 0; kk < vertices.size(); kk++)
-                    {
-                    double x,y,z;
-                    CoM[0] += vertices[kk].x/(double) vertices.size();
-                    CoM[1] += vertices[kk].y/(double) vertices.size();
-                    CoM[2] += vertices[kk].z/(double) vertices.size();
-                    CoM[3] = 1;
-                    }
-
-                    top[0] = CoM[0]/100.0;
-                    top[1] = CoM[1]/100.0;
-                    top[2] = CoM[2]/100.0;
-
-                    opMo.buildFrom(top,Rop);
-                    cMo[0][3] /= 100.0;
-                    cMo[1][3] /= 100.0;
-                    cMo[2][3] /= 100.0;
-
-                    cMo = cMo*opMo.inverse();
-
-                    for (int kk = 0; kk < vertices.size(); kk++)
-                    {
-                    vertices[kk].x -= CoM[0];
-                    vertices[kk].y -= CoM[1];
-                    vertices[kk].z -= CoM[2];
-                    CoMCam = cMo*CoM;
-                    CoMZ += CoMCam[2];
-                    }
-
-                    for (int kk = 0; kk < vertices.size(); kk++)
-                    {
-                    vertices[kk].x /= 100.0;
-                    vertices[kk].y /= 100.0;
-                    vertices[kk].z /= 100.0;
-                    }
-
-                    CoMZ /= (double) vertices.size();
-
-
-                    std::cout << " cmoz " << CoMZ << std::endl;
 
                 tracker.loadImagePoseMesh(image, cMo, vertices, normals, triangles);
+
+
+                double CoMZ = 0;
+                vpColVector CoM(4);
+                vpColVector CoMCam(4);
+
+                for (int kk = 0; kk < vertices.size(); kk++)
+                {
+                double x,y,z;
+                CoM[0] += vertices[kk].x/(double)vertices.size();
+                CoM[1] += vertices[kk].y/(double)vertices.size();
+                CoM[2] += vertices[kk].z/(double)vertices.size();
+                CoM[3] = 1;
+                }
+
+                top[0] = CoM[0];
+                top[1] = CoM[1];
+                top[2] = CoM[2];
+
+                opMo.buildFrom(top, Rop);
+                cMo = cMo*opMo;
+
+                for (int kk = 0; kk < vertices.size(); kk++)
+                {
+                vertices[kk].x -= CoM[0];
+                vertices[kk].y -= CoM[1];
+                vertices[kk].z -= CoM[2];
+                CoMCam = cMo*CoM;
+                CoMZ += CoMCam[2];
+                }
+
+                CoMZ /= (double) vertices.size();
+
                 tracker.setPose(cMo);
                 tracker.opMo = opMo;
 
@@ -503,6 +492,8 @@ int main(int argc, char **argv)
 
                 mgr->load(vertices, normals, triangles);
                 t0= vpTime::measureTimeMs();
+
+                std::cout << " cmoz " << CoMZ << std::endl;
 
                 std::cout << "cmo " << cMo << std::endl;
                 }
