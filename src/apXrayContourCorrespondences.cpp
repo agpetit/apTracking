@@ -462,11 +462,15 @@ int main(int argc, char **argv)
                     CoM[3] = 1;
                     }
 
-                    top[0] = CoM[0];
-                    top[1] = CoM[1];
-                    top[2] = CoM[2];
+                    top[0] = CoM[0]/100.0;
+                    top[1] = CoM[1]/100.0;
+                    top[2] = CoM[2]/100.0;
 
                     opMo.buildFrom(top,Rop);
+                    cMo[0][3] /= 100;
+                    cMo[1][3] /= 100;
+                    cMo[2][3] /= 100;
+
                     cMo = cMo*opMo.inverse();
 
                     for (int kk = 0; kk < vertices.size(); kk++)
@@ -476,6 +480,13 @@ int main(int argc, char **argv)
                     vertices[kk].z -= CoM[2];
                     CoMCam = cMo*CoM;
                     CoMZ += CoMCam[2];
+                    }
+
+                    for (int kk = 0; kk < vertices.size(); kk++)
+                    {
+                    vertices[kk].x /= 100.0;
+                    vertices[kk].y /= 100.0;
+                    vertices[kk].z /= 100.0;
                     }
 
                     CoMZ /= (double) vertices.size();

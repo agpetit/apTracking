@@ -14,7 +14,7 @@ conf = {
         },
     rendering = {
         edgeRend_threshold = 2,
-        clipDist = 10,
+        clipDist = 0.5,
         sampleRend = 1,
 	useNPoints = 1,
 	nPoints = 5000,
