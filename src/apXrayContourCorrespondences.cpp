@@ -467,9 +467,9 @@ int main(int argc, char **argv)
                     top[2] = CoM[2]/100.0;
 
                     opMo.buildFrom(top,Rop);
-                    cMo[0][3] /= 100;
-                    cMo[1][3] /= 100;
-                    cMo[2][3] /= 100;
+                    cMo[0][3] /= 100.0;
+                    cMo[1][3] /= 100.0;
+                    cMo[2][3] /= 100.0;
 
                     cMo = cMo*opMo.inverse();
 
