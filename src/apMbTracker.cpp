@@ -669,6 +669,9 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
         //char c = stream[i];
         //if( c == '[' ) i++;
 
+    //std::cout << " str " << stream.str() << std::endl;
+
+    //getchar();
 
         if (stream.peek() == '[')
             stream.ignore();
@@ -679,7 +682,7 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
              stream >> intrinsic[j][k];
              if (stream.peek() == ',')
                  stream.ignore();
-             //std::cout << " camparam " << intrinsic[j][k] << std::endl;
+             std::cout << " camparam " << intrinsic[j][k] << std::endl;
                  }
                  stream.ignore();
                  stream.ignore();
@@ -692,7 +695,7 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
                  stream >> R0[j][k];
                  if (stream.peek() == ',')
                      stream.ignore();
-                 //std::cout << " rotation " << R0[j][k] << std::endl;
+                 std::cout << " rotation " << R0[j][k] << std::endl;
                 }
                 stream.ignore();
                 stream.ignore();
@@ -704,7 +707,7 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
                 stream >> t0[k];
                 if (stream.peek() == ',')
                     stream.ignore();
-                //std::cout << " translation " << t0[k] << std::endl;
+                std::cout << " translation " << t0[k] << std::endl;
                 }
                 stream.ignore();
                 stream.ignore();

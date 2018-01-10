@@ -272,7 +272,6 @@ int main(int argc, char **argv)
       opath = vpIoTools::path("out0") + vpIoTools::path("/image%06d.png");
       opath1 = vpIoTools::path("out0") + vpIoTools::path("/imageKalman%06d.png");
 
-
     apMbTracker tracker;
     // Set tracking and rendering parameters
     vpCameraParameters mcam;
@@ -449,7 +448,6 @@ int main(int argc, char **argv)
                 vpImageConvert::convert(image,Icol);
 
                 mgr->load(vertices, normals, triangles);
-
                 t0= vpTime::measureTimeMs();
 
                 std::cout << "cmo " << cMo << std::endl;
@@ -488,9 +486,30 @@ int main(int argc, char **argv)
             cMo.extract(tr);
             // Pose tracking
 
+            double CoMZ = 0;
+            vpColVector CoM(4);
+            vpColVector CoMCam(4);
+            for (int kk = 0; kk < vertices.size(); kk++)
+            {
+            double x,y,z;
+            CoM[0] = vertices[kk].x;
+            CoM[1] = vertices[kk].y;
+            CoM[2] = vertices[kk].z;
+            CoM[3] = 1;
+            CoMCam = cMo*CoM;
+
+            CoMZ += CoMCam[2];
+            }
+
+            CoMZ /= (double) vertices.size();
+
+            std::cout << " cmoz " << CoMZ << std::endl;
+
+
             try{
                 t0= vpTime::measureTimeMs();
-                tracker.trackDef(Id,Icol,Inormd,Ior,Ior,tr[2]);
+
+                tracker.trackDef(Id,Icol,Inormd,Ior,Ior,CoMZ);
                 t1= vpTime::measureTimeMs();
                 {
                 meantime += (t1-t0);

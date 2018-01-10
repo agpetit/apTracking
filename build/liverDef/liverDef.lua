@@ -9,12 +9,12 @@ conf = {
         nb_sample = 5000
         },
     camera = {
-        u0 = 622, v0 = 360,
-        px = 1280, py = 1280
+        u0 = 160, v0 = 160,
+        px = 1173, py = 1173
         },
     rendering = {
         edgeRend_threshold = 2,
-        clipDist = 0.9,
+        clipDist = 10,
         sampleRend = 1,
 	useNPoints = 1,
 	nPoints = 5000,
