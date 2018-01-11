@@ -9081,12 +9081,12 @@ int length = 0;
             vpColVector vertexop(4);
             vpColVector vertex(4);
 
-            vertexop[0] = points[scaleLevel][k]->cpointo.get_oX();
-            vertexop[1] = points[scaleLevel][k]->cpointo.get_oY();
-            vertexop[2] = points[scaleLevel][k]->cpointo.get_oZ();
+            vertexop[0] = points[scaleLevel][k]->cpointo.get_oX()*100;
+            vertexop[1] = points[scaleLevel][k]->cpointo.get_oY()*100;
+            vertexop[2] = points[scaleLevel][k]->cpointo.get_oZ()*100;
             vertexop[3] = 1;
 
-            vertex = opMo.inverse()*vertexop;
+            vertex = opMo*vertexop;
 
             p3d.x = vertex[0];
             p3d.y = vertex[1];

@@ -442,6 +442,7 @@ int main(int argc, char **argv)
     {
         while(true){
 
+            double CoMZ = 0;
 
             // Render the 3D model, get the depth edges, normal and texture maps
             try{
@@ -452,8 +453,6 @@ int main(int argc, char **argv)
 
                 tracker.loadImagePoseMesh(image, cMo, vertices, normals, triangles);
 
-
-                double CoMZ = 0;
                 vpColVector CoM(4);
                 vpColVector CoMCam(4);
 
@@ -473,16 +472,21 @@ int main(int argc, char **argv)
                 opMo.buildFrom(top, Rop);
                 cMo = cMo*opMo;
 
+                cMo[0][3] /= 100.0;
+                cMo[1][3] /= 100.0;
+                cMo[2][3] /= 100.0;
+
                 for (int kk = 0; kk < vertices.size(); kk++)
                 {
                 vertices[kk].x -= CoM[0];
                 vertices[kk].y -= CoM[1];
                 vertices[kk].z -= CoM[2];
-                CoMCam = cMo*CoM;
-                CoMZ += CoMCam[2];
-                }
 
-                CoMZ /= (double) vertices.size();
+                vertices[kk].x /= 100.0;
+                vertices[kk].y /= 100.0;
+                vertices[kk].z /= 100.0;
+
+                }
 
                 tracker.setPose(cMo);
                 tracker.opMo = opMo;
@@ -493,9 +497,6 @@ int main(int argc, char **argv)
                 mgr->load(vertices, normals, triangles);
                 t0= vpTime::measureTimeMs();
 
-                std::cout << " cmoz " << CoMZ << std::endl;
-
-                std::cout << "cmo " << cMo << std::endl;
                 }
 
                 mgr->updateRTT(Inormd,Ior,&cMo);
@@ -504,8 +505,8 @@ int main(int argc, char **argv)
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
                 a.processEvents(QEventLoop::AllEvents, 1);
-                vpImageIo::writePNG(Inormd, "Inormd.png");
-                vpImageIo::writePNG(Ior, "Ior.png");
+                //vpImageIo::writePNG(Inormd, "Inormd.png");
+                //vpImageIo::writePNG(Ior, "Ior.png");
                 tracker.Inormdprec = Inormd;
                 tracker.Iorprec = Ior;
                 tracker.Itexprec = Ior;
