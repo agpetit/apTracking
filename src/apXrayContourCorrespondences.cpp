@@ -450,7 +450,7 @@ int main(int argc, char **argv)
             // Render the 3D model, get the depth edges, normal and texture maps
             try{
 
-                if (im == 0)
+               // if (im == 0)
                 {
 
                 CoMZ = 0;
@@ -519,12 +519,13 @@ int main(int argc, char **argv)
 
                 vpImageConvert::convert(image,Id);
                 vpImageConvert::convert(image,Icol);
-
+                if (im == 0)
                 mgr->load(vertices, normals, triangles);
+                else mgr->update(vertices, normals, triangles);
                 t0= vpTime::measureTimeMs();
 
-                zmin -= 1;
-                zmax += 1;
+                zmin -= 7;
+                zmax += 7;
 
                 std::cout << " zmin " << zmin << " " << zmax << " cmocamz " << CoMCam[2] << std::endl;
 

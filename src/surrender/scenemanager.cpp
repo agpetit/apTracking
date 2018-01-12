@@ -417,6 +417,12 @@ namespace luxifer
         fsaa_fshader->loadShaderSourceFromFile("Materials/FSAA.frag");
     }
 
+    void SceneManager::update(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles)
+    {
+        scene_node = NULL;
+        scene_node = ModelLoader::load(vertices, normals, triangles);
+    }
+
     osg::Vec3d SceneManager::getCameraPosition()
     {
         return -camera_matrix.getTrans();

@@ -52,6 +52,7 @@ namespace luxifer
 
         void load(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
 
+        void update(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
 
         //! \brief Returns a node which describes the scene
         osg::ref_ptr<osg::Node> getSceneNode();

@@ -643,6 +643,8 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
 
     zmq::message_t message1;
 
+    std::cout << " status 0 " << std::endl;
+
     bool status1 = m_socketSub->recv(&message1);
 
     std::cout << " status 1 " << status1 << std::endl;
@@ -9050,7 +9052,6 @@ void apMbTracker::exportCorrespondencesEdges(const vpImage<unsigned char> &I) {
 
 std::vector <std::pair <point3d,point2d>> correspondences;
 
-
 string messageStr;
 string messagePoint3d;
 string messagePoint2d;
@@ -9073,6 +9074,7 @@ int length = 0;
             vertexop[3] = 1;
 
             //vertex = opMo*vertexop;
+            vertex = vertexop;
 
             p3d.x = vertex[0];
             p3d.y = vertex[1];
@@ -9111,7 +9113,6 @@ int length = 0;
         zmq::message_t message(length);
 
         memcpy(message.data(), messageStr.c_str(), length);
-
         //std::cout << " message correspondences " << messageStr << std::endl;
 
         bool status = m_socketPub->send(message);
@@ -9624,9 +9625,12 @@ double t1 = vpTime::measureTimeMs();
                                                 const double l = std::sqrt(norm[0] * norm[0] + norm[1]
                                                                 * norm[1] + norm[2] * norm[2]);
                                                 if (l > 1e-1) {
-                                                        double Z = -(znear * zfar)
+
+                                                        double z = 2.0 * (double) Inormd[n][m].A/ 255 - 1.0;
+                                                        /*double Z = -(znear * zfar)
                                                                         / (((double) ((double) Inormd[n][m].A)
-                                                                                        / 255) * (zfar - znear) - zfar);
+                                                                                        / 255) * (zfar - znear) - zfar);*/
+                                                        double Z = -2*(znear * zfar) / (z * (zfar - znear) - (zfar + znear));
                                                         apControlPoint *p = new apControlPoint;
                                                         p->setCameraParameters(&cam);
                                                         p->setMovingEdge(&me);
