@@ -524,8 +524,8 @@ int main(int argc, char **argv)
                 else mgr->update(vertices, normals, triangles);
                 t0= vpTime::measureTimeMs();
 
-                zmin -= 7;
-                zmax += 7;
+                zmin -= 5;
+                zmax += 5;
 
                 std::cout << " zmin " << zmin << " " << zmax << " cmocamz " << CoMCam[2] << std::endl;
 
