@@ -437,12 +437,15 @@ int main(int argc, char **argv)
 
     vpHomogeneousMatrix opMo;
 
+    double CoMZ;
+    double zmin;
+    double zmax;
+    double zmid;
+
     // Main tracking loop
     try
     {
         while(true){
-
-            double CoMZ = 0;
 
             // Render the 3D model, get the depth edges, normal and texture maps
             try{
@@ -450,6 +453,9 @@ int main(int argc, char **argv)
                 if (im == 0)
                 {
 
+                CoMZ = 0;
+                zmin = 1000;
+                zmax = 0;
 
                 tracker.loadImagePoseMesh(image, cMo, vertices, normals, triangles);
 
@@ -469,24 +475,44 @@ int main(int argc, char **argv)
                 top[1] = CoM[1];
                 top[2] = CoM[2];
 
-                opMo.buildFrom(top, Rop);
-                cMo = cMo*opMo;
+                /*opMo.buildFrom(top, Rop);
+                cMo = cMo*opMo;*/
 
-                cMo[0][3] /= 100.0;
+                /*cMo[0][3] /= 100.0;
                 cMo[1][3] /= 100.0;
-                cMo[2][3] /= 100.0;
+                cMo[2][3] /= 100.0;*/
 
                 for (int kk = 0; kk < vertices.size(); kk++)
                 {
-                vertices[kk].x -= CoM[0];
+                /*vertices[kk].x -= CoM[0];
                 vertices[kk].y -= CoM[1];
-                vertices[kk].z -= CoM[2];
+                vertices[kk].z -= CoM[2];*/
 
-                vertices[kk].x /= 100.0;
+                vpColVector vertex(4);
+                vpColVector vertexcam(4);
+                vertex[3] = 1;
+
+                vertex[0] = vertices[kk].x;
+                vertex[1] = vertices[kk].y;
+                vertex[2] = vertices[kk].z;
+
+                vertexcam = cMo * vertex;
+
+                //std::cout << " " <<  vertex[0] << " " <<  vertex[1] << " " <<  vertex[2] << std::endl;
+
+                if (vertexcam[2] > zmax)
+                    zmax = vertexcam[2];
+
+                if (vertexcam[2] < zmin)
+                    zmin = vertexcam[2];
+
+                /*vertices[kk].x /= 100.0;
                 vertices[kk].y /= 100.0;
-                vertices[kk].z /= 100.0;
+                vertices[kk].z /= 100.0;*/
 
                 }
+
+                CoMCam = cMo * CoM;
 
                 tracker.setPose(cMo);
                 tracker.opMo = opMo;
@@ -497,9 +523,16 @@ int main(int argc, char **argv)
                 mgr->load(vertices, normals, triangles);
                 t0= vpTime::measureTimeMs();
 
+                zmin -= 1;
+                zmax += 1;
+
+                std::cout << " zmin " << zmin << " " << zmax << " cmocamz " << CoMCam[2] << std::endl;
+
+                //getchar();
+
                 }
 
-                mgr->updateRTT(Inormd,Ior,&cMo);
+                mgr->updateRTT(Inormd,Ior,&cMo, zmin, zmax);
 
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
@@ -535,7 +568,7 @@ int main(int argc, char **argv)
             try{
                 t0= vpTime::measureTimeMs();
 
-                tracker.trackDef(Id,Icol,Inormd,Ior,Ior,tr[2]);
+                tracker.trackDef(Id,Icol,Inormd,Ior,Ior,zmin,zmax);
                 t1= vpTime::measureTimeMs();
                 {
                 meantime += (t1-t0);

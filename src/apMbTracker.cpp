@@ -8013,7 +8013,7 @@ void apMbTracker::track(const vpImage<unsigned char> &I, const vpImage<
 void apMbTracker::trackDef(const vpImage<unsigned char> &I, const vpImage<
                 vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd, const vpImage<
                 unsigned char>& Ior, const vpImage<unsigned char>& Itex,
-                const double dist) {
+                const double distmin, const double distmax) {
         initPyramid(I, Ipyramid);
         initPyramid(Iprec, Ipyramidprec);
         switch (trackingType) {
@@ -8036,21 +8036,7 @@ void apMbTracker::trackDef(const vpImage<unsigned char> &I, const vpImage<
                                         case POINTS_SH:
                                         case POINTS_MH:
                                                 extractControlPoints(*Ipyramid[lvl], Inormd, Ior, Itex,
-                                                                dist);
-                                                break;
-                                        case LINES_MH:
-                                                extractControlPointsLines(*Ipyramid[lvl], Inormd, Ior,
-                                                                Itex, dist);
-                                                break;
-                                        case CCD_SH:
-                                        case CCD_MH:
-                                                extractControlPointsCCD(*Ipyramid[lvl], Inormd, Ior,
-                                                                Itex, dist);
-                                                break;
-                                        case CCD_MH_KLT:
-                                                extractControlPointsCCD(*Ipyramid[lvl], Inormd, Ior,
-                                                                Itex, dist);
-                                                extractKltControlPointsFAST(*Ipyramid[lvl],Inormd, Ior, Itex, dist);
+                                                                distmin, distmax);
                                                 break;
                                         }
                                 } catch (...) {
@@ -9081,12 +9067,12 @@ int length = 0;
             vpColVector vertexop(4);
             vpColVector vertex(4);
 
-            vertexop[0] = points[scaleLevel][k]->cpointo.get_oX()*100;
-            vertexop[1] = points[scaleLevel][k]->cpointo.get_oY()*100;
-            vertexop[2] = points[scaleLevel][k]->cpointo.get_oZ()*100;
+            vertexop[0] = points[scaleLevel][k]->cpointo.get_oX();
+            vertexop[1] = points[scaleLevel][k]->cpointo.get_oY();
+            vertexop[2] = points[scaleLevel][k]->cpointo.get_oZ();
             vertexop[3] = 1;
 
-            vertex = opMo*vertexop;
+            //vertex = opMo*vertexop;
 
             p3d.x = vertex[0];
             p3d.y = vertex[1];
@@ -9415,10 +9401,10 @@ void process1(const vpImage<vpRGBa>& Inormd, vpImage<unsigned char>& Ilap) {
 
 void apMbTracker::extractControlPoints(const vpImage<unsigned char> &I,
 		const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char>& Ior,
-		const vpImage<unsigned char>& Itex, const double dist) {
+                const vpImage<unsigned char>& Itex, const double dist) {
 	int sample = rendparam.sampleR;
-	const double znear = dist - rendparam.clipDist;
-	const double zfar = dist + rendparam.clipDist;
+        const double znear = dist - rendparam.clipDist;
+        const double zfar = dist + rendparam.clipDist;
 
 	const int rows = Ior.getHeight();
 	const int cols = Ior.getWidth();
@@ -9543,12 +9529,142 @@ double t1 = vpTime::measureTimeMs();
 
 }
 
+void apMbTracker::extractControlPoints(const vpImage<unsigned char> &I,
+                const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char>& Ior,
+                const vpImage<unsigned char>& Itex, const double distmin, const double distmax) {
+        int sample = rendparam.sampleR;
+        const double znear = distmin;
+        const double zfar = distmax;
+
+        const int rows = Ior.getHeight();
+        const int cols = Ior.getWidth();
+
+double t0 = vpTime::measureTimeMs();
+        vpImage<unsigned char> I2(rows, cols);
+        process(Inormd, I2);
+
+        npoints = 0;
+
+        if(rendparam.useNPoints)
+        {
+        int npointsparam = rendparam.nPoints;
+        int ntotalpoints = 0;
+        bool flag = false;
+        for (int n = 0; n < rows; n++)
+                for (int m = 0; m < cols; m++)
+                {
+                        flag = false;
+        if (Itex[n][m] != 100) {
+                ntotalpoints++;
+                flag = true;
+        } else if (Ior[n][m] != 100) {
+                if (!flag)
+                ntotalpoints++;
+        } else
+                continue;
+                }
+        if(npointsparam < ntotalpoints)
+        {
+     sample = 2*floor((double)ntotalpoints/npointsparam);
+        }
+        else{
+         sample = 1;
+        }
+        std::cout << " sample " << sample << " ntotalpoints " << ntotalpoints << std::endl;
+        }
+
+double t1 = vpTime::measureTimeMs();
+                                std::cout << "timeprocess " << t1 - t0 << std::endl;
+
+//#pragma omp parallel
+        {
+                std::vector<apControlPoint*> local_insert_table;
+                vpColVector norm(3);
+                for (unsigned int i = 0; i < scales.size(); ++i) {
+                        if (scales[i]) {
+//#pragma omp master
+                                downScale(i);
+//#pragma omp barrier
+
+//#pragma omp for
+                                for (int k = 0; k < points[i].size(); ++k) {
+                                        apControlPoint *p = (points[i])[k];
+                                        if (p != NULL)
+                                                delete p;
+                                }
+//#pragma omp master
+                                points[i].clear();
+
+                                const int m0 = (20 + sample - 1) / sample * sample;
+                                const int n1 = rows - 20;
+                                const int m1 = cols - 20;
+//#pragma omp for nowait
+                                for (int n = m0; n < n1; ++n) {
+                                        const int sample0 = ((n - m0) % sample) == 0 ? 1 : sample;
+                                        for (int m = m0; m < m1; m += sample0) {
+                                                double theta;
+                                                if (Itex[n][m] != 100)
+                                                        theta = 3.1416 * (double) ((double) I2[n][m] / 255
+                                                                        - 0.5);
+                                                else if (Ior[n][m] != 100)
+                                                        theta = 3.1416 * (double) ((double) I2[n][m] / 255
+                                                                        - 0.5);
+                                                else
+                                                        continue;
+
+                                                norm[0] = (rendparam.Normx)
+                                                                * ((double) ((double) Inormd[n][m].R) / 255
+                                                                                - 0.5);
+                                                norm[1] = (rendparam.Normy)
+                                                                * ((double) ((double) Inormd[n][m].G) / 255
+                                                                                - 0.5);
+                                                norm[2] = (rendparam.Normz)
+                                                                * ((double) ((double) Inormd[n][m].B) / 255
+                                                                                - 0.5);
+                                                const double l = std::sqrt(norm[0] * norm[0] + norm[1]
+                                                                * norm[1] + norm[2] * norm[2]);
+                                                if (l > 1e-1) {
+                                                        double Z = -(znear * zfar)
+                                                                        / (((double) ((double) Inormd[n][m].A)
+                                                                                        / 255) * (zfar - znear) - zfar);
+                                                        apControlPoint *p = new apControlPoint;
+                                                        p->setCameraParameters(&cam);
+                                                        p->setMovingEdge(&me);
+                                                        p->buildPoint(n, m, Z, theta, norm, cMo);
+                                                        p->initControlPoint(I, 0);
+                                                        npoints += 1;
+                                                        local_insert_table.push_back(p);
+                                                }
+                                        }
+                                }
+                                if (!local_insert_table.empty())
+//#pragma omp critical
+                                {
+                                        points[i].insert(points[i].end(),
+                                                        local_insert_table.begin(),
+                                                        local_insert_table.end());
+                                        //npoints += local_insert_table.size();
+                                }
+                                local_insert_table.clear();
+
+                                //std::cout << " size " << points[i].size() << std::endl;
+                        }
+//#pragma omp barrier
+//#pragma omp master
+                        upScale(i);
+                }
+        }
+
+        std::cout << " size points " << points[scaleLevel].size() << std::endl;
+
+}
+
 void apMbTracker::extractControlPointsP(const vpImage<unsigned char> &I,
 		const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char>& Ior,
-		const vpImage<unsigned char>& Itex, const double dist) {
+                const vpImage<unsigned char>& Itex, const double dist) {
     int sample = rendparam.sampleR;
-	const double znear = dist - rendparam.clipDist;
-	const double zfar = dist + rendparam.clipDist;
+        const double znear = dist - rendparam.clipDist;
+        const double zfar = dist + rendparam.clipDist;
 
 	const int rows = Ior.getHeight();
 	const int cols = Ior.getWidth();

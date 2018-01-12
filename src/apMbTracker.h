@@ -328,7 +328,7 @@ private:
   void loadConfigFile(const std::string& _filename);
   void loadConfigFile(const char* filename);
   void loadModel(const char* cad_name);
-  void  loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
+  void loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
   void savepair(std::string &message, const std::pair<point3d, point2d> &pair);
   void save3dpoint(std::string &message, const point3d &point3d);
   void save2dpoint(std::string &message, const point2d &point2d);
@@ -342,7 +342,7 @@ private:
   void initCylinder(const vpPoint&, const vpPoint&, double, int, const string&){};
   void track(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist);
   //void trackHyb(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist, const double m, apOgre ogre_);
-  void trackDef(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist);
+  void trackDef(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double distmin, const double distmax);
   void trackPred(const vpImage<unsigned char> &I);
   void track(const vpImage<unsigned char>& I){};
   void trackXray(const vpImage<unsigned char>& I, double dist);
@@ -449,6 +449,7 @@ private:
   void trackKltControlPoints(const vpImage<unsigned char> &I);
   void updateControlPoints();
   void extractControlPoints(const vpImage<unsigned char> &I, const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char> &Ior,const vpImage<unsigned char> &Itex, const double dist);
+  void extractControlPoints(const vpImage<unsigned char> &I, const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char> &Ior,const vpImage<unsigned char> &Itex, const double distmin, const double distmax);
   void extractControlPointsP(const vpImage<unsigned char> &I, const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char>& Ior, const vpImage<unsigned char>& Itex, const double dist);
   void extractControlPointsCCD(const vpImage<unsigned char> &I, const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char> &Ior,const vpImage<unsigned char> &Itex, const double dist);
   void extractControlPointsLines(const vpImage<unsigned char> &I, const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char> &Ior,const vpImage<unsigned char> &Itex, const double dist);

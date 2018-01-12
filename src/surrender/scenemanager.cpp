@@ -584,6 +584,26 @@ namespace luxifer
         setCamera(ModelView);
     }
 
+    void SceneManager::updateCameraParameters (const vpHomogeneousMatrix &cMo, const double Znear, const double Zfar)
+    {
+        // As y from ViSP is -y from Ogre and z from ViSP is -z from Ogre
+        // we have to change the matrix a little bit.
+        // Rotations between x and y will therefore see their sign inverted
+        // and so will rotations between x and z.
+        // Rotations between y and z don't have to move as their relation is
+        // the same in ViSP and Ogre.
+        // As for translations, ty=-ty and tz=-tz as y=-y and z=-z
+
+        vpTranslationVector translat;
+        cMo.extract(translat);
+        updateClipDistances(Znear,Zfar);
+        osg::Matrixd ModelView = osg::Matrixd(   cMo[0][0], -cMo[1][0], -cMo[2][0], 0,
+                                                 cMo[0][1], -cMo[1][1], -cMo[2][1], 0,
+                                                 cMo[0][2], -cMo[1][2], -cMo[2][2], 0,
+                                                 cMo[0][3], -cMo[1][3], -cMo[2][3], 1);
+        setCamera(ModelView);
+    }
+
     void SceneManager::updateClipDistances(const double Zd)
     {
         // Camera objects use optimal dynamic clipping planes
@@ -595,6 +615,16 @@ namespace luxifer
         fFar = float(Zd + clipD);
     }
 
+    void SceneManager::updateClipDistances(const double Znear, const double Zfar)
+    {
+        // Camera objects use optimal dynamic clipping planes
+        // ==> we must emulate clipping in the shader
+        u_fNear->set(float(Znear));
+        u_fFar->set(float(Zfar));
+        fNear = float(Znear);
+        fFar = float(Zfar);
+    }
+
     /**
     * Update render to texture for depth edges
     * \param Inormd : RGBA map containing the normal map + depth map of the rendered scene.
@@ -604,6 +634,22 @@ namespace luxifer
     void SceneManager::updateRTT(vpImage<vpRGBa> &I1, vpImage<unsigned char> &I0, vpHomogeneousMatrix *CMo)
     {
         updateCameraParameters(*CMo);
+
+        render();
+
+        copyTextureToMemory(normal_buffer, I1.bitmap, GL_RGBA, GL_UNSIGNED_BYTE);
+        copyTextureToMemory(edge_buffer, I0.bitmap, GL_RED, GL_UNSIGNED_BYTE);
+
+        // OpenGL textures are upside down so we have to flip them
+        for(int y = 0 ; y < I0.getHeight() / 2 ; ++y)
+            std::swap_ranges(I0[y], I0[y] + I0.getWidth(), I0[I0.getHeight() - 1 - y]);
+        for(int y = 0 ; y < I1.getHeight() / 2 ; ++y)
+            std::swap_ranges(I1[y], I1[y] + I1.getWidth(), I1[I1.getHeight() - 1 - y]);
+    }
+
+    void SceneManager::updateRTT(vpImage<vpRGBa> &I1, vpImage<unsigned char> &I0, vpHomogeneousMatrix *CMo, const double znear, const double zfar)
+    {
+        updateCameraParameters(*CMo, znear, zfar);
 
         render();
 

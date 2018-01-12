@@ -152,6 +152,8 @@ x=(m-jc)/px;
 y=(n-ic)/py;
 rho=x*cos(theta)+y*sin(theta);
 cpoint->setWorldCoordinates(x*Z,y*Z,Z);
+
+std::cout << " control point " << x*Z << " " << y*Z << " " << Z << std::endl;
 cpoint->changeFrame(oMc);
 cpointo.setWorldCoordinates(cpoint->get_X(),cpoint->get_Y(),cpoint->get_Z());
 normw=normo;

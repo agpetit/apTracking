@@ -71,7 +71,9 @@ namespace luxifer
         GLuint getNormalBuffer();
 
         void updateCameraParameters (const vpHomogeneousMatrix &cMo);
+        void updateCameraParameters (const vpHomogeneousMatrix &cMo, const double Znear, const double Zfar);
         void updateRTT(vpImage<vpRGBa> &I1, vpImage<unsigned char> &I0, vpHomogeneousMatrix *CMo);
+        void updateRTT(vpImage<vpRGBa> &I1, vpImage<unsigned char> &I0, vpHomogeneousMatrix *CMo, const double znear, const double zfar);
         void updateRTTCol(vpImage<vpRGBa> &I2, vpImage<vpRGBa> &I1, vpImage<unsigned char> &I0, vpHomogeneousMatrix *CMo);
         void updateRTTColAR(vpImage<vpRGBa> &I2,vpHomogeneousMatrix *CMo);
 
@@ -95,6 +97,7 @@ namespace luxifer
         void copyTextureToTexture(osg::ref_ptr<osg::Texture2D> dst, osg::ref_ptr<osg::Texture2D> src);
 
         void updateClipDistances(const double Zd);
+        void updateClipDistances(const double Znear, const double Zfar);
     private:
         osg::ref_ptr<osg::Node> scene_node;
 
