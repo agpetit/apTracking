@@ -667,6 +667,10 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
     vpMatrix intrinsic;
     intrinsic.resize(3,3);
 
+    vertices.resize(0);
+    normals.resize(0);
+    triangles.resize(0);
+
    // for( size_t i=0; i<stream.length(); i++)
         //char c = stream[i];
         //if( c == '[' ) i++;

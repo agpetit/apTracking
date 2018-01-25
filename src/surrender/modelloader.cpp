@@ -247,7 +247,7 @@ namespace luxifer
 
         }
 
-        std::cout << " ok load mesh " << std::endl;
+        std::cout << " ok load mesh " << v_vertex->size() << " " << v_normal->size() << std::endl;
 
         const string object_name = "deformablemesh";
 
