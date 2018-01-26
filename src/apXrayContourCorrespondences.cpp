@@ -287,11 +287,11 @@ int main(int argc, char **argv)
     tracker.getLearningParameters(learn);
 
     SceneViewer viewer;
-     SceneManager *mgr;
-   /*  mgr = new SceneManager(const_cast<QGLContext*>(viewer.context()));
+    SceneManager *mgr;
+    mgr = new SceneManager(const_cast<QGLContext*>(viewer.context()));
     viewer.setSceneManager(mgr);
     viewer.show();
-    viewer.move(200, 200);*/
+    viewer.move(200, 200);
 
     const int width = 320;
     const int height = 320;
@@ -520,14 +520,24 @@ int main(int argc, char **argv)
 
                 vpImageConvert::convert(image,Id);
                 vpImageConvert::convert(image,Icol);
-                mgr = new SceneManager(const_cast<QGLContext*>(viewer.context()));
-                   viewer.setSceneManager(mgr);
-                   viewer.show();
-                   viewer.move(200, 200);
 
-                if (im == 0)
+                if (im > 3)
+                {
+                    for (int k = 0; k < vertices.size(); k++)
+                    {
+                        vertices[k].x /= 2.0;
+                        vertices[k].y /= 2.0;
+                        vertices[k].z /= 2.0;
+                    }
+                     // d_positions.setValue(vect);
+                      std::cout << " change positions "  << std::endl;
+
+                }
+
+
+                //if (im == 0)
                 mgr->load(vertices, normals, triangles);
-                else mgr->update(vertices, normals, triangles);
+               // else mgr->update(vertices, normals, triangles);
                 t0= vpTime::measureTimeMs();
 
                 zmin -= 5;
@@ -542,8 +552,6 @@ int main(int argc, char **argv)
                 std::cout << " cMo proj " << cMo << std::endl;
 
                 mgr->updateRTT(Inormd,Ior,&cMo, zmin, zmax);
-
-                delete mgr;
 
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;

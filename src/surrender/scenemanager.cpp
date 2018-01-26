@@ -419,8 +419,17 @@ namespace luxifer
 
     void SceneManager::update(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles)
     {
-        scene_node = NULL;
+        ref_ptr<Group> color_cam_grp = new Group;
+        ref_ptr<Group> normal_cam_grp = new Group;
+
         scene_node = ModelLoader::load(vertices, normals, triangles);
+
+        color_cam_grp->addChild(scene_node);
+        color_cam->setScene(color_cam_grp);
+
+        normal_cam_grp->addChild(scene_node);
+        normal_cam->setScene(normal_cam_grp);
+
     }
 
     osg::Vec3d SceneManager::getCameraPosition()
