@@ -287,10 +287,11 @@ int main(int argc, char **argv)
     tracker.getLearningParameters(learn);
 
     SceneViewer viewer;
-    SceneManager *mgr = new SceneManager(const_cast<QGLContext*>(viewer.context()));
+     SceneManager *mgr;
+   /*  mgr = new SceneManager(const_cast<QGLContext*>(viewer.context()));
     viewer.setSceneManager(mgr);
     viewer.show();
-    viewer.move(200, 200);
+    viewer.move(200, 200);*/
 
     const int width = 320;
     const int height = 320;
@@ -519,6 +520,11 @@ int main(int argc, char **argv)
 
                 vpImageConvert::convert(image,Id);
                 vpImageConvert::convert(image,Icol);
+                mgr = new SceneManager(const_cast<QGLContext*>(viewer.context()));
+                   viewer.setSceneManager(mgr);
+                   viewer.show();
+                   viewer.move(200, 200);
+
                 if (im == 0)
                 mgr->load(vertices, normals, triangles);
                 else mgr->update(vertices, normals, triangles);
@@ -533,7 +539,11 @@ int main(int argc, char **argv)
 
                 }
 
+                std::cout << " cMo proj " << cMo << std::endl;
+
                 mgr->updateRTT(Inormd,Ior,&cMo, zmin, zmax);
+
+                delete mgr;
 
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
