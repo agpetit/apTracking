@@ -9091,11 +9091,14 @@ int length = 0;
             correspondence.first = p3d;
             correspondence.second = p2d;
 
+
+            if (site.suppress==0){
             correspondences.push_back(correspondence);
 
             save3dpoint(messagePoint3d,p3d);
             messageStr += messagePoint3d;
             length += messagePoint3d.length();
+            }
 
         }
 
@@ -9109,9 +9112,11 @@ int length = 0;
             p2d.i = site.i;
             p2d.j = site.j;
 
+            if (site.suppress==0){
             save2dpoint(messagePoint2d,p2d);
             messageStr += messagePoint2d;
             length += messagePoint2d.length();
+            }
 
         }
         zmq::message_t message(length);
