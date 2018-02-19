@@ -22,14 +22,14 @@
 #include <visp/vpVideoReader.h>
 #include <visp/vpImage.h>
 #include <visp/vpImageIo.h>
-#include <visp/vpDisplayX.h>
+#include <visp/vpDisplay.h>
 #include <visp/vpFeatureVanishingPoint.h>
 #include <visp/vpRansac.h>
 #include <visp/vpKltOpencv.h>
 #include <visp/vpColVector.h>
 #include <visp/vpMeLine.h>
 
-#include "apLibMotion.h"
+//#include "apLibMotion.h"
 #include "apSegMotionCol.h"
 
 
@@ -55,13 +55,13 @@ public :
 	segmentationType type;
 	apSegmentationParameters segParam;
 
-    vibeModel_t *model;// = libvibeModelNew();
+        vibeModel_t *model;// = libvibeModelNew();
 	int32_t width;
 	int32_t height;
 	int32_t stride;
 
 	apSegMotionCol segMot;
-	IplImage *frame_1c_orig;
+        Mat frame_1c_orig;
 
 	vpCameraParameters cam;
 

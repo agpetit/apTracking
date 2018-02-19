@@ -119,7 +119,7 @@ delete [] labelPts;
 	  }*/
 }
 
-void apSegMotionCol::initTrajectories(IplImage *Img){
+void apSegMotionCol::initTrajectories(cv::Mat Img){
 
 	tracker.initTracking(Img);
 	nbPointToTrack = 0;
@@ -862,8 +862,10 @@ void apSegMotionCol::GMM()
 
 
     }
-    em_modelFgd.clear();
-    em_modelBgd.clear();
+
+    //em_modelFgd.clear();
+    //em_modelBgd.clear();
+
    // em_modelFgd.train( samplesFgd, cv::Mat(), params, &labelsFgd );
     //em_modelBgd.train( samplesBgd, cv::Mat(), params, &labelsBgd );
 	//const CvMat* m = em_modelFgd.get_means();
@@ -3073,12 +3075,12 @@ for (m = 3 ; m < width-3; m++)
 
 double cannyTh1=4;
 double cannyTh2=8;
-IplImage* Ip = NULL;
+Mat Ip;
 Mat dst0;
 vpImageConvert::convert(I0, Ip);
-Mat src0=Mat(Ip,true);
-IplImage* dst = cvCreateImage( cvSize(I0.getWidth(),I0.getHeight()), 8, 1);
-cvCanny( Ip, dst, cannyTh1, cannyTh2, 3 );
+Mat src0= Ip.clone();
+Mat dst( Size(I0.getWidth(),I0.getHeight()), CV_8U, 1);
+Canny( Ip, dst, cannyTh1, cannyTh2, 3 );
 vpImageConvert::convert(dst, I1);
 double a,b;
 for (int i=0;i<height-0;i++)
@@ -3229,13 +3231,12 @@ void apSegMotionCol::detectLimbC(vpImage<unsigned char> &I, vpImage<vpRGBa> &_I)
 	                std::cout << " triples " << triples[0].i1 << " " << triples[0].j1 << " " << triples[0].k1 << std::endl;
 
 
-	                IplImage* Ip = NULL;
-					IplImage* Ip1;
+                                        Mat Ip;
 					//vpImageConvert::convert(I_, Ip);
 					vpImageConvert::convert(I, Ip);
 					Mat color_dst;
 					vector<Vec2f> linesV;
-					Mat dst(Ip);
+                                        Mat dst = Ip.clone();
 					vpImage<unsigned char> I3;
 					cvtColor(dst, color_dst, CV_GRAY2BGR);
 /*					HoughLines(dst, linesV, 3, CV_PI / 60, 150, 0, 0);
@@ -3270,11 +3271,10 @@ void apSegMotionCol::detectLimbC(vpImage<unsigned char> &I, vpImage<vpRGBa> &_I)
 					       circle( color_dst, center, radius, Scalar(0,0,255), 3, 8, 0 );
 					    }
 
-						vpImage<vpRGBa> Ioverlay;
-						 Ip1 = new IplImage(color_dst);
+                                                 vpImage<vpRGBa> Ioverlay;
+                                                 Mat Ip1 = color_dst.clone();
 						 vpImageConvert::convert(Ip1, I3);
-						 delete Ip1;
-						vpDisplayX display;
+                                                 vpDisplayX display;
 						 display.init(I3, 1500, 10, "Hough");
 						 vpDisplay::display(I3);
 						 vpDisplay::flush(I3);
@@ -3421,13 +3421,12 @@ void apSegMotionCol::detectLimb(vpImage<unsigned char> &I, vpImage<vpRGBa> &_I)
     	}
     	}
 
-	                IplImage* Ip = NULL;
-					IplImage* Ip1;
-					vpImageConvert::convert(I_, Ip);
+                                        Mat Ip,Ip1;
+                                        vpImageConvert::convert(I_, Ip);
 					//vpImageConvert::convert(I, Ip);
 					Mat color_dst;
 					vector<Vec2f> linesV;
-					Mat dst(Ip);
+                                        Mat dst = Ip.clone();
 					vpImage<unsigned char> I3;
 					cvtColor(dst, color_dst, CV_GRAY2BGR);
 					HoughLines(dst, linesV, 3, CV_PI / 60, 150, 0, 0);
@@ -3463,9 +3462,8 @@ void apSegMotionCol::detectLimb(vpImage<unsigned char> &I, vpImage<vpRGBa> &_I)
 					    }*/
 
 						vpImage<vpRGBa> Ioverlay;
-						 Ip1 = new IplImage(color_dst);
+                                                 Ip1 = color_dst.clone();
 						 vpImageConvert::convert(Ip1, I3);
-						 delete Ip1;
 						vpDisplayX display;
 						 display.init(I3, 1500, 10, "Hough");
 						 vpDisplay::display(I3);

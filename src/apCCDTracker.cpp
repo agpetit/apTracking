@@ -2722,7 +2722,12 @@ void apCCDTracker::updateParametersRobust(vpMatrix &LTCIL, vpColVector &LTCIR, v
     //LTCIL = L_ccd.transpose()*L_ccd;
 //    std::cout << "delta_t(3) = " << vpTime::measureTimeMicros() - t0 << " µs" << std::endl;
 //    t0 = vpTime::measureTimeMicros();
-    computeJTR(CIL,weighted_error_ccd,LTCIR);
+    const vpMatrix _CIL = CIL;
+    const vpColVector _weighted_error_ccd = weighted_error_ccd;
+
+    vpMatrix LTCIR_;
+    computeJTR(_CIL,_weighted_error_ccd,LTCIR_);
+    LTCIR = LTCIR_;
 //    std::cout << "delta_t(4) = " << vpTime::measureTimeMicros() - t0 << " µs" << std::endl;
 
     //LTCIL = L_ccd.transpose()*covariance_inv*L_ccd;
@@ -3052,8 +3057,12 @@ void apCCDTracker::updateParametersRobustPrev(vpMatrix &LTCIL, vpColVector &LTCI
     //LTCIL = L_ccd.transpose()*L_ccd;
 //    std::cout << "delta_t(3) = " << vpTime::measureTimeMicros() - t0 << " µs" << std::endl;
 //    t0 = vpTime::measureTimeMicros();
+    const vpMatrix _CIL = CIL;
+    const vpColVector _weighted_error_ccd = weighted_error_ccd;
 
-    computeJTR(CIL,weighted_error_ccd,LTCIR);
+    vpMatrix LTCIR_;
+    computeJTR(_CIL,_weighted_error_ccd,LTCIR_);
+    LTCIR = LTCIR_;
 //    std::cout << "delta_t(4) = " << vpTime::measureTimeMicros() - t0 << " µs" << std::endl;
 
     //LTCIL = L_ccd.transpose()*covariance_inv*L_ccd;

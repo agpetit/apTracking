@@ -3,7 +3,7 @@
 #define APSEGMENTMOTION_H
 
 #include <visp/vpKltOpencv.h>
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include <visp/vpHistogram.h>
 #include "apRANSAC.h"
 #include "apKernel.h"
@@ -13,7 +13,7 @@
 #include "apGMM.h"
 #include "apHoughVoteCircle.h"
 
-#include "apLibMotion.h"
+//#include "apLibMotion.h"
 #include "minE.h"
 #include "ml.h"
 
@@ -235,8 +235,8 @@ public:
 
 	std::vector<vpImage<vpRGBa> > histIm;
 
-    cv::EM em_modelFgd;
-    cv::EM em_modelBgd;
+    //cv::EM em_modelFgd;
+    //cv::EM em_modelBgd;
 
 	minE minEnergy;
 
@@ -284,7 +284,7 @@ public:
 	void setDeltaHomography(int _deltaH){deltaHomography = _deltaH;}
 	void setNGaussians(int _ngaussians){nGaussians = _ngaussians;}
 	void setNBins(int _nbins){nbins = _nbins;}
-	void initTrajectories(IplImage *Img);
+        void initTrajectories(cv::Mat Img);
 	void initEnergy(vpImage<unsigned char> &_I);
 	void updateTrajectories();
 	void fusionTrajectories(apSegMotionCol tracker_tmp);
