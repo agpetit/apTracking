@@ -455,6 +455,21 @@ void apMbTracker::computeVVS(const vpImage<unsigned char>& _I) {
 	//    std::cout << "error: " << (residu_1 - r) << std::endl;
 }
 
+void apMbTracker::sendPose()
+{
+    string messageStr;
+    messageStr = std::to_string(cMo[0][3]) + " " + std::to_string(cMo[1][3]) + " " + std::to_string(cMo[2][3]) + " "
+            + std::to_string(cMo[0][0]) + " " + std::to_string(cMo[0][1]) + " " + std::to_string(cMo[0][2]) + " "
+            + std::to_string(cMo[1][0]) + " " + std::to_string(cMo[1][1]) + " " + std::to_string(cMo[1][2]) + " "
+            + std::to_string(cMo[2][0]) + " " + std::to_string(cMo[2][1]) + " " + std::to_string(cMo[2][2]) + " ";
+
+    zmq::message_t message(messageStr.length());
+    memcpy(message.data(), messageStr.c_str(), messageStr.length());
+
+    bool status = m_socketPub->send(message);
+
+}
+
 void loadImage( cv::Mat & mat, const char * data_str )
 {
     std::stringstream ss;
@@ -462,6 +477,36 @@ void loadImage( cv::Mat & mat, const char * data_str )
 
     boost::archive::text_iarchive tia( ss );
     tia >> mat;
+}
+
+void apMbTracker::receiveImage(vpImage<vpRGBa> &Icol)
+{
+    cv::Mat img;
+    cv::Mat img1 = Mat::zeros( Icol.getHeight(),Icol.getWidth(), CV_8UC3);
+
+    zmq::message_t message1;
+
+    bool status1 = m_socketSub->recv(&message1);
+    if(status1){
+    std::string rpl = std::string(static_cast<char*>(message1.data()), message1.size());
+    const char *cstr = rpl.c_str();
+    loadImage(img,cstr);
+
+   // memcpy(img.data, message1.data(), imgSize);
+    std::cout << " ok receive " << std::endl;
+
+  // Assign pixel value to img
+  for (int i = 0;  i < img1.rows; i++) {
+   for (int j = 0; j < img1.cols; j++) {
+    img1.at<Vec4b>(i,j)[0] = img.at<uchar>(0,i*img1.cols+j);
+    img1.at<Vec4b>(i,j)[1] = img.at<uchar>(0,i*img1.cols+j + 1);
+    img1.at<Vec4b>(i,j)[2] = img.at<uchar>(0,i*img1.cols+j + 2);
+    img1.at<Vec4b>(i,j)[3] = img.at<uchar>(0,i*img1.cols+j + 3);
+    }
+   }
+  cv::imwrite("socketimage100.png", img1);
+    }
+vpImageConvert::convert(img1,Icol);
 }
 
 

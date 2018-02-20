@@ -328,6 +328,8 @@ private:
   void loadConfigFile(const std::string& _filename);
   void loadConfigFile(const char* filename);
   void loadModel(const char* cad_name);
+  void receiveImage(vpImage<vpRGBa> &Icol);
+  void sendPose();
   void loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
   void savepair(std::string &message, const std::pair<point3d, point2d> &pair);
   void save3dpoint(std::string &message, const point3d &point3d);

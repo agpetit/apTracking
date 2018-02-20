@@ -70,7 +70,7 @@ public:
 	void setStartingLevel();
 	void loadViews(std::string viewspath);
 	void setFilters(std::string hpath, vpCameraParameters &cam);
-    //void setTracker(apMbTracker &_tracker){tracker = _tracker;}
+        //void setTracker(apMbTracker &_tracker){tracker = _tracker;}
 	void detect(std::string ipath, std::string isegpath, std::string hpath, std::string scpath, vpCameraParameters &cam, int fframe, double thld, const SearchStrategy &searchStrategy, const PFEstimateType &PFEType);
 	void computeTransProba(vpMatrix &simmatrix);
 	void computeInteractionMixing(int nbParticles);

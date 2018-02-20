@@ -171,6 +171,11 @@ ADD_EXECUTABLE(apXrayContourCorrespondences
     apXrayContourCorrespondences.cpp
     ${TRACKER_COMMON_FILES}
   )
+
+ADD_EXECUTABLE(apCOTrackingCom
+    apCOTrackingCom.cpp
+    ${TRACKER_COMMON_FILES}
+  )
   
 #  ADD_EXECUTABLE(apCOAR
 #    apCOAR.cpp
@@ -208,7 +213,7 @@ ADD_EXECUTABLE(apXrayContourCorrespondences
 #  )
 
   TARGET_LINK_LIBRARIES(apXrayTracking
-        ${OPENGL_LIBRARIES}
+    ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
     ${QT_LIBRARIES}
     ${GLEW_LIBRARY}
@@ -216,7 +221,15 @@ ADD_EXECUTABLE(apXrayContourCorrespondences
   )
 
   TARGET_LINK_LIBRARIES(apXrayContourCorrespondences
-        ${OPENGL_LIBRARIES}
+    ${OPENGL_LIBRARIES}
+    ${OPENSCENEGRAPH_LIBRARIES}
+    ${QT_LIBRARIES}
+    ${GLEW_LIBRARY}
+    ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
+  )
+
+  TARGET_LINK_LIBRARIES(apCOTrackingCom
+    ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
     ${QT_LIBRARIES}
     ${GLEW_LIBRARY}
