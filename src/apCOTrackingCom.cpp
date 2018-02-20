@@ -85,7 +85,7 @@ using namespace cv;
 
 using namespace luxifer;
 
-#define GETOPTARGS  "o:i:c:s:l:m:I:dh"
+#define GETOPTARGS  "o:c:s:l:m:I:dh"
 
 
 void usage(const char *name, const char *badparam)
@@ -107,9 +107,6 @@ SYNOPSIS\n\
 OPTIONS:                                               \n\
   -o <object name>                                 \n\
      Specify the name of object or scene to track\n\
-\n\
-  -i <input image path>                                \n\
-     Set image input path.\n\
 \n\
   -s <first image>                                \n\
      Set the first image of the sequence.\n\
@@ -138,7 +135,6 @@ OPTIONS:                                               \n\
 
 bool getOptions(int argc, char **argv,
                 std::string &object,
-                std::string &ipath,
                 bool &display,
                 int &start_image,
                 std::string &configfile,
@@ -153,7 +149,6 @@ bool getOptions(int argc, char **argv,
 
     switch (c) {
     case 'o': object = optarg; break;
-    case 'i': ipath = optarg; break;
     case 'd': display = false; break;
     case 'c': configfile = optarg; break;
     case 's': start_image = atoi(optarg);   break;
@@ -237,26 +232,13 @@ int main(int argc, char **argv)
     covariancepath = "/home/soft/apTracking/mbt-co/build2/covariance";
     timepath = "time";
 
-
-
     // Read the command line options
-    if (!getOptions(argc, argv, opt_object, opt_ipath, opt_display, start_image, configFile, opt_learn, opt_detect, inline_init)) {
+    if (!getOptions(argc, argv, opt_object, opt_display, start_image, configFile, opt_learn, opt_detect, inline_init)) {
       return (-1);
     }
 
     opt_display = true;
     // Get the option values
-
-     if (!opt_ipath.empty())
-     {
-       ipath = opt_ipath;// + vpIoTools::path("/image%06d.png");
-//       truthpath = opt_ipath + vpIoTools::path("/truth.txt");
-     }
-     else
-     {
-       ipath = env_ipath2 + vpIoTools::path("/soft/luxifer_20120111_livraison_inria/demo9/image%06d.png");
-//       truthpath = env_ipath2 + vpIoTools::path("/truth.txt");
-     }
 
      if (!opt_object.empty())
        object = opt_object;
@@ -378,69 +360,6 @@ int main(int argc, char **argv)
 
 
     vpHomogeneousMatrix cMo, cMo2, cMoFilt;
-
-	cout << "time2 "<< opt_detect << endl;
-
-    //Automatic initialization of the tracker
-
-    if(opt_detect)
-    {
-
-        // File where the graph is stored
-/*    	std::string hf = "h" + object + ".txt";
-    	char *hfile = (char *)hf.c_str();
-    	// File to store the data (pose...) of each view at the first level
-    	std::string data0f = "data" + object + "0.txt";
-    	char *data0file = (char *)data0f.c_str();
-    	//File to store the data (pose...) of the views at each level of the hierarchical view graph
-    	std::string data1f = "data" + object + "1.txt";
-    	char *data1file = (char *)data1f.c_str();*/
-    	// File to store the transition probabilities between each prototype view at the last level of the hierarchy
-    	std::string transP = "transProb" + object + ".txt";
-    	char *transProba = (char *)transP.c_str();
-
-        if(opt_learn)
-    	{
-    		//Learn the 3D model to build the hierarchical view graph
-        	apViews views;
-        	// Initialize the view sphere
-        	views.initViewSphere(learn,object);
-    		//Build the view graph - the resulting views are saved and the hierarchical graph is stored in txt file (hfile)
-    		views.buildViewGraph(mcam,mgr,vpath, height, width);
-    	}
-
-    	int fr;
-    	apDetector detector;
-    	detector.init(detect,object);
-    	detector.loadViews(vpath);
-    	detector.setFilters(vpath, mcam);
-    	detector.computeTransitionProbV(transProba);
-    	detector.setSegmentationParameters(seg);
-        //detector.setTracker(tracker);
-    	std::cout << " Ok particle filters set - Click to detect " << std::endl;
-        //while(!vpDisplay::getClick(Id,false))
-        {
-            vpDisplay::display(Id);
-            vpDisplay::displayCharString(Id, 15, 10,
-                                         "Ready to detect - click",
-                                         vpColor::red);
-            vpDisplay::flush(Id) ;
-
-        }
-        double t0= vpTime::measureTimeMs();
-        //thld = 20;
-        detector.detect(ipath,isegpath,vpath, scpath,mcam,start_image,20,apDetector::TOP,apDetector::MEAN);
-        double t1= vpTime::measureTimeMs();
-        cMo = detector.getPose();
-        fr =  detector.getFrame();
-        //tracker.setPose(cMo);
-        cout << "detection time "<< t1-t0 << endl;
-
-        tracker.setPose(cMo);
-        tracker.init(Id,cMo);
-    }
-
-    cout << "detection time "<< endl;
 
     // Manual initialization of the tracker
     if (opt_display && opt_click_allowed && !opt_detect)

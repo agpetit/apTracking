@@ -54,15 +54,9 @@ set(IGTLink_LIBRARIES ${OpenIGTLink_LIBRARIES})
 
 LINK_DIRECTORIES(${GLEW_LIBRARY_DIR})
 
-LINK_DIRECTORIES(${VIBE_DIR})
-
 SET(QT_SOURCE_FILES surrender/sceneviewer.cpp surrender/scenemanager.cpp)
 SET(QT_HEADERS surrender/sceneviewer.h surrender/scenemanager.h)
 
-SET(VIBE_FILES
-vibe-background.o
-vibe-background.h
-)
 
 
 QT4_WRAP_CPP(QT_SOURCE_FILES ${QT_HEADERS})
@@ -142,7 +136,6 @@ SET(TRACKER_COMMON_FILES
     zhelpers.h
     ${QT_SOURCE_FILES}                  ${QT_SOURCE_HEADERS}
     ${SURRENDER_FILES}
-    ${VIBE_FILES}
 )
 
 #ADD_EXECUTABLE(apCorrTracking

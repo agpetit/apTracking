@@ -12,7 +12,6 @@
 #include <visp/vpMath.h>
 #include <visp/vpImage.h>
 #include <visp/vpImageConvert.h>
-#include "vibe-background.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "opencv2/imgproc/imgproc.hpp"
@@ -45,7 +44,6 @@ class VISP_EXPORT apSegmentation
 public :
 	typedef enum
 	{
-	VIBE,
 	OPENCV_GMM_ZIVKOVIC,
 	OPENCV_GMM_BAF,
 	CRIMINISI,
@@ -55,7 +53,6 @@ public :
 	segmentationType type;
 	apSegmentationParameters segParam;
 
-    vibeModel_t *model;// = libvibeModelNew();
 	int32_t width;
 	int32_t height;
 	int32_t stride;

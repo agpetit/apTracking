@@ -23,24 +23,6 @@ void apSegmentation::init(vpImage<vpRGBa> &_I)
 {
    type = PETIT;
 	switch(type){
-	case VIBE:
-	{
-	model = libvibeModelNew();
-	width = _I.getWidth();
-	height = _I.getHeight();
-	stride = _I.getWidth()*3;
-	okseg = false;
-    /*vpImage<unsigned char> Ig;
-    Ig = _I;*/
-    //vpImageConvert::convert(_I,Ig);
-	  /* Allocates memory to store the input images and the segmentation maps */
-    uint8_t *image_data = static_cast<uint8_t *>(malloc(stride * height));
-	memcpy(image_data, _I.bitmap, stride * height);
-	  /* Allocates the model and initialize it with the first image */
-	libvibeModelAllocInit_8u_C1R(model, image_data, width, height, stride);
-	free(image_data);
-	break;
-	}
 	case OPENCV_GMM_ZIVKOVIC:
 		{break;
 		}
@@ -87,21 +69,6 @@ void apSegmentation::clear()
 void apSegmentation::segmentFgdBgd(vpImage<vpRGBa> &_I, vpImage<vpRGBa> &I_, int frame)
 {
 	switch(type){
-	case VIBE:
-	{
-	vpImage<unsigned char> Ig;
-    //vpImageConvert::convert(_I,Ig);
-    //Ig = _I;
-    I_.resize(height,width);
-	uint8_t *segmentation_map = static_cast<uint8_t *>(malloc(width * height));
-	uint8_t *image_data = static_cast<uint8_t *>(malloc(stride * height));
-	memcpy(image_data, _I.bitmap, stride * height);
-	libvibeModelUpdate_8u_C1R(model, image_data, segmentation_map);
-	memcpy(I_.bitmap, segmentation_map, 4 * width * height);
-	free(image_data);
-	free(segmentation_map);
-	break;
-	}
 	case OPENCV_GMM_ZIVKOVIC:
 	{
 		break;
