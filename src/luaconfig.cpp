@@ -5,7 +5,8 @@
 
 LuaConfig::LuaConfig(const std::string &filename)
 {
-    L = lua_open();
+    //L = lua_open();
+    L = luaL_newstate();
     luaL_openlibs(L);
     if (luaL_dofile(L, filename.c_str()))
     {

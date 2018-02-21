@@ -30,6 +30,8 @@
 #include "apKltControlPoint.h"
 //#include "apViews.h"
 
+#include <visp/vpImageTools.h>
+
 #include <fstream>
 #include <cstring>
 #include <cstdio>
