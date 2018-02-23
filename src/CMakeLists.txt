@@ -169,6 +169,11 @@ ADD_EXECUTABLE(apCOTrackingCom
     apCOTrackingCom.cpp
     ${TRACKER_COMMON_FILES}
   )
+
+ADD_EXECUTABLE(apCTContourCorrespondences
+    apCTContourCorrespondences.cpp
+    ${TRACKER_COMMON_FILES}
+  )
   
 #  ADD_EXECUTABLE(apCOAR
 #    apCOAR.cpp
@@ -222,6 +227,14 @@ ADD_EXECUTABLE(apCOTrackingCom
   )
 
   TARGET_LINK_LIBRARIES(apCOTrackingCom
+    ${OPENGL_LIBRARIES}
+    ${OPENSCENEGRAPH_LIBRARIES}
+    ${QT_LIBRARIES}
+    ${GLEW_LIBRARY}
+    ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
+  )
+
+  TARGET_LINK_LIBRARIES(apCTContourCorrespondences
     ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
     ${QT_LIBRARIES}

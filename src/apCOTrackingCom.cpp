@@ -95,7 +95,6 @@ Example of tracking based on the 3D model.\n\
 \n\
 SYNOPSIS\n\
   %s [-o <object name>]\n\
- [-i <image path>] \n\
  [-s <first image>] \n\
  [-c <config file>] \n\
  [-l <learn object>] \n\

@@ -682,6 +682,72 @@ void desserialize(std::istream &in, cv::Mat &s)
   }
 }
 
+void apMbTracker::loadPointsNormals2d(std::vector<std::vector<point2d>> points2d, std::vector<std::vector<point2dd>> normals2d)
+{
+
+    zmq::message_t message1;
+    bool status1 = m_socketSub->recv(&message1);
+
+    std::cout << " status 1 " << status1 << std::endl;
+    if(status1){
+    std::string rpl = std::string(static_cast<char*>(message1.data()), message1.size());
+    const char *cstr = rpl.c_str();
+
+    std::stringstream stream;
+    stream << cstr;
+
+    points2d.resize(0);
+    normals2d.resize(0);
+
+    int nimages = 0;
+
+        while (!stream.eof())
+        {
+            std::vector<point2d> points2d0;
+            std::vector<point2dd> normals2d0;
+
+           points2d0.resize(0);
+           normals2d0.resize(0);
+
+           int npoints = 0;
+
+             while (stream.peek()!=';')
+             {
+                 point2d point;
+                 double x,y;
+                 stream >> x;
+                 stream >> y;
+                 npoints ++;
+                 point.i = (int) x;
+                 point.j = (int) y;
+                 std::cout << " pos " << x << " " << y << std::endl;
+
+                 points2d0.push_back(point);
+             }
+             stream.ignore();
+             points2d.push_back(points2d0);
+
+
+             while (stream.peek()!=';')
+             {
+                 point2dd normal;
+                 stream >> normal.x;
+                 stream >> normal.y;
+                 std::cout << " norm " << normal.x << " " << normal.y << std::endl;
+                 normals2d0.push_back(normal);
+             }
+             stream.ignore();
+             stream.ignore();
+             normals2d.push_back(normals2d0);
+             nimages++;
+         }
+        }
+
+    std::cout << " size normals " << normals2d.size() << " " << points2d.size() << std::endl;
+
+
+}
+
 
 void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles)
 {
@@ -8198,6 +8264,149 @@ void apMbTracker::trackDef(const vpImage<unsigned char> &I, const vpImage<
 }
 
 
+/*!
+ Compute each state of the tracking procedure for all the feature sets.
+
+ If the tracking is considered as failed an exception is thrown.
+
+ \param I : The image.
+ */
+
+void apMbTracker::trackDef2D(const vpImage<unsigned char> &I, const vpImage<
+                vpRGBa> &IRGB, std::vector<point2d> &positions, std::vector<point2dd> &normals, std::vector<point2d> &trackededges, std::vector<int> &suppress) {
+        initPyramid(I, Ipyramid);
+        initPyramid(Iprec, Ipyramidprec);
+        switch (trackingType) {
+        case CCD_SH:
+        case CCD_MH:
+        case CCD_LINES_MH:
+        case CCD_MH_KLT:
+        case CCD_LINES_MH_KLT:
+                initPyramid(IRGB, IRGBpyramid);
+        }
+
+        for (int lvl = (scales.size() - 1); lvl >= 0; lvl -= 1) {
+                if (scales[lvl]) {
+                        vpHomogeneousMatrix cMo_1 = cMo;
+                        try {
+                                downScale(lvl);
+                                double t0 = vpTime::measureTimeMs();
+                                try {
+                                        switch (trackingType) {
+                                        case POINTS_SH:
+                                        case POINTS_MH:
+                                                buildControlPoints2D(*Ipyramid[lvl],positions, normals);
+                                                break;
+                                        }
+                                } catch (...) {
+                                        vpTRACE("Error in points extraction");
+                                }
+
+                                double t1 = vpTime::measureTimeMs();
+                                std::cout << "timeextract " << t1 - t0 << std::endl;
+                                timeextract = t1 - t0;
+                                double t2 = vpTime::measureTimeMs();
+                                try {
+                                        switch (trackingType) {
+                                        case POINTS_SH:
+                                        case CCD_SH:
+                                                trackControlPoints(*Ipyramid[lvl]);
+                                                break;
+                                        case POINTS_MH:
+                                        case CCD_MH:
+                                                trackControlPointsMH(*Ipyramid[lvl]);
+                                                break;
+                                        case CCD_MH_KLT:
+                                                trackControlPointsMH(*Ipyramid[lvl]);
+                                                trackKltControlPoints(*Ipyramid[lvl]);
+                                                break;
+                                        }
+                                } catch (...) {
+                                        vpTRACE("Error in tracking");
+                                        throw;
+                                }
+                                double t3 = vpTime::measureTimeMs();
+                                std::cout << "timetrack " << t3 - t2 << std::endl;
+                                timetrack = t3-t2;
+
+                                try {
+                                        double t4 = vpTime::measureTimeMs();
+                                        switch (trackingType) {
+                                        case POINTS_SH:
+                                                buildCorrespondencesEdges2D(trackededges, suppress);
+                                                break;
+                                        case POINTS_MH:
+                                                buildCorrespondencesEdges2D(trackededges, suppress);
+                                                break;
+                                        /*case CCD_SH:
+                                                exportCorrespondencesEdgesCCD(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                                break;
+                                        case CCD_MH:
+                                                exportCorrespondencesEdgesCCDMH(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                                break;
+                                        case CCD_MH_KLT:
+                                                if (kltPoints[lvl].size() > 2)
+                                                exportCorrespondencesEdgesCCDMHKlt(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                                else exportCorrespondencesEdgesCCDMH(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                            break;*/
+                                        }
+                                        double t5 = vpTime::measureTimeMs();
+                                        std::cout << "timeExportCorrespondences " << t5 - t4 << std::endl;
+                                        timevvs = t5-t4;
+                                } catch (...) {
+                                        vpTRACE("Error in computeVVS");
+                                        throw vpException(vpException::fatalError,
+                                                        "Error in computeVVS");
+                                }
+                                // try
+                                // {
+                                // testTracking();
+                                // }
+                                // catch(...)
+                                // {
+                                // throw vpTrackingException(vpTrackingException::fatalError, "test Tracking fail");
+                                // }
+
+                                try {
+                                        //displayControlPoints();
+                                } catch (...) {
+                                        vpTRACE("Error in moving edge updating");
+                                        throw;
+                                }
+
+                        } catch (...) {
+                                if (lvl != 0) {
+                                        cMo = cMo_1;
+                                        reInitLevel(lvl);
+                                        upScale(lvl);
+                                } else {
+                                        upScale(lvl);
+                                        throw;
+                                }
+                        }
+                }
+        }
+
+        cleanPyramid(Ipyramid);
+        switch (trackingType) {
+        case CCD_SH:
+        case CCD_MH:
+        case CCD_LINES_MH:
+        case CCD_MH_KLT:
+        case CCD_LINES_MH_KLT:
+                cleanPyramid(IRGBpyramid);
+                CCDTracker.clearCCDTracker();
+        }
+        cleanPyramid(Ipyramidprec);
+        Iprec = I;
+        IprecRGB = IRGB;
+
+        frame++;
+        frame0++;
+}
+
+
+
 /*void apMbTracker::track(const vpImage<unsigned char> &I, const vpImage<
 		vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd, const vpImage<
 		unsigned char>& Ior, const vpImage<unsigned char>& Itex,
@@ -9174,6 +9383,82 @@ int length = 0;
 
 }
 
+void apMbTracker::buildCorrespondencesEdges2D(std::vector<point2d> &trackededges, std::vector<int> &suppress) {
+
+trackededges.resize(0);
+suppress.resize(0);
+
+//#pragma omp parallel for
+        for (int k = 0; k < points[scaleLevel].size(); k++)
+        {
+            vpPointSite site = points[scaleLevel][k]->s;
+
+            point2d p2d;
+            p2d.i = site.i;
+            p2d.j = site.j;
+            trackededges.push_back(p2d);
+            suppress.push_back(site.suppress);
+
+        }
+
+}
+
+void apMbTracker::exportCorrespondencesEdges2D(std::vector<std::vector<point2d>> &trackededgesIm, std::vector<std::vector<int>> &suppressIm) {
+
+
+    string messagePoint2d;
+    string messageSuppress;
+    string messageStr;
+
+    int length = 0;
+
+    for (int im = 0; im < trackededgesIm.size(); im++)
+    {
+    for (int k = 0; k < trackededgesIm[im].size(); k++)
+    {
+        point2d p2d;
+        p2d.i =  trackededgesIm[im][k].i;
+        p2d.j =  trackededgesIm[im][k].j;
+
+        std::cout << " export p2d " <<  p2d.i << " " << p2d.j << std::endl;
+        {
+        save2dpoint(messagePoint2d,p2d);
+        messageStr += messagePoint2d;
+        length += messagePoint2d.length();
+        }
+    }
+    messageStr += ";";
+
+    for (int k = 0; k < suppressIm[im].size(); k++)
+    {
+        messageSuppress = std::to_string(suppressIm[im][k]) + " ";
+        messageStr += messageSuppress;
+        length += messageSuppress.length();
+
+        std::cout << " export supp " << suppressIm[im][k] << std::endl;
+
+
+    }
+
+    messageStr += ";";
+
+    }
+
+
+    /*for (int im = 0; im < suppressIm.size(); im++)
+    {
+    messageStr += ";";
+    }*/
+
+    zmq::message_t message(messageStr.length());
+    memcpy(message.data(), messageStr.c_str(), messageStr.length());
+    std::cout << " message correspondences " << messageStr << std::endl;
+
+    bool status = m_socketPub->send(message);
+    std::cout << "Problem with communication send " <<  messageStr.length() << std::endl;
+
+}
+
 /*!
  Initialize the control points thanks to a given pose of the camera.
 
@@ -9454,53 +9739,9 @@ void process1(const vpImage<vpRGBa>& Inormd, vpImage<unsigned char>& Ilap) {
  \param dist : Z coordinate of the center of the object, in order to define and update the near and far clip distances
  */
 
-void apMbTracker::extractControlPoints(const vpImage<unsigned char> &I,
-		const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char>& Ior,
-                const vpImage<unsigned char>& Itex, const double dist) {
-	int sample = rendparam.sampleR;
-        const double znear = dist - rendparam.clipDist;
-        const double zfar = dist + rendparam.clipDist;
-
-	const int rows = Ior.getHeight();
-	const int cols = Ior.getWidth();
-
-double t0 = vpTime::measureTimeMs();
-	vpImage<unsigned char> I2(rows, cols);
-	process(Inormd, I2);
+void apMbTracker::buildControlPoints2D(const vpImage<unsigned char> &I, std::vector<point2d> &points2d, std::vector<point2dd> &normals) {
 
 	npoints = 0;
-
-	if(rendparam.useNPoints)
-	{
-	int npointsparam = rendparam.nPoints;
-	int ntotalpoints = 0;
-	bool flag = false;
-	for (int n = 0; n < rows; n++)
-		for (int m = 0; m < cols; m++)
-		{
-			flag = false;
-	if (Itex[n][m] != 100) {
-		ntotalpoints++;
-		flag = true;
-	} else if (Ior[n][m] != 100) {
-		if (!flag)
-		ntotalpoints++;
-	} else
-		continue;
-		}
-	if(npointsparam < ntotalpoints)
-	{
-     sample = 2*floor((double)ntotalpoints/npointsparam);
-	}
-	else{
-	 sample = 1;
-	}
-	std::cout << " sample " << sample << " ntotalpoints " << ntotalpoints << std::endl;
-	}
-
-double t1 = vpTime::measureTimeMs();
-				std::cout << "timeprocess " << t1 - t0 << std::endl;
-
 //#pragma omp parallel
 	{
 		std::vector<apControlPoint*> local_insert_table;
@@ -9510,7 +9751,6 @@ double t1 = vpTime::measureTimeMs();
 //#pragma omp master
 				downScale(i);
 //#pragma omp barrier
-
 //#pragma omp for
 				for (int k = 0; k < points[i].size(); ++k) {
 					apControlPoint *p = (points[i])[k];
@@ -9519,48 +9759,25 @@ double t1 = vpTime::measureTimeMs();
 				}
 //#pragma omp master
 				points[i].clear();
-
-				const int m0 = (20 + sample - 1) / sample * sample;
-				const int n1 = rows - 20;
-				const int m1 = cols - 20;
-//#pragma omp for nowait
-				for (int n = m0; n < n1; ++n) {
-					const int sample0 = ((n - m0) % sample) == 0 ? 1 : sample;
-					for (int m = m0; m < m1; m += sample0) {
-						double theta;
-						if (Itex[n][m] != 100)
-							theta = 3.1416 * (double) ((double) I2[n][m] / 255
-									- 0.5);
-						else if (Ior[n][m] != 100)
-							theta = 3.1416 * (double) ((double) I2[n][m] / 255
-									- 0.5);
-						else
-							continue;
-
-						norm[0] = (rendparam.Normx)
-								* ((double) ((double) Inormd[n][m].R) / 255
-										- 0.5);
-						norm[1] = (rendparam.Normy)
-								* ((double) ((double) Inormd[n][m].G) / 255
-										- 0.5);
-						norm[2] = (rendparam.Normz)
-								* ((double) ((double) Inormd[n][m].B) / 255
-										- 0.5);
+                                for (int k = 0; k < points2d.size(); k++)
+                                {
+                                                double theta = acos(-normals[k].x/normals[k].y);
+                                                norm[0] = 1;
+                                                norm[1] = 0;
+                                                norm[2] = 0;
 						const double l = std::sqrt(norm[0] * norm[0] + norm[1]
 								* norm[1] + norm[2] * norm[2]);
-						if (l > 1e-1) {
-							double Z = -(znear * zfar)
-									/ (((double) ((double) Inormd[n][m].A)
-											/ 255) * (zfar - znear) - zfar);
+                                                if (l > 1e-1)
+                                                {
+                                                        double Z = 1;
 							apControlPoint *p = new apControlPoint;
 							p->setCameraParameters(&cam);
 							p->setMovingEdge(&me);
-							p->buildPoint(n, m, Z, theta, norm, cMo);
+                                                        p->buildPoint(points2d[k].i, points2d[k].j, Z, theta, norm, cMo);
 							p->initControlPoint(I, 0);
 							npoints += 1;
 							local_insert_table.push_back(p);
 						}
-					}
 				}
 				if (!local_insert_table.empty())
 //#pragma omp critical
@@ -9579,7 +9796,6 @@ double t1 = vpTime::measureTimeMs();
 			upScale(i);
 		}
 	}
-
 	std::cout << " size points " << points[scaleLevel].size() << std::endl;
 
 }
@@ -9685,6 +9901,145 @@ double t1 = vpTime::measureTimeMs();
                                                                         / (((double) ((double) Inormd[n][m].A)
                                                                                         / 255) * (zfar - znear) - zfar);*/
                                                         double Z = -2*(znear * zfar) / (z * (zfar - znear) - (zfar + znear));
+                                                        apControlPoint *p = new apControlPoint;
+                                                        p->setCameraParameters(&cam);
+                                                        p->setMovingEdge(&me);
+                                                        p->buildPoint(n, m, Z, theta, norm, cMo);
+                                                        p->initControlPoint(I, 0);
+                                                        npoints += 1;
+                                                        local_insert_table.push_back(p);
+                                                }
+                                        }
+                                }
+                                if (!local_insert_table.empty())
+//#pragma omp critical
+                                {
+                                        points[i].insert(points[i].end(),
+                                                        local_insert_table.begin(),
+                                                        local_insert_table.end());
+                                        //npoints += local_insert_table.size();
+                                }
+                                local_insert_table.clear();
+
+                                //std::cout << " size " << points[i].size() << std::endl;
+                        }
+//#pragma omp barrier
+//#pragma omp master
+                        upScale(i);
+                }
+        }
+
+        std::cout << " size points " << points[scaleLevel].size() << std::endl;
+
+}
+
+/*!
+ Extract 3D control points from the depth edges, the texture or color edges, given the depth buffer and the normal map
+ \param I : input image.
+ \param Inormd : Normal map (RGB channels) and depth buffer (A channel)
+ \param Ior : oriented edge map from depth edge.
+ \param Itex : oriented edge map from texture or color edges.
+ \param dist : Z coordinate of the center of the object, in order to define and update the near and far clip distances
+ */
+
+void apMbTracker::extractControlPoints(const vpImage<unsigned char> &I,
+                const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char>& Ior,
+                const vpImage<unsigned char>& Itex, const double dist) {
+        int sample = rendparam.sampleR;
+        const double znear = dist - rendparam.clipDist;
+        const double zfar = dist + rendparam.clipDist;
+
+        const int rows = Ior.getHeight();
+        const int cols = Ior.getWidth();
+
+double t0 = vpTime::measureTimeMs();
+        vpImage<unsigned char> I2(rows, cols);
+        process(Inormd, I2);
+
+        npoints = 0;
+
+        if(rendparam.useNPoints)
+        {
+        int npointsparam = rendparam.nPoints;
+        int ntotalpoints = 0;
+        bool flag = false;
+        for (int n = 0; n < rows; n++)
+                for (int m = 0; m < cols; m++)
+                {
+                        flag = false;
+        if (Itex[n][m] != 100) {
+                ntotalpoints++;
+                flag = true;
+        } else if (Ior[n][m] != 100) {
+                if (!flag)
+                ntotalpoints++;
+        } else
+                continue;
+                }
+        if(npointsparam < ntotalpoints)
+        {
+     sample = 2*floor((double)ntotalpoints/npointsparam);
+        }
+        else{
+         sample = 1;
+        }
+        std::cout << " sample " << sample << " ntotalpoints " << ntotalpoints << std::endl;
+        }
+
+double t1 = vpTime::measureTimeMs();
+                                std::cout << "timeprocess " << t1 - t0 << std::endl;
+
+//#pragma omp parallel
+        {
+                std::vector<apControlPoint*> local_insert_table;
+                vpColVector norm(3);
+                for (unsigned int i = 0; i < scales.size(); ++i) {
+                        if (scales[i]) {
+//#pragma omp master
+                                downScale(i);
+//#pragma omp barrier
+
+//#pragma omp for
+                                for (int k = 0; k < points[i].size(); ++k) {
+                                        apControlPoint *p = (points[i])[k];
+                                        if (p != NULL)
+                                                delete p;
+                                }
+//#pragma omp master
+                                points[i].clear();
+
+                                const int m0 = (20 + sample - 1) / sample * sample;
+                                const int n1 = rows - 20;
+                                const int m1 = cols - 20;
+//#pragma omp for nowait
+                                for (int n = m0; n < n1; ++n) {
+                                        const int sample0 = ((n - m0) % sample) == 0 ? 1 : sample;
+                                        for (int m = m0; m < m1; m += sample0) {
+                                                double theta;
+                                                if (Itex[n][m] != 100)
+                                                        theta = 3.1416 * (double) ((double) I2[n][m] / 255
+                                                                        - 0.5);
+                                                else if (Ior[n][m] != 100)
+                                                        theta = 3.1416 * (double) ((double) I2[n][m] / 255
+                                                                        - 0.5);
+                                                else
+                                                        continue;
+
+                                                norm[0] = (rendparam.Normx)
+                                                                * ((double) ((double) Inormd[n][m].R) / 255
+                                                                                - 0.5);
+                                                norm[1] = (rendparam.Normy)
+                                                                * ((double) ((double) Inormd[n][m].G) / 255
+                                                                                - 0.5);
+                                                norm[2] = (rendparam.Normz)
+                                                                * ((double) ((double) Inormd[n][m].B) / 255
+                                                                                - 0.5);
+                                                const double l = std::sqrt(norm[0] * norm[0] + norm[1]
+                                                                * norm[1] + norm[2] * norm[2]);
+                                                if (l > 1e-1) {
+                                                        double Z = -(znear * zfar)
+                                                                        / (((double) ((double) Inormd[n][m].A)
+                                                                                        / 255) * (zfar - znear) - zfar);
                                                         apControlPoint *p = new apControlPoint;
                                                         p->setCameraParameters(&cam);
                                                         p->setMovingEdge(&me);

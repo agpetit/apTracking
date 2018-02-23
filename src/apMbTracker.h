@@ -330,6 +330,7 @@ private:
   void loadModel(const char* cad_name);
   void receiveImage(vpImage<vpRGBa> &Icol);
   void sendPose();
+  void loadPointsNormals2d(std::vector<std::vector<point2d>> points2d, std::vector<std::vector<point2dd>> normals2d);
   void loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
   void savepair(std::string &message, const std::pair<point3d, point2d> &pair);
   void save3dpoint(std::string &message, const point3d &point3d);
@@ -345,6 +346,7 @@ private:
   void track(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist);
   //void trackHyb(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist, const double m, apOgre ogre_);
   void trackDef(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double distmin, const double distmax);
+  void trackDef2D(const vpImage<unsigned char> &I, const vpImage<vpRGBa> &IRGB,  std::vector<point2d> &positions, std::vector<point2dd> &normals, std::vector<point2d> &trackededges, std::vector<int> &suppress);
   void trackPred(const vpImage<unsigned char> &I);
   void track(const vpImage<unsigned char>& I){};
   void trackXray(const vpImage<unsigned char>& I, double dist);
@@ -358,6 +360,9 @@ private:
   void displayKltPoints(const vpImage<unsigned char>& I);
   void sample(const vpImage<unsigned char>& I){};
   void resetTracker();
+  void buildControlPoints2D(const vpImage<unsigned char> &I, std::vector<point2d> &points2d, std::vector<point2dd> &normals);
+  void buildCorrespondencesEdges2D(std::vector<point2d> &trackededges, std::vector<int> &suppress);
+  void exportCorrespondencesEdges2D(std::vector<std::vector<point2d>> &trackededgesIm, std::vector<std::vector<int>> &suppressIm);
   //void reInitModel(const vpImage<unsigned char>& I, const char* cad_name, const vpHomogeneousMatrix& _cMo);
   //void reInitConfigModel(const vpImage<unsigned char>& I, const char* cad_name, const char* config_name, const vpHomogeneousMatrix& _cMo);
 

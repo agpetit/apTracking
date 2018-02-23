@@ -15,6 +15,12 @@ typedef struct point2d{
   int j;
 }point2d;
 
+typedef struct point2dd{
+
+  double x;
+  double y;
+}point2dd;
+
 typedef struct triangle{
 
   int v1;
