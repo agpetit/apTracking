@@ -481,7 +481,7 @@ int main(int argc, char **argv)
             //if(im%5==0)
             {
             //vpImageIo::write(Ioverlaycol, filename4);
-            vpImageIo::write(Ioverlay, filename5);
+            //vpImageIo::write(Ioverlay, filename5);
             }
 
             im++;
