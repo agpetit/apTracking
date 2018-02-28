@@ -337,6 +337,8 @@ private:
   void save2dpoint(std::string &message, const point2d &point2d);
   //void loadLines(const vpImage<unsigned char>& I, vector<Vec4i>& Lines, const vpMatrix &Zc, const vpHomogeneousMatrix &cMo);
   //void resetLines();
+
+  void initComm();
   void init(const vpImage<unsigned char>&){};
   void init(const vpImage<unsigned char>& I, const vpHomogeneousMatrix &cMo);
   void initKltTracker(const vpImage<unsigned char>& I);

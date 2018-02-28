@@ -287,6 +287,7 @@ int main(int argc, char **argv)
     apDetection detect;
     apSegmentationParameters seg;
     apLearn learn;
+    tracker.initComm();
     tracker.loadConfigFile(configFile);
     tracker.getCameraParameters(mcam);
     tracker.getRendParameters(mrend);
@@ -382,10 +383,10 @@ int main(int argc, char **argv)
         }
     }
 
-       if (opt_display && opt_click_allowed && !opt_detect)
-       {
-         tracker.initClick(Id, initFile.c_str(), true);
-       }
+//       if (opt_display && opt_click_allowed && !opt_detect)
+//       {
+//         tracker.initClick(Id, initFile.c_str(), true);
+//       }
        /*else
        {
          vpHomogeneousMatrix cMoi(-0.002774173802,-0.001058705951,0.2028195729,2.06760528,0.8287820106,-0.3974327515);
@@ -600,8 +601,8 @@ grabber.acquire(Idisplay);*/
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
                 a.processEvents(QEventLoop::AllEvents, 1);
-                //vpImageIo::writePNG(Inormd, "Inormd.png");
-                //vpImageIo::writePNG(Ior, "Ior.png");
+                //vpImageIo::writePNG(Inormd, "/Users/froy/Inormd.png");
+                //vpImageIo::writePNG(Ior, "/Users/froy/Ior.png");
                 tracker.Inormdprec = Inormd;
                 tracker.Iorprec = Ior;
                 tracker.Itexprec = Ior;
@@ -641,6 +642,8 @@ grabber.acquire(Idisplay);*/
             // Acquire images
             try{
                     tracker.receiveImage(Icol);
+                    //vpImageIo::writePNG(Icol, "/Users/froy/Icol.png");
+
                     vpImageConvert::convert(Icol,Id);
             }
             catch(...){
@@ -800,7 +803,7 @@ grabber.acquire(Idisplay);*/
             //std::cout << "Write: " << filename4 << std::endl;
             //if(im%5==0)
             {
-            vpImageIo::write(Ioverlaycol, filename4);
+            //vpImageIo::write(Ioverlaycol, filename4);
             //vpImageIo::write(Ioverlay, filename5);
             }
 

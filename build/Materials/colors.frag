@@ -1,7 +1,7 @@
 uniform sampler2D tex;
 varying vec3 normal;
 varying vec3 color;
-varying vec2 uv;
+// varying vec2 uv;
 
 void main()
 {

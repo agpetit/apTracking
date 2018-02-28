@@ -174,12 +174,29 @@ namespace luxifer
         CHECK_GL();
         hPrograms[program] = pid;
 
+        const GLsizei max_len = 16384;
+
         for(unsigned int i = 0 ; i < program->getNumShaders() ; ++i)
         {
             const osg::Shader *shader = program->getShader(i);
             GLuint sid = getShaderID(shader);
             glAttachShader(pid, sid);
             CHECK_GL();
+
+            GLchar *buffer = new GLchar[max_len + 1];
+            memset(buffer, 0, max_len + 1);
+            GLsizei len;
+            glGetShaderInfoLog(sid, max_len, &len, buffer);
+            CHECK_GL();
+
+            if (len > 0)
+            {
+                std::cerr << "Error while compiling :" << shader->getFileName() << std::endl;
+                //std::cerr.write(buffer, len);
+                std::cerr << buffer << std::endl;
+                std::cerr  << std::endl;
+                std::cerr << "<<<<<<< :" << std::endl;
+            }
         }
 
         glLinkProgram(pid);
@@ -188,20 +205,23 @@ namespace luxifer
         glGetProgramiv(pid, GL_LINK_STATUS, &linked);
         CHECK_GL();
         if (!linked)
-            std::cerr << "program link error" << std::endl;
+        {
+            std::cerr << program->getName() << " program link error" << std::endl;
+        }
 
-        const GLsizei max_len = 16384;
         GLchar *buffer = new GLchar[max_len + 1];
         memset(buffer, 0, max_len + 1);
         GLsizei len;
-        glGetProgramInfoLog(pid, max_len, &len, buffer);
+        glGetInfoLogARB(pid, max_len, &len, buffer);
         CHECK_GL();
 
         if (len > 0)
         {
-            std::cerr.write(buffer, len);
-            std::cerr << std::endl;
-            std::cerr << std::endl;
+            std::cerr << "Error while linking :" << std::endl;
+            //std::cerr.write(buffer, len);
+            std::cerr << buffer << std::endl;
+            std::cerr  << std::endl;
+            std::cerr << "<<<<<<< :" << std::endl;
         }
 
         delete[] buffer;
