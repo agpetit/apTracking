@@ -259,8 +259,9 @@ int main(int argc, char **argv)
 
       //configFile2 = object + vpIoTools::path("/") + object + vpIoTools::path("2.lua");
 
-    opath = vpIoTools::path("out") + vpIoTools::path("/image%06d.png");
-    opath1 = vpIoTools::path("out") + vpIoTools::path("/imageKalman%06d.png");
+    opath = vpIoTools::path("out") + object + vpIoTools::path("/image%06d.png");
+    //opath1 = vpIoTools::path("out") + vpIoTools::path("out") + vpIoTools::path("/imageKalman%06d.png");
+    opath1 = vpIoTools::path("out") + object + vpIoTools::path("/mask%06d.png");
 
 
     // Path the views of hierarchical graph are saved
@@ -334,6 +335,8 @@ int main(int argc, char **argv)
     vpImage<vpRGBa> Inormd(height,width);
     // Texture edge map
     vpImage<unsigned char> Itex(height,width);
+    vpImage<unsigned char> Imask(height,width);
+
     for (int n=0; n <height ; n++)
     {
         for (int m = 0 ; m < width; m++)
@@ -801,10 +804,18 @@ grabber.acquire(Idisplay);*/
             sprintf(buf5, opath1.c_str(), im-start_image);
             std::string filename5(buf5);
             //std::cout << "Write: " << filename4 << std::endl;
+
+            for (int k = 0; k < Icol.getWidth(); k++)
+                for (int l = 0; l < Icol.getHeight(); l++)
+                    if (Inormd[l][k].A!=0)
+                    Imask[l][k] = 255;
+                    else Imask[l][k] = 0;
             //if(im%5==0)
             {
             //vpImageIo::write(Ioverlaycol, filename4);
             //vpImageIo::write(Ioverlay, filename5);
+                vpImageIo::write(Icol, filename4);
+                vpImageIo::write(Imask, filename5);
             }
 
             im++;
