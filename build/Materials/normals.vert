@@ -1,7 +1,7 @@
 uniform mat4 worldViewProj;
 uniform vec4 texelOffsets;
 varying vec3 oNormal;
-varying float depth;
+// varying float depth;
 //varying vec4 oPosition;
 /*float4 position : POSITION,
 						float3 normal       : NORMAL,
@@ -15,7 +15,7 @@ void main()
 
     oNormal = normalize(gl_Normal);
     vec4 tmp = gl_ModelViewMatrix * gl_Vertex;
-    depth = tmp.z / tmp.w;
+    // depth = tmp.z / tmp.w;
 }
 
 

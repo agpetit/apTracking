@@ -42,7 +42,7 @@ namespace boost {
             m.create(rows, cols, elemType);
             size_t dataSize = m.cols * m.rows * elemSize;
 
-            //cout << "reading matrix data rows, cols, elemSize, type, datasize: (" << m.rows << "," << m.cols << "," << m.elemSize() << "," << m.type() << "," << dataSize << ")" << endl;
+            std::cout << "reading matrix data rows, cols, elemSize, type, datasize: (" << m.rows << "," << m.cols << "," << m.elemSize() << "," << m.type() << "," << dataSize << ")" << std::endl;
 
             for (size_t dc = 0; dc < dataSize; ++dc) {
                 ar & m.data[dc];

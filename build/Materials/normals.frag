@@ -1,5 +1,5 @@
 varying vec3 oNormal;
-varying float depth;
+// varying float depth;
 uniform float fNear;
 uniform float fFar;
 //uniform sampler2D tex;

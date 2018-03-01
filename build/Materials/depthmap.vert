@@ -12,7 +12,7 @@ varying vec2 depth;
 
 void main()
 {
-  gl_Position = ftransform(); 
+ 
 //gl_Position = mul(worldViewProj,position);
                                                   
   // fix pixel / texel alignment
@@ -32,6 +32,7 @@ depth.x = 0.5;
 //depth.x = gl_Position.z/depthRange.w;
 //depth.x = 0;
 //depth.x= gl_Position.z*0.001;*/
+ gl_Position = ftransform(); 
 }
 
 

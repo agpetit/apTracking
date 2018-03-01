@@ -216,6 +216,7 @@ namespace luxifer
         ref_ptr<Program> color_program = new Program;
         ref_ptr<Shader> color_vshader = new Shader(Shader::VERTEX);
         ref_ptr<Shader> color_fshader = new Shader(Shader::FRAGMENT);
+        color_program->setName("Color program");
         color_program->addShader(color_vshader);
         color_program->addShader(color_fshader);
         color_vshader->loadShaderSourceFromFile("Materials/colors.vert");
@@ -235,6 +236,7 @@ namespace luxifer
         ref_ptr<Program> normal_program = new Program;
         ref_ptr<Shader> normal_vshader = new Shader(Shader::VERTEX);
         ref_ptr<Shader> normal_fshader = new Shader(Shader::FRAGMENT);
+        normal_program->setName("Normal program");
         normal_program->addShader(normal_vshader);
         normal_program->addShader(normal_fshader);
         normal_vshader->loadShaderSourceFromFile("Materials/normals.vert");
@@ -258,6 +260,7 @@ namespace luxifer
         //ref_ptr<Shader> compositor_vshader1 = new Shader(Shader::VERTEX);
         //compositor_program->addShader(compositor_vshader1);
         //compositor_program->addShader(compositor_fshader1);
+        compositor_program->setName("Compositor program");
         compositor_program->addShader(compositor_vshader);
         compositor_program->addShader(compositor_fshader);
         //compositor_vshader1->loadShaderSourceFromFile("Materials/GaussianFilter.vert");
@@ -268,6 +271,7 @@ namespace luxifer
         fsaa_program = new Program;
         ref_ptr<Shader> fsaa_vshader = new Shader(Shader::VERTEX);
         ref_ptr<Shader> fsaa_fshader = new Shader(Shader::FRAGMENT);
+        fsaa_program->setName("FSAA program");
         fsaa_program->addShader(fsaa_vshader);
         fsaa_program->addShader(fsaa_fshader);
         fsaa_vshader->loadShaderSourceFromFile("Materials/FSAA.vert");

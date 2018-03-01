@@ -494,24 +494,26 @@ void apMbTracker::receiveImage(vpImage<vpRGBa> &Icol)
     bool status1 = m_socketSub->recv(&message1);
     if(status1){
     std::string rpl = std::string(static_cast<char*>(message1.data()), message1.size());
+
     const char *cstr = rpl.c_str();
     loadImage(img,cstr);
 
    // memcpy(img.data, message1.data(), imgSize);
     std::cout << " ok receive " << std::endl;
+//    cv::imwrite("/Users/froy/test_apbm.png", img);
 
-  // Assign pixel value to img
-  for (int i = 0;  i < img1.rows; i++) {
-   for (int j = 0; j < img1.cols; j++) {
-    img1.at<Vec4b>(i,j)[0] = img.at<uchar>(0,i*img1.cols+j);
-    img1.at<Vec4b>(i,j)[1] = img.at<uchar>(0,i*img1.cols+j + 1);
-    img1.at<Vec4b>(i,j)[2] = img.at<uchar>(0,i*img1.cols+j + 2);
-    img1.at<Vec4b>(i,j)[3] = img.at<uchar>(0,i*img1.cols+j + 3);
+//  // Assign pixel value to img
+//  for (int i = 0;  i < img1.rows; i++) {
+//   for (int j = 0; j < img1.cols; j++) {
+//    img1.at<Vec4b>(i,j)[0] = img.at<uchar>(0,i*img1.cols+j);
+//    img1.at<Vec4b>(i,j)[1] = img.at<uchar>(0,i*img1.cols+j + 1);
+//    img1.at<Vec4b>(i,j)[2] = img.at<uchar>(0,i*img1.cols+j + 2);
+//    img1.at<Vec4b>(i,j)[3] = img.at<uchar>(0,i*img1.cols+j + 3);
+//    }
+//   }
+//  cv::imwrite("socketimage100.png", img1);
     }
-   }
-  cv::imwrite("socketimage100.png", img1);
-    }
-vpImageConvert::convert(img1,Icol);
+vpImageConvert::convert(img,Icol);
 }
 
 
@@ -8783,6 +8785,24 @@ void apMbTracker::trackPred(const vpImage<unsigned char> &I) {
 	//Iprec=I;
 }
 
+void apMbTracker::initComm()
+{
+    m_socketPub =new zmq::socket_t(m_context, ZMQ_PUB);
+    m_socketPub->bind("tcp://127.0.0.1:6666");
+
+    m_socketSub =new zmq::socket_t(m_context, ZMQ_SUB);
+    m_socketSub->setsockopt(ZMQ_SUBSCRIBE, "", 0);
+    m_socketSub->connect("tcp://127.0.0.1:6667");
+    if(m_socketSub->connected())
+    {
+        std::cout << "Connected to tcp://127.0.0.1:6667" << std::endl;
+    }
+    else
+    {
+        std::cout << "Could not connect to tcp://127.0.0.1:6667" << std::endl;
+    }
+}
+
 /*!
  Initialize the tracking thanks to the initial pose of the camera.
 
@@ -8798,12 +8818,6 @@ void apMbTracker::init(const vpImage<unsigned char>& I,
 	sId.setCameraParameters(cam);
 	sI.setCameraParameters(cam);
 
-    m_socketPub =new zmq::socket_t(m_context, ZMQ_PUB);
-    m_socketPub->bind("tcp://127.0.0.1:6666");
-
-    m_socketSub =new zmq::socket_t(m_context, ZMQ_SUB);
-    m_socketSub->setsockopt(ZMQ_SUBSCRIBE, "", 0);
-    m_socketSub->connect("tcp://127.0.0.1:6667");
 	/*apControlPoint *p;
 	 vpColVector norm(3);
 	 norm[0]=1;

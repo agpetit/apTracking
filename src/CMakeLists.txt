@@ -39,9 +39,13 @@ set(CMAKE_MODULE_PATH
     "${apTracking_SOURCE_DIR}/cmake"
   )
 
+# -L/usr/local/Cellar/llvm/5.0.1/lib
+# -fopenmp
+# 
+# /Volumes/Data/Dependencies/visp/build_2.10
+
 #ADD_DEFINITIONS( -Wall -msse -msse2 -ffast-math -funroll-loops -mfpmath=sse)
 ADD_DEFINITIONS( -Wall -msse -msse2 -ffast-math -funroll-loops -mfpmath=sse -fomit-frame-pointer)
-
 
 FIND_PACKAGE(Qt4 4.6.2 REQUIRED QtCore QtGui QtOpenGL)
 include(${QT_USE_FILE})
