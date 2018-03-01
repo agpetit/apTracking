@@ -369,6 +369,8 @@ int main(int argc, char **argv)
     tracker.setGroundTruth(gdtpath, trueposepath, start_image);
     //tracker.initKltTracker(Id);
     tracker.init(Id,cMo);
+    tracker.initComm();
+
     if (opt_display)
         vpDisplay::flush(Id);
     double px = mcam.get_px() ;

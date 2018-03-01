@@ -641,6 +641,7 @@ int main(int argc, char **argv)
        cMo=cMo.inverse();*/
 
     tracker.init(Id,cMo);
+    tracker.initComm();
     if (opt_display)
         vpDisplay::flush(Id);
     double px = mcam.get_px() ;
