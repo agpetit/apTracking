@@ -2163,7 +2163,7 @@ void apCCDTracker::updateParameters(vpMatrix &LTCIL, vpColVector &LTCIR)
     error0_ccd.resize(nerror_ccd);
     weighted_error_ccd.resize(nerror_ccd);
 
-//#pragma omp parallel
+#pragma omp parallel
     {
         double _tmp_cov_data[9];
         cv::Mat tmp_cov(3,3,CV_64F,_tmp_cov_data);// = cv::Mat::zeros(3,3,CV_64F);
@@ -2180,7 +2180,7 @@ void apCCDTracker::updateParameters(vpMatrix &LTCIL, vpColVector &LTCIR)
 
         // std::cout << "dimension: " << Sigma_Phi.cols << " " << Sigma_Phi.rows << std::endl;
     //    int i =0;
-//#pragma omp for nowait
+#pragma omp for nowait
         for(int kk = 0 ; kk < pointsCCD[scaleLevel].size(); kk ++)
         {
             const int i = kk;
@@ -2263,7 +2263,7 @@ tmp_jacobian.at<double>(3,n) = 0;
 
     //        i++;
         }
-//#pragma omp critical
+#pragma omp critical
         {
             //\nabla{E_2} = \sum J * \Sigma_{kl}^{-1} * (I_{kl} - \hat{I_{kl}})
             nabla_E += local_nabla_E;
