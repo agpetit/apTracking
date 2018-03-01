@@ -171,13 +171,18 @@ SET(TRACKER_COMMON_FILES
 #    ${TRACKER_COMMON_FILES}
 #  )
   
-#ADD_EXECUTABLE(apCOTracking
-#    apCOTracking.cpp
-#    ${TRACKER_COMMON_FILES}
-#  )
+ADD_EXECUTABLE(apCOTracking
+    apCOTracking.cpp
+    ${TRACKER_COMMON_FILES}
+  )
 
 ADD_EXECUTABLE(apXrayTracking
     apXrayTracking.cpp
+    ${TRACKER_COMMON_FILES}
+  )
+
+ADD_EXECUTABLE(apXrayIntensityContourTracking
+    apXrayIntensityContourTracking.cpp
     ${TRACKER_COMMON_FILES}
   )
 
@@ -223,15 +228,23 @@ ADD_EXECUTABLE(apCTContourCorrespondences
 #    ${GLEW_LIBRARY}
 #  )
   
-#  TARGET_LINK_LIBRARIES(apCOTracking
-#        ${OPENGL_LIBRARIES}
-#    ${OPENSCENEGRAPH_LIBRARIES}
-#    ${QT_LIBRARIES}
-#    ${GLEW_LIBRARY}
-#    ${LUA_LIBRARIES} -lzmq
-#  )
+  TARGET_LINK_LIBRARIES(apCOTracking
+        ${OPENGL_LIBRARIES}
+    ${OPENSCENEGRAPH_LIBRARIES}
+    ${QT_LIBRARIES}
+    ${GLEW_LIBRARY}
+    ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
+  )
 
   TARGET_LINK_LIBRARIES(apXrayTracking
+    ${OPENGL_LIBRARIES}
+    ${OPENSCENEGRAPH_LIBRARIES}
+    ${QT_LIBRARIES}
+    ${GLEW_LIBRARY}
+    ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
+  )
+
+  TARGET_LINK_LIBRARIES(apXrayIntensityContourTracking
     ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
     ${QT_LIBRARIES}

@@ -139,6 +139,9 @@ apMbTracker::~apMbTracker() {
 		}
 	}
 	lines.resize(0);
+
+        delete m_socketPub;
+        delete m_socketSub;
 }
 
 
@@ -956,7 +959,8 @@ void
  vpImage<unsigned char> Idiff(hght,wdth);
  vpColVector e;
 
- vpImageIo::read(Igdgroundtruth, "imagePig3.png");
+ //vpImageIo::read(Igdgroundtruth, "imagePig3.png");
+ Igdgroundtruth = _I;
 
 
  /*for (int i=3; i < nbr-3 ; i++)
@@ -1062,7 +1066,7 @@ void
               + std::to_string(cMo0[2][0]) + " " + std::to_string(cMo0[2][1]) + " " + std::to_string(cMo0[2][2]) + " ";
 
       zmq::message_t message(messageStr.length());
-      std::cout << "Problem with communication" <<  messageStr.length() << std::endl;
+      std::cout << "cmo" <<  cMo0 << std::endl;
       memcpy(message.data(), messageStr.c_str(), messageStr.length());
 
       bool status = m_socketPub->send(message);
@@ -1135,7 +1139,7 @@ void
      H = ((mu * diagHsd) + Hsd).pseudoInverse();
  //	compute the control law
  e = H * Lsd.t() *errorG;
-v =  -2*e;
+v =  -1*e;
  cMo =  vpExponentialMap::direct(v).inverse() * cMo;
 
  std::cout << " v " << v << std::endl;

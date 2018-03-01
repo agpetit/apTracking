@@ -222,7 +222,7 @@ int main(int argc, char **argv)
     std::string covariancepath;
     std::string timepath;
     std::vector<double> inline_init;
-//    std::string truthpath;
+//std::string truthpath;
     bool opt_display;
     bool opt_learn = false;
     bool opt_detect = false;

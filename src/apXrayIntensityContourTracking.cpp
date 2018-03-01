@@ -11,6 +11,7 @@
  *======================================================
  */
 
+#include "structures.h"
 #include <QApplication>
 #include "surrender/scenemanager.h"
 #include "surrender/sceneviewer.h"
@@ -76,8 +77,9 @@
 
 #include "luaconfig.h"
 #include "p_helper.h"
+#include <queue>
+#include <condition_variable>
 
-#include <zmq.hpp>
 
 using namespace std;
 using namespace cv;
@@ -220,7 +222,7 @@ int main(int argc, char **argv)
     std::string covariancepath;
     std::string timepath;
     std::vector<double> inline_init;
-//    std::string truthpath;
+//std::string truthpath;
     bool opt_display;
     bool opt_learn = false;
     bool opt_detect = false;
@@ -285,7 +287,6 @@ int main(int argc, char **argv)
     // Path the views of hierarchical graph are saved
 
     vpath = vpIoTools::path("views1/image%06d.png");
-
     scpath = vpIoTools::path("sc_hist/hist%06d.txt");
 
 
@@ -313,34 +314,8 @@ int main(int argc, char **argv)
     tracker.getSegmentationParameters(seg);
     tracker.getLearningParameters(learn);
 
-//    vpMbPointsTracker tracker2;
-    // Set tracking and rendering parameters
-    /*vpCameraParameters mcam2;
-    apRend mrend2;
-    apDetection detect2;
-    apLearn learn2;
-    tracker2.loadConfigFile(configFile2);
-    tracker2.getCameraParameters(mcam2);
-    tracker2.getRendParameters(mrend2);
-    tracker2.getDetectionParameters(detect2);
-    tracker2.getLearningParameters(learn2);*/
-
     // OpenCVGrabber to grab images from USB Camera
     //vpOpenCVGrabber grabber;
-
-    vpMatrix lik;
-    vpMatrix outlik;
-
-
-    /*lik.loadMatrix("filtlikelihoodspot6k.txt",lik,false);
-    outlik.resize(lik.getCols(),lik.getRows());
-    for (int i =0; i<10;i++)
-    	for (int j =0; j<53;j++)
-    		outlik[i][j] = lik[j][i];
-
-    		         outlik.saveMatrix("filtlikelihoodspot6kT.txt",outlik,false);
-
-    		         getchar();*/
 
     SceneViewer viewer;
     SceneManager *mgr = new SceneManager(const_cast<QGLContext*>(viewer.context()));
@@ -354,9 +329,7 @@ int main(int argc, char **argv)
     vpImage<vpRGBa> Ioverlay;
     vpImage<vpRGBa> Ioverlaycol;
 
-    /*grabber.setDeviceType(1);
-      grabber.open(Id);
-      grabber.acquire(Id);*/
+        std::cout << " reader " << ipath.c_str() << std::endl;
 
     //VideoReader to read images from disk
     vpVideoReader reader;
@@ -365,6 +338,8 @@ int main(int argc, char **argv)
     reader.open(Id);
     reader.acquire(Id);
     vpVideoReader readerRGB;
+
+
     //if(tracker.getUseRGB())
     {
     	readerRGB.setFileName(ipath.c_str());
@@ -412,149 +387,148 @@ int main(int argc, char **argv)
         }
     }
 
-
-    /*vpImage<vpRGBa> I;
-    vpVideoWriter writer;
-    //Initialize the writer.
-    writer.setFileName("./images/image%06d.png");
-    writer.open(I);
-
-    int device = 2;
-    std::cout << "Use device: " << device << std::endl;
-    cv::VideoCapture cap(device); // open the default camera
-    cap.set(CV_CAP_PROP_FPS, 30);
-    if(!cap.isOpened())  // check if we succeeded
-      return -1;
-    cv::Mat frame;
-    cap >> frame; // get a new frame from camera
-    IplImage iplimage = frame;
-    std::cout << "Image size: " << iplimage.width << " "
-              << iplimage.height << std::endl;
-    //vpImage<unsigned char> I; // for gray images
-    vpImageConvert::convert(&iplimage, I);
-    vpDisplayOpenCV d(I);
-
-    for ( int img =0;img < 3000 ; img++)
-    {
-        cap >> frame; // get a new frame from camera
-        iplimage = frame;
-        // Convert the image in ViSP format and display it
-        vpImageConvert::convert(&iplimage, I);
-        vpDisplay::display(I);
-        vpDisplay::flush(I);
-        if (vpDisplay::getClick(I, false)) // a click to exit
-          break;
-      //Here the code to capture or create an image and stores it in I.
-      //Save the image
-      writer.saveFrame(I);
-    }
-    writer.close();
-
-
-    getchar();*/
-
-
     vpHomogeneousMatrix cMo, cMo2, cMoFilt;
 
-	cout << "time2 "<< opt_detect << endl;
+       // tx="192.169",ty="-350",tz="226", R00= "-0.231176", R01="2.1603e-16", R02="0.972912" , R10="0.972912", R11="1.73796e-16" , R12="0.231176", R20="-1.19147e-16" , R21="1" , R22="-2.50356e-16"
 
-    //Automatic initialization of the tracker
+    /*-7.372876909e-17  1  -1.766268742e-16  226
+    0.231176  -1.5479766e-16  -0.972912  -192.169
+    -0.972912  -1.1256366e-16  -0.231176  350
+    0  0  0  1 */
 
-    if(opt_detect)
-    {
+       cMo[0][3] = 192.169;
+       cMo[1][3] = -350;
+       cMo[2][3] = 226;
+       cMo[0][0] = -0.231176;
+       cMo[0][1] = 2.1603e-16;
+       cMo[0][2] = 0.972912;
+       cMo[1][0] = 0.972912;
+       cMo[1][1] = 1.73796e-16;
+       cMo[1][2] = 0.231176;
+       cMo[2][0] = -1.19147e-16;
+       cMo[2][1] = 1;
+       cMo[2][2] = -2.50356e-16;
 
-        // File where the graph is stored
-/*    	std::string hf = "h" + object + ".txt";
-    	char *hfile = (char *)hf.c_str();
-    	// File to store the data (pose...) of each view at the first level
-    	std::string data0f = "data" + object + "0.txt";
-    	char *data0file = (char *)data0f.c_str();
-    	//File to store the data (pose...) of the views at each level of the hierarchical view graph
-    	std::string data1f = "data" + object + "1.txt";
-    	char *data1file = (char *)data1f.c_str();*/
-    	// File to store the transition probabilities between each prototype view at the last level of the hierarchy
-    	std::string transP = "transProb" + object + ".txt";
-    	char *transProba = (char *)transP.c_str();
+       // pose simulated image, amera frame
 
-        if(opt_learn)
-    	{
-    		//Learn the 3D model to build the hierarchical view graph
-        	apViews views;
-        	// Initialize the view sphere
-        	views.initViewSphere(learn,object);
-    		//Build the view graph - the resulting views are saved and the hierarchical graph is stored in txt file (hfile)
-    		views.buildViewGraph(mcam,mgr,vpath, height, width);
-    	}
+       cMo[0][3] =-175.4532513;
+       cMo[1][3] = -239.2093021 ;
+       cMo[2][3] = 350;
+       cMo[0][0] = -0.231176;
+       cMo[0][1] = 2.1603e-16;
+       cMo[0][2] = 0.972912;
+       cMo[1][0] = 0.972912;
+       cMo[1][1] = 1.73796e-16;
+       cMo[1][2] = 0.231176;
+       cMo[2][0] = -1.19147e-16;
+       cMo[2][1] = 1;
+       cMo[2][2] = -2.50356e-16;
 
-    	int fr;
-    	apDetector detector;
-    	detector.init(detect,object);
-    	detector.loadViews(vpath);
-    	detector.setFilters(vpath, mcam);
-    	detector.computeTransitionProbV(transProba);
-    	detector.setSegmentationParameters(seg);
-        //detector.setTracker(tracker);
-    	std::cout << " Ok particle filters set - Click to detect " << std::endl;
-        //while(!vpDisplay::getClick(Id,false))
-        {
-            vpDisplay::display(Id);
-            vpDisplay::displayCharString(Id, 15, 10,
-                                         "Ready to detect - click",
-                                         vpColor::red);
-            vpDisplay::flush(Id) ;
+       // pose real image -222.375 154.59 379.542 [0.989822 -3.09578e-17 0.142311,0.136547 0.281733 -0.949727,-0.0400937 0.959493 0.278865
 
-        }
-        double t0= vpTime::measureTimeMs();
-        //thld = 20;
-        detector.detect(ipath,isegpath,vpath, scpath,mcam,start_image,20,apDetector::TOP,apDetector::MEAN);
-        double t1= vpTime::measureTimeMs();
-        cMo = detector.getPose();
-        fr =  detector.getFrame();
-        //tracker.setPose(cMo);
-        cout << "detection time "<< t1-t0 << endl;
-        for (int k = 0; k<fr;k++)
-            {
-            reader.acquire(Id);
-            readerRGB.acquire(Icol);
-            }
-        tracker.setPose(cMo);
-        tracker.init(Id,cMo);
-    }
+       cMo[0][3] =-222.375;
+       cMo[1][3] = 154.59;
+       cMo[2][3] = 379.542;
+       cMo[0][0] = 0.989822;
+       cMo[0][1] = -3.09578e-17;
+       cMo[0][2] = 0.142311;
+       cMo[1][0] = 0.136547;
+       cMo[1][1] = 0.281733;
+       cMo[1][2] = -0.949727;
+       cMo[2][0] = -0.0400937;
+       cMo[2][1] = 0.959493;
+       cMo[2][2] = 0.278865;
+
+
+   /* -0.231176  0.972912  -1.19147e-16  384.9440607
+    2.1603e-16  1.73796e-16  1  -226
+    0.972912  0.231176  -2.50356e-16  -106.0519261
+    0  0  0  1*/
+
+       /*cMo[0][3] = 384.9440607 ;
+       cMo[1][3] = -226;
+       cMo[2][3] = -106.0519261;
+       cMo[0][0] = -0.231176;
+       cMo[0][1] = 2.1603e-16;
+       cMo[0][2] = 0.972912;
+       cMo[1][0] = 0.972912;
+       cMo[1][1] = 1.73796e-16;
+       cMo[1][2] = 0.231176;
+       cMo[2][0] = -1.19147e-16;
+       cMo[2][1] = 1;
+       cMo[2][2] = -2.50356e-16;*/
+
+
+
+      /* std::cout << " cmo inv " << cMo.inverse() << std::endl;
+            getchar();*/
+
+    /*vpRotationMatrix R0;
+           R0[0][0] = -0.231176;
+           R0[0][1] = 2.1603e-16;
+           R0[0][2] = 0.972912;
+           R0[1][0] = 0.972912;
+           R0[1][1] = 1.73796e-16;
+           R0[1][2] = 0.231176;
+           R0[2][0] = -1.19147e-16;
+           R0[2][1] = 1;
+           R0[2][2] = -2.50356e-16;
+
+    vpTranslationVector ta(-192.169,350,-226);*/
+
+       /*cMo[0][3] = -236 ;
+       cMo[1][3] = 192.169;
+       cMo[2][3] = 350;
+       cMo[0][0] = 1.049915526e-16;
+       cMo[0][1] = -1;
+       cMo[0][2] = 3.099296783e-16;
+       cMo[1][0] = -0.231176;
+       cMo[1][1] = 2.7726234e-16;
+       cMo[1][2] = 0.972912;
+       cMo[2][0] = -0.972912 ;
+       cMo[2][1] =  -1.73796e-16;
+       cMo[2][2] = -0.231176 ;*/
+
+
+      /* -1.333024474e-16  1  -1.907823217e-16  226
+       0.231176  -1.5479766e-16  -0.972912  -192.169
+       -0.972912  -1.73796e-16  -0.231176  350
+       0  0  0  1 */
+
+       /*1.049915526e-16  -1  3.099296783e-16  -226
+       -0.231176  2.7726234e-16  0.972912  192.169
+       -0.972912  -1.73796e-16  -0.231176  350*/
+
+        //std::cout << " cmo inv " << R0*ta << std::endl;
+             // getchar();
+
+        vpRxyzVector vdelta(0.0,0.0,-0.1);
+        vpTranslationVector tdelta(0,0,0);
+
+        vpRxyzVector vdelta1(0.,0.0,-0.0);
+        vpTranslationVector tdelta1(0,0,0);
+
+
+        vpRotationMatrix Rdelta;
+        Rdelta.buildFrom(vdelta);
+        vpHomogeneousMatrix Mdelta;
+        Mdelta.buildFrom(tdelta,Rdelta);
+
+        vpRotationMatrix Rdelta1;
+        Rdelta1.buildFrom(vdelta1);
+        vpHomogeneousMatrix Mdelta1;
+        Mdelta1.buildFrom(tdelta1,Rdelta1);
+
+
+        cMo = Mdelta1*cMo*Mdelta;
+
+        std::cout << " cmo " << cMo << std::endl;
+
+        int wdth = 764;
+        int hght = 800;
+
 
     cout << "detection time "<< endl;
-
-    // Manual initialization of the tracker
-    if (opt_display && opt_click_allowed && !opt_detect)
-    {
-        if (inline_init.empty())
-        {
-            while(!vpDisplay::getClick(Id,false))
-            {
-                vpDisplay::display(Id);
-                vpDisplay::displayCharString(Id, 15, 10,
-                                             "click after positioning the object",
-                                             vpColor::red);
-                vpDisplay::flush(Id) ;
-            }
-            tracker.initClick(Id, initFile.c_str(), true);
-        }
-        else
-        {
-            memcpy(cMo.data, inline_init.data(), sizeof(double) * inline_init.size());
-            tracker.setPose(cMo);
-        }
-    }
-
-       if (opt_display && opt_click_allowed && !opt_detect)
-       {
-         tracker.initClick(Id, initFile.c_str(), true);
-       }
-       /*else
-       {
-         vpHomogeneousMatrix cMoi(-0.002774173802,-0.001058705951,0.2028195729,2.06760528,0.8287820106,-0.3974327515);
-         tracker.init(Id,cMoi);
-       }*/
-
 
         vpImage<vpRGBa> Icol1(height,width);
 
@@ -572,16 +546,17 @@ int main(int argc, char **argv)
             Icol1[i][j].B = 0;//Icol2[359-i][j].B;
             Id[i][j] = 0.2126*Icol2[359-i][j].R + 0.7152*Icol2[359-i][j].G + 0.0722*Icol2[359-i][j].B;*/
 
-
         }
     //Icol = Icol1;
+
+    tracker.setPose(cMo);
 
     tracker.setIprec(Id);
     tracker.cMoprec = cMo;
     tracker.setIprecRGB(Icol);
     tracker.getPose(cMo);
     tracker.setGroundTruth(gdtpath, trueposepath, start_image);
-    tracker.initKltTracker(Id);
+    //tracker.initKltTracker(Id);
     std::cout << " ok " << std::endl;
 
     //vpDisplay::getClick(Id);
@@ -593,41 +568,13 @@ int main(int argc, char **argv)
     /*cMo.buildFrom(11.7759940348,5.8999979250,5.5547190835,-2.6525344080,-0.0000000000,1.6833495227 );
        cMo.buildFrom( -0.768532741,  6.24302505,  13.54560648,  -2.683611579,  0.003069081378,  1.629208268 );
        cMo=cMo.inverse();*/
-    //tracker.init(Id,cMo);
+
+    tracker.init(Id,cMo);
     if (opt_display)
         vpDisplay::flush(Id);
     double px = mcam.get_px() ;
     double py = mcam.get_py() ;
 
-
-    // ----------------------------------------------------------
-
-    //grabber.setDeviceType(1);
-    /*grabber.open(Idisplay);
-grabber.acquire(Idisplay);*/
-    // Compute the initial pose of the camera
-    //computeInitialPose(&mcam, Idisplay, &mPose, md, mcog, &cmo, mP);
-    // Close the framegrabber
-    //grabber.close();
-    //grabber.open(Id);
-
-    /*vpImage<unsigned char> Isat,Ior3;
-    apViews view_;
-    vpImageIo::readPNG(Isat, "raw.png");
-    view_.edgeOrientMap(Isat);
-    Ior3.resize(Isat.getHeight(),Isat.getWidth());
-    vpImage<vpRGBa> *imArg;
-    imArg=view_.dt0(&Isat);
-    for (int y = 0; y < Isat.getHeight(); y++){
-      for (int x = 0; x < Isat.getWidth(); x++){
-//    	  (*imArg)[y][x].A = (double)(*I00)[y][x];
-          Ior3[y][x]=(*imArg)[y][x].B;
-          //Ior4[y][x]=Iseg[y][x];
-      }
-    }
-    vpImageIo::writePNG(Ior3,"Isatdt.png");
-
-    getchar();*/
 
     vpMatrix pose;
     vpMatrix covariance;
@@ -655,26 +602,6 @@ grabber.acquire(Idisplay);*/
     vpColVector error(6);
 
     fstream fout("out/tracking.txt", std::ios_base::out);
-    /*fstream fin(truthpath, std::ios_base::in);
-    for (int k = 0; k<firstFrame; k++)
-    {
-        fout >> k >> ' ' << cMo << std::endl;
-    }*/
-    /*
-    vpImage<vpRGBa> Ibgd;
-    vpImage<unsigned char> IbgdG;
-    vpImageIo::readPNG(Ibgd, "background.png");
-    vpImageConvert::convert(Ibgd,IbgdG);
-    apSegmentation seg;
-    seg.init(Ibgd);
-    seg.segmentFgdBgd(Ibgd,Id,argc,argv);*/
-    /*vpImage<unsigned char> Iseg;
-    vpImage<vpRGBa> Icol;
-    vpVideoReader readerCol;
-    readerCol.setFileName(ipath.c_str());
-    readerCol.setFirstFrameIndex(start_image);
-    readerCol.open(Icol);
-    readerCol.acquire(Icol);*/
 
     cMo2 = cMo;
 
@@ -690,59 +617,13 @@ grabber.acquire(Idisplay);*/
     vpPlot plotPose;
     vpPlot plotCov;
 
-    //Create a window (700 by 700) at position (100, 200) with two graphics
-      vpPlot A(2, 700, 700, 100, 200, "Curves...");
-      //The first graphic contains 1 curve and the second graphic contains 2 curves
-      A.initGraph(0,5);
-      A.initGraph(1,5);
-      //The color of the curve in the first graphic is red
-      A.setColor(0,0,vpColor::blue);
-      A.setColor(0,1,vpColor::red);
-      A.setColor(0,2,vpColor::green);
-      A.setColor(0,3,vpColor::black);
-      A.setColor(0,4,vpColor::cyan);
-
-
-
-      //The first curve in the second graphic is green
-      A.setColor(1,0,vpColor::blue);
-      //The second curve in the second graphic is blue
-      A.setColor(1,1,vpColor::red);
-      A.setColor(1,2,vpColor::green);
-      A.setColor(1,3,vpColor::black);
-      A.setColor(1,4,vpColor::cyan);
-
-
-      //Add the point (0,0) in the first graphic
-      A.plot(0,0,0,0);
-      A.plot(0,1,0,0);
-      A.plot(0,2,0,0);
-      A.plot(0,3,0,0);
-      A.plot(0,4,0,0);
-
-
-
-      //Add the point (0,1) to the first curve of the second graphic
-      A.plot(1,0,0,0);
-      //Add the point (0,2) to the second curve of the second graphic
-      A.plot(1,1,0,0);
-      A.plot(1,2,0,0);
-      A.plot(1,3,0,0);
-      A.plot(1,4,0,0);
-
-
-      vpPlot B(2, 700, 700, 100, 200, "Curves...");
-
-      vpImage<unsigned char> Ig(height,width);
-      double mtime = 0;
-      double timetrack, timerender,timeextract,timevvs, timetrack1;
-      double timeKalman = 0;
-      double t0,t1;
+    vpImage<unsigned char> Ig(height,width);
+    double mtime = 0;
+    double timetrack, timerender,timeextract,timevvs, timetrack1;
+    double timeKalman = 0;
+    double t0,t1;
     vpImage<vpRGBa> Icol2(height,width);
     Icol2 = Icol;
-
-
-
 
     // Main tracking loop
     try
@@ -754,16 +635,12 @@ grabber.acquire(Idisplay);*/
             try{
                 tracker.getPose(cMo);
                 t0= vpTime::measureTimeMs();
-                mgr->updateRTT(Inormd,Ior,&cMo);
+
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
-                a.processEvents(QEventLoop::AllEvents, 1);
                 //vpImageIo::writePNG(Inormd, "Inormd.png");
                 //vpImageIo::writePNG(Ior, "Ior.png");
-                tracker.Inormdprec = Inormd;
-                tracker.Iorprec = Ior;
-                tracker.Itexprec = Ior;
                 tracker.cMoprec = cMo;
 
             }
@@ -795,8 +672,6 @@ grabber.acquire(Idisplay);*/
             cout << "timeKalman "<<t1-t0<<endl;
             timeKalman = t1-t0;
 
-
-
             // Acquire images
             try{
                 for (int sp = 0; sp < sample ; sp++)
@@ -814,12 +689,6 @@ grabber.acquire(Idisplay);*/
                                 Icol1[i][j].G = Icol1[i][j].R;
                                 Icol1[i][j].B = Icol1[i][j].R;
 
-                                /*Icol1[i][j].R = Icol2[359-i][j].R;
-                                Icol1[i][j].G = 0;//Icol2[359-i][j].G;
-                                Icol1[i][j].B = 0;//Icol2[359-i][j].B;
-                                Id[i][j] = 0.2126*Icol2[359-i][j].R + 0.7152*Icol2[359-i][j].G + 0.0722*Icol2[359-i][j].B;*/
-
-
                             }
                         //Icol = Icol1;
                 }
@@ -827,6 +696,9 @@ grabber.acquire(Idisplay);*/
             catch(...){
                 break;
             }
+
+            //vpImageIo::read(Id,"socketimage10.png");
+            //vpImageIo::read(Id,"imagePig3.png");
             vpDisplay::display(Id);
 
             //tracker.setPose(cMo);
@@ -834,11 +706,8 @@ grabber.acquire(Idisplay);*/
             // Pose tracking
             try{
                 t0= vpTime::measureTimeMs();
-                tracker.track(Id,Icol,Inormd,Ior,Ior,tr[2]);
+                tracker.trackXray(Id, tr[2]);
 
-                //tracker.displayKltPoints(Id);
-
-                //tracker.track(Id, Igrad, Igradx, Igrady, Inormd, Ior, Ior, tr[2]);
                 {
                     tracker.getCovarianceMatrix(covMat);
                     tracker.getCovarianceMatrixME(covMatME);
@@ -930,25 +799,6 @@ grabber.acquire(Idisplay);*/
             covariance[im][23] = tracker.covarianceMatrix[5][5];
             covariance[im][24] = im;
 
-
-
-            //covariance.resize(im+1,5);
-            //std::cout << " covmatME " << covMatME << " covmat " << covMat << std::endl;
-            A.plot(0,0,im-start_image+1,sqrt(tracker.covarianceMatrixME[0][0] + tracker.covarianceMatrixME[1][1] + tracker.covarianceMatrixME[2][2]));
-            A.plot(1,0,im-start_image+1,sqrt(tracker.covarianceMatrixME[3][3] + tracker.covarianceMatrixME[4][4] + tracker.covarianceMatrixME[5][5]));
-            A.plot(0,1,im-start_image+1,sqrt(tracker.covarianceMatrixCCD[0][0] + tracker.covarianceMatrixCCD[1][1] + tracker.covarianceMatrixCCD[2][2]));
-            A.plot(1,1,im-start_image+1,sqrt(tracker.covarianceMatrixCCD[3][3] + tracker.covarianceMatrixCCD[4][4] + tracker.covarianceMatrixCCD[5][5]));
-            A.plot(0,2,im-start_image+1,sqrt(tracker.covarianceMatrixKLT[0][0] + tracker.covarianceMatrixKLT[1][1] + tracker.covarianceMatrixKLT[2][2]));
-            std::cout << " lktl " <<tracker.covarianceMatrixKLT[0][0]+ tracker.covarianceMatrixKLT[1][1]+ tracker.covarianceMatrixKLT[2][2]<< std::endl;
-
-            A.plot(1,2,im-start_image+1,sqrt(tracker.covarianceMatrixKLT[3][3] + tracker.covarianceMatrixKLT[4][4] + tracker.covarianceMatrixKLT[5][5]));
-            A.plot(0,3,im-start_image+1,sqrt(tracker.covarianceMatrix[0][0] + tracker.covarianceMatrix[1][1] + tracker.covarianceMatrix[2][2]));
-            A.plot(1,3,im-start_image+1,sqrt(tracker.covarianceMatrix[3][3] + tracker.covarianceMatrix[4][4] + tracker.covarianceMatrix[5][5]));
-            if(useKalmanFilter)
-            {
-            A.plot(0,4,im-start_image+1,sqrt(filt.PvEst[0][0] + filt.PvEst[1][1] + filt.PvEst[2][2]));
-            A.plot(1,4,im-start_image+1,sqrt(filt.PvEst[3][3] + filt.PvEst[4][4] + filt.PvEst[5][5]));
-            }
 
             //covariance[im][0] = covMat[0][0] + covMat[1][1] + covMat[2][2];
             //covariance[im][1] = covMat[2][2] + covMat[3][3] + covMat[4][4];
