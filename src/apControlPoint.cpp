@@ -586,7 +586,7 @@ apControlPoint::computeInteractionMatrixErrorMH(const vpHomogeneousMatrix &cMo,c
     const double *Lrho = H[0];
     const double *Ltheta = H[1];
     // Calculate interaction matrix for a distance
-    for (int k = 0 ; k < 3 ; k++)
+    for (int k = 0 ; k < 6 ; k++)
     {
         L[k] = (Lrho[k] + alpha * Ltheta[k]);
     }

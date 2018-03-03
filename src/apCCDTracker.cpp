@@ -2231,13 +2231,13 @@ void apCCDTracker::updateParameters(vpMatrix &LTCIL, vpColVector &LTCIR)
                     tmp_jacobian.at<double>(0,n) = -cam.get_px()*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(-nv_ptr[0]/p->Zs);
                     tmp_jacobian.at<double>(1,n) = -cam.get_px()*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(-nv_ptr[1]/p->Zs);
                     tmp_jacobian.at<double>(2,n) = -cam.get_px()*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*((nv_ptr[0]*p->xs+nv_ptr[1]*p->ys)/p->Zs);
-                    /*tmp_jacobian.at<double>(3,n) = -cam.get_px()*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(nv_ptr[0]*p->xs*p->ys+nv_ptr[1]*(1+p->ys*p->ys));
+                    tmp_jacobian.at<double>(3,n) = -cam.get_px()*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(nv_ptr[0]*p->xs*p->ys+nv_ptr[1]*(1+p->ys*p->ys));
                     tmp_jacobian.at<double>(4,n) = -cam.get_px()*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(-nv_ptr[1]*p->xs*p->ys-nv_ptr[0]*(1+p->xs*p->xs));
-                    tmp_jacobian.at<double>(5,n) = -cam.get_px()*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(nv_ptr[0]*p->ys-nv_ptr[1]*p->xs);*/
+                    tmp_jacobian.at<double>(5,n) = -cam.get_px()*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(nv_ptr[0]*p->ys-nv_ptr[1]*p->xs);
 
-tmp_jacobian.at<double>(5,n) = 0;
+/*tmp_jacobian.at<double>(5,n) = 0;
 tmp_jacobian.at<double>(4,n) = 0;
-tmp_jacobian.at<double>(3,n) = 0;
+tmp_jacobian.at<double>(3,n) = 0;*/
 
                     /*L_ccd[i*2*normal_points_number*3 + j*3 + n][0] = -955*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(-nv_ptr[0]/p->Zs);
               L_ccd[i*2*normal_points_number*3 + j*3 + n][1] = -955*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(-nv_ptr[1]/p->Zs);
@@ -2445,9 +2445,9 @@ void apCCDTracker::updateParametersPrev(vpMatrix &LTCIL, vpColVector &LTCIR)
                     tmp_jacobian.at<double>(0,n) = -px*(vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(-nvzs0) + lambda_prev*(vic_ptr[10*j + 9]*(mean_vic_ptr_prev[n] - mean_vic_ptr_prev[n+3])*(nvzs0)));
                     tmp_jacobian.at<double>(1,n) = -px*(vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(-nvzs1) + lambda_prev*(vic_ptr[10*j + 9]*(mean_vic_ptr_prev[n] - mean_vic_ptr_prev[n+3])*(nvzs1)));
                     tmp_jacobian.at<double>(2,n) = -px*(vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(nvzs01) + lambda_prev*(vic_ptr[10*j + 9]*(mean_vic_ptr_prev[n] - mean_vic_ptr_prev[n+3])*(nvzs01)));
-                    /*tmp_jacobian.at<double>(3,n) = -cam.get_px()*(vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(nv_ptr[0]*p->xs*p->ys+nv_ptr[1]*(1+p->ys*p->ys)) + lambda_prev*(vic_ptr[10*j + 9]*(mean_vic_ptr_prev[n] - mean_vic_ptr_prev[n+3])*(nv_ptr[0]*p->xs*p->ys+nv_ptr[1]*(1+p->ys*p->ys))));
+                    tmp_jacobian.at<double>(3,n) = -cam.get_px()*(vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(nv_ptr[0]*p->xs*p->ys+nv_ptr[1]*(1+p->ys*p->ys)) + lambda_prev*(vic_ptr[10*j + 9]*(mean_vic_ptr_prev[n] - mean_vic_ptr_prev[n+3])*(nv_ptr[0]*p->xs*p->ys+nv_ptr[1]*(1+p->ys*p->ys))));
                     tmp_jacobian.at<double>(4,n) = -cam.get_px()*(vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(-nv_ptr[1]*p->xs*p->ys-nv_ptr[0]*(1+p->xs*p->xs)) + lambda_prev*(vic_ptr[10*j + 9]*(mean_vic_ptr_prev[n] - mean_vic_ptr_prev[n+3])*(-nv_ptr[1]*p->xs*p->ys-nv_ptr[0]*(1+p->xs*p->xs))) );
-                    tmp_jacobian.at<double>(5,n) = -cam.get_px()*(vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(nv_ptr[0]*p->ys-nv_ptr[1]*p->xs) + lambda_prev*(vic_ptr[10*j + 9]*(mean_vic_ptr_prev[n] - mean_vic_ptr_prev[n+3])*(nv_ptr[0]*p->ys-nv_ptr[1]*p->xs)));*/
+                    tmp_jacobian.at<double>(5,n) = -cam.get_px()*(vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(nv_ptr[0]*p->ys-nv_ptr[1]*p->xs) + lambda_prev*(vic_ptr[10*j + 9]*(mean_vic_ptr_prev[n] - mean_vic_ptr_prev[n+3])*(nv_ptr[0]*p->ys-nv_ptr[1]*p->xs)));
 
 /*tmp_jacobian.at<double>(5,n) = 0;
 tmp_jacobian.at<double>(4,n) = 0;

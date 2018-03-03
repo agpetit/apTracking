@@ -1,15 +1,15 @@
 conf = {
     ecm = {
         mask = { size = 5, nb_mask = 180 },
-        range = { init = 8, tracking = 10 },
-        contrast = { edge_threshold = 3000, mu1 = 0.5, mu2 = 0.5 }
+        range = { init = 8, tracking = 20 },
+        contrast = { edge_threshold = 500, mu1 = 0.5, mu2 = 0.5 }
         },
     sample = {
         step = 2,
         nb_sample = 500
         },
     camera = {
-        u0 = 192, v0 = 192,
+        u0 = 382, v0 = 400,
         px = 3000, py = 3000
         },
     rendering = {
@@ -25,10 +25,10 @@ conf = {
         },
     trackingtype = 4,
       --weightme = 0.0,
-    weightme = 0.6,
+    weightme = 0.8,
     --weightccd = 0.0000015,
     --weightklt = 10,
-    weightccd = 0.2,
+    weightccd = 0.1,
      --weightccd = 0.0,
      weightklt = 0.0,
      ccd = {
@@ -40,7 +40,7 @@ conf = {
 	beta = 0.06,
 	kappa = 0.5,
 	c = 0.25,
-	h = 10,
+	h = 18,
 	delta_h = 1,
 	resolution = 300,
 	degree = 4,

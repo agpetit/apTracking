@@ -524,10 +524,6 @@ int main(int argc, char **argv)
 
         std::cout << " cmo " << cMo << std::endl;
 
-        int wdth = 764;
-        int hght = 800;
-
-
     cout << "detection time "<< endl;
 
         vpImage<vpRGBa> Icol1(height,width);
@@ -550,6 +546,32 @@ int main(int argc, char **argv)
     //Icol = Icol1;
 
     tracker.setPose(cMo);
+
+    vpHomogeneousMatrix oMct;
+    vpHomogeneousMatrix cMct = cMo;
+
+
+    // Manual initialization of the tracker
+    if (opt_display && opt_click_allowed && !opt_detect)
+    {
+        if (inline_init.empty())
+        {
+            while(!vpDisplay::getClick(Id,false))
+            {
+                vpDisplay::display(Id);
+                vpDisplay::displayCharString(Id, 15, 10,
+                                             "click after positioning the object",
+                                             vpColor::red);
+                vpDisplay::flush(Id) ;
+            }
+            tracker.initClick(Id, initFile.c_str(), true);
+        }
+        else
+        {
+            memcpy(cMo.data, inline_init.data(), sizeof(double) * inline_init.size());
+            tracker.setPose(cMo);
+        }
+    }
 
     tracker.setIprec(Id);
     tracker.cMoprec = cMo;
@@ -631,17 +653,20 @@ int main(int argc, char **argv)
     {
         while(true){
 
-
             // Render the 3D model, get the depth edges, normal and texture maps
             try{
                 tracker.getPose(cMo);
                 t0= vpTime::measureTimeMs();
-
+                mgr->updateRTT(Inormd,Ior,&cMo);
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
-                //vpImageIo::writePNG(Inormd, "Inormd.png");
-                //vpImageIo::writePNG(Ior, "Ior.png");
+                a.processEvents(QEventLoop::AllEvents, 1);
+                vpImageIo::writePNG(Inormd, "Inormd.png");
+                vpImageIo::writePNG(Ior, "Ior.png");
+                tracker.Inormdprec = Inormd;
+                tracker.Iorprec = Ior;
+                tracker.Itexprec = Ior;
                 tracker.cMoprec = cMo;
 
             }
@@ -649,6 +674,7 @@ int main(int argc, char **argv)
                 vpTRACE("Error in 3D rendering");
                 throw;
             }
+
             vpDisplay::display(Icol);
             std::cout << " disp " << im-start_image << std::endl;
             if(im-start_image>0)
@@ -697,8 +723,6 @@ int main(int argc, char **argv)
             catch(...){
                 break;
             }
-
-            //vpImageIo::read(Id,"socketimage10.png");
             //vpImageIo::read(Id,"imagePig3.png");
             vpDisplay::display(Id);
 
@@ -707,7 +731,16 @@ int main(int argc, char **argv)
             // Pose tracking
             try{
                 t0= vpTime::measureTimeMs();
-                tracker.trackXray(Id, tr[2]);
+
+                //tracker.trackXray(Id, tr[2]);
+                tracker.track(Id,Icol,Inormd,Ior,Ior,tr[2]);
+
+                //tracker.displayKltPoints(Id);
+                //tracker.track(Id, Igrad, Igradx, Igrady, Inormd, Ior, Ior, tr[2]);
+                {
+                    tracker.getCovarianceMatrix(covMat);
+                    tracker.getCovarianceMatrixME(covMatME);
+                }
 
                 {
                     tracker.getCovarianceMatrix(covMat);
@@ -743,7 +776,6 @@ int main(int argc, char **argv)
             }
             // Display 3D model
             tracker.getPose(cMo);
-
             //tracker.computeError(error);
             tracker.display(Id,cMo,mcam,vpColor::green,1);
 

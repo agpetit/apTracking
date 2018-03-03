@@ -587,6 +587,31 @@ int main(int argc, char **argv)
     tracker.initKltTracker(Id);
     std::cout << " ok " << std::endl;
 
+    /*vpRxyzVector rpix(M_PI,0,0);
+    vpRotationMatrix Rpix;
+    Rpix.buildFrom(rpix);
+    vpTranslationVector tv0(0,0,0);
+
+    vpHomogeneousMatrix Mpix;
+    Mpix.buildFrom(tv0,Rpix);
+
+    vpHomogeneousMatrix MOGL;
+
+    vpRotationMatrix ROGL;
+    vpTranslationVector tOGL;
+    MOGL = Mpix*cMo;
+
+    vpQuaternionVector quatOGL;
+    vpQuaternionVector quatOCV;
+
+    MOGL.extract(quatOGL);
+    cMo.extract(quatOCV);
+
+    st:cout << " MOGL " <<MOGL << " " << quatOGL << " " << quatOCV << std::endl;
+
+    getchar();*/
+
+
     //vpDisplay::getClick(Id);
     /*cMo2 = cMo;
     tracker2.setPose(cMo2);*/
@@ -990,8 +1015,8 @@ grabber.acquire(Idisplay);*/
             {
             //vpImageIo::write(Ioverlaycol, filename4);
             //vpImageIo::write(Ioverlay, filename5);
-                vpImageIo::write(Icol, filename4);
-                vpImageIo::write(Imask, filename5);
+                //vpImageIo::write(Icol, filename4);
+                //vpImageIo::write(Imask, filename5);
             }
 
             im++;
