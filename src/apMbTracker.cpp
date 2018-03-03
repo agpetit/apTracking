@@ -5194,7 +5194,7 @@ void apMbTracker::computeVVSCCDMH(const vpImage<unsigned char>& _I,
 
 		//v = -lambda * (LTL + weight_ccd * LTCIL).pseudoInverse(LTL.getRows() * DBL_EPSILON) * (LTR - weight_ccd * LTCIR);
 		cMo = vpExponentialMap::direct(v).inverse() * cMo;
-                        std::cout << "t3 = " << v << std::endl;
+                        //std::cout << "t3 = " << v << std::endl;
 
 		iter++;
 	}

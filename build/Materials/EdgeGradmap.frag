@@ -81,15 +81,15 @@ void main()
 
 
 
-	if (sum*255.0>20.0 || sum*255.0<-20.0)
-
+	//if (sum*255.0>20.0 || sum*255.0<-20.0)
+        if (sum*255.0<-4.0)
 	{
 	for( i=0; i<9; i++ )
 	{
 		vec4 tmp = texture2D(tex, gl_TexCoord[0].st + offset[i]);
 
-		//lum = 0.6*tmp.x + 0.3*tmp.y + 0.1*tmp.z;
-		lum = tmp.w;
+		lum = 0.6*tmp.x + 0.3*tmp.y + 0.1*tmp.z;
+		//lum = tmp.w;
 		sum_h += lum * kernel_h[i];
 		sum_v += lum * kernel_v[i];
 	}

@@ -1013,7 +1013,7 @@ grabber.acquire(Idisplay);*/
                     else Imask[l][k] = 0;
             //if(im%5==0)
             {
-            //vpImageIo::write(Ioverlaycol, filename4);
+            vpImageIo::write(Ioverlaycol, filename4);
             //vpImageIo::write(Ioverlay, filename5);
                 //vpImageIo::write(Icol, filename4);
                 //vpImageIo::write(Imask, filename5);
