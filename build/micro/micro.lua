@@ -1,8 +1,8 @@
 conf = {
     ecm = {
         mask = { size = 5, nb_mask = 180 },
-        range = { init = 8, tracking = 7 },
-        contrast = { edge_threshold = 10000, mu1 = 0.5, mu2 = 0.5 }
+        range = { init = 8, tracking = 3 },
+        contrast = { edge_threshold = 1000, mu1 = 0.5, mu2 = 0.5 }
         },
     sample = {
         step = 2,
@@ -40,7 +40,7 @@ conf = {
 	beta = 0.06,
 	kappa = 0.5,
 	c = 0.25,
-	h = 7,
+	h = 10,
 	delta_h = 1,
 	resolution = 300,
 	degree = 4,

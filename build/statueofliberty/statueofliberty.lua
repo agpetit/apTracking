@@ -9,8 +9,8 @@ conf = {
         nb_sample = 500
         },
     camera = {
-        u0 = 640, v0 = 360,
-        px = 4000, py = 4000
+        u0 = 320, v0 = 180,
+        px = 2000, py = 2000
         },
     rendering = {
         edgeRend_threshold = 20,

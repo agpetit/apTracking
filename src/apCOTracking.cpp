@@ -587,7 +587,7 @@ int main(int argc, char **argv)
     tracker.initKltTracker(Id);
     std::cout << " ok " << std::endl;
 
-    /*vpRxyzVector rpix(M_PI,0,0);
+    vpRxyzVector rpix(M_PI,0,0);
     vpRotationMatrix Rpix;
     Rpix.buildFrom(rpix);
     vpTranslationVector tv0(0,0,0);
@@ -604,12 +604,12 @@ int main(int argc, char **argv)
     vpQuaternionVector quatOGL;
     vpQuaternionVector quatOCV;
 
-    MOGL.extract(quatOGL);
+    (MOGL.inverse()).extract(quatOGL);
     cMo.extract(quatOCV);
 
-    st:cout << " MOGL " <<MOGL << " " << quatOGL << " " << quatOCV << std::endl;
+    st:cout << " MOGL " <<MOGL.inverse() << " " << quatOGL << " " << quatOCV << std::endl;
 
-    getchar();*/
+    //getchar();
 
 
     //vpDisplay::getClick(Id);
