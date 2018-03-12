@@ -629,8 +629,8 @@ grabber.acquire(Idisplay);*/
             {
                 filt.cMoEst = cMo;
                 filt.predictPose();
-                filt.getPredPose(cMo);
-                tracker.setPose(cMo);
+                //filt.getPredPose(cMo);
+                //tracker.setPose(cMo);
                 tracker.predictKLT = true;
                 mgr->updateRTT(Inormd,Ior,&cMo);
                 a.processEvents(QEventLoop::AllEvents, 1);
@@ -679,9 +679,8 @@ grabber.acquire(Idisplay);*/
                     filt.estimatePose(cMo,covMat);
                     tracker.setPose(filt.cMoEst);
                     cMoFilt = filt.cMoEst;
-                    //cMo = cMoFilt;
-                    //tracker.display(Id,cMoFilt,mcam,vpColor::green,1);
-                    //tracker.display(Id,filt.cMoPred_0,mcam,vpColor::blue,1);
+                    cMo = cMoFilt;
+                    //tracker.display(Id,cMoFilt,mcam,vpColor::red,1);
                 }
                 t1= vpTime::measureTimeMs();
                 cout << "timeTrack "<<t1-t0 + timeKalman<<endl;

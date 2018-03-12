@@ -77,15 +77,15 @@ void apKalmanFilter::initFilter(vpHomogeneousMatrix &cMo, apKalmanParameters &ka
 				Q[i][j] = 0;
 				if(i == j)
 				{H[i][j] = 1;
-				R[i][j] = 0.02;
-				Rv[i][j] = 0.00000001;}
+                                R[i][j] = 0.0002;
+                                Rv[i][j] = 0.00001;}
 				if (j<3 && i<3){
 					if(i == j)
 						{Qv[i][j] = sQT*sQT;
 						PvEst[i][j] = sPT*sPT;
 						//R[i][j] = 3e-09;
-						R[i][j] = 0.001;
-						Rv[i][j] = 0.0000001;
+                                                R[i][j] = 0.001;
+                                                Rv[i][j] = 0.0001;
 						}
 				}
 				}
@@ -111,12 +111,12 @@ void apKalmanFilter::predictPose()
 	vPred = vEst;
 	vpMatrix Iv(6,6);
 	Iv.setIdentity();
-	vpMatrix I(12,12);
-	I.setIdentity();
-	//cMoPred = vpExponentialMap::direct(vPred).inverse() * cMoEst;
+        vpMatrix I(12,12);
+        I.setIdentity();
+        cMoPred = vpExponentialMap::direct(vPred).inverse() * cMoEst;
 	//cMoPred_0 = vpExponentialMap::direct((Iv)*vPred).inverse() * cMoEst;
-	//cMoPred_0 = vpExponentialMap::direct(vMes-vPred).inverse() * cMoEst;
-	cMoPred = cMoEst;
+        //cMoPred_0 = vpExponentialMap::direct(vMes-vPred).inverse() * cMoEst;
+        cMoPred = cMoEst;
 	cMoPred_0 = cMoEst;
 	PPred = J*PEst*J.transpose() + Q;
     PvPred = PvEst + Qv;
@@ -126,19 +126,20 @@ void apKalmanFilter::predictPose()
 void apKalmanFilter::estimatePose(vpHomogeneousMatrix &cMoMes, vpMatrix &covMes)
 {
 
-cMoInnov = cMoMes*(cMoEst.inverse());
+cMoInnov = cMoMes*(cMoPred.inverse());
 K = PPred*H.transpose()*((H*PPred*H.transpose() + covMes).pseudoInverse());
 //Kv = PvPred*((PvPred + R).pseudoInverse());
 Kv = PvPred*((PvPred + covMes).pseudoInverse());
 vpMatrix Iv(6,6);
 Iv.setIdentity();
-vMes = vpExponentialMap::inverse((cMoInnov).inverse());
+vMes = vpExponentialMap::inverse((cMoInnov));
 
 std::cout << " Kv " << Kv << std::endl;
 vEst = vPred + (Kv)*(vMes-vPred);
 //vEst = vPred + (H_0)*K*(vMes-vPred);
-cMoEst = vpExponentialMap::direct(Kv*(vMes-vPred)).inverse()*cMoPred;
-//cMoEst = vpExponentialMap::direct(Kv*vpExponentialMap::inverse(cMoInnov.inverse())).inverse()*cMoPred;
+//cMoEst = vpExponentialMap::direct(Kv*(vMes-vPred)).inverse()*cMoPred;
+//cMoEst = vpExponentialMap::direct(K*vpExponentialMap::inverse(cMoInnov.inverse())).inverse()*cMoPred;
+cMoEst = vpExponentialMap::direct(vEst)*cMoEst;
 //cMoEst = cMoMes;
 
 //PEst = (I-K*H)*PPred;

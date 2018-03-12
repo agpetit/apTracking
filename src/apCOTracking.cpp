@@ -391,6 +391,13 @@ int main(int argc, char **argv)
     vpImage<unsigned char> Itex(height,width);
     vpImage<unsigned char> Imask(height,width);
 
+
+    // Depth edges map, with gradient orientation
+    vpImage<unsigned char> Ior2(height,width);
+    // Normal map and texture map
+    vpImage<vpRGBa> Inormd2(height,width);
+    // Texture edge map
+
     for (int n=0; n <height ; n++)
     {
         for (int m = 0 ; m < width; m++)
@@ -457,7 +464,7 @@ int main(int argc, char **argv)
     getchar();*/
 
 
-    vpHomogeneousMatrix cMo, cMo2, cMoFilt;
+    vpHomogeneousMatrix cMo, cMo2, cMoFilt, cMoFilt1;
 
 	cout << "time2 "<< opt_detect << endl;
 
@@ -604,10 +611,16 @@ int main(int argc, char **argv)
     vpQuaternionVector quatOGL;
     vpQuaternionVector quatOCV;
 
+    MOGL.extract(quatOGL);
+
+
+std:cout << " MOGL  " <<MOGL << " " << quatOGL << " " << quatOCV << std::endl;
+
+
     (MOGL.inverse()).extract(quatOGL);
     cMo.extract(quatOCV);
 
-    st:cout << " MOGL " <<MOGL.inverse() << " " << quatOGL << " " << quatOCV << std::endl;
+    st:cout << " MOGL inverse " <<MOGL.inverse() << " " << quatOGL << " " << quatOCV << std::endl;
 
     //getchar();
 
@@ -782,11 +795,11 @@ grabber.acquire(Idisplay);*/
             try{
                 tracker.getPose(cMo);
                 t0= vpTime::measureTimeMs();
-                mgr->updateRTT(Inormd,Ior,&cMo);
+                //mgr->updateRTT(Inormd,Ior,&cMo);
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
-                a.processEvents(QEventLoop::AllEvents, 1);
+                //a.processEvents(QEventLoop::AllEvents, 1);
                 //vpImageIo::writePNG(Inormd, "Inormd.png");
                 //vpImageIo::writePNG(Ior, "Ior.png");
                 tracker.Inormdprec = Inormd;
@@ -812,8 +825,8 @@ grabber.acquire(Idisplay);*/
             {
                 filt.cMoEst = cMo;
                 filt.predictPose();
-                filt.getPredPose(cMo);
-                tracker.setPose(cMo);
+                //filt.getPredPose(cMo);
+                //tracker.setPose(cMo);
                 tracker.predictKLT = true;
                 mgr->updateRTT(Inormd,Ior,&cMo);
                 a.processEvents(QEventLoop::AllEvents, 1);
@@ -874,16 +887,17 @@ grabber.acquire(Idisplay);*/
                 if (useKalmanFilter)
                 {
                     tracker.getPose(cMo);
-                    tracker.display(Id,cMo,mcam,vpColor::red,1);
+                    //tracker.display(Id,cMo,mcam,vpColor::red,1);
                     tracker.getCovarianceMatrix(covMat);
                     tracker.getCovarianceMatrixME(covMatME);
                     filt.estimatePose(cMo,covMat);
                     tracker.setPose(filt.cMoEst);
                     cMoFilt = filt.cMoEst;
-                    //cMo = cMoFilt;
-                    //tracker.display(Id,cMoFilt,mcam,vpColor::green,1);
-                    //tracker.display(Id,filt.cMoPred_0,mcam,vpColor::blue,1);
+                    cMo = cMoFilt;
+                    tracker.display(Id,cMoFilt,mcam,vpColor::red,1);
                 }
+
+
                 t1= vpTime::measureTimeMs();
                 cout << "timeTrack "<<t1-t0 + timeKalman<<endl;
                 //if(im>1000)
@@ -903,7 +917,7 @@ grabber.acquire(Idisplay);*/
             tracker.getPose(cMo);
 
             //tracker.computeError(error);
-            tracker.display(Id,cMo,mcam,vpColor::green,1);
+            //tracker.display(Id,cMo,mcam,vpColor::green,1);
 
             std::cout<<" cMo out" << cMo <<std::endl;
             std::cout<<" cMo filt" << cMoFilt <<std::endl;
@@ -1015,7 +1029,7 @@ grabber.acquire(Idisplay);*/
             {
             vpImageIo::write(Ioverlaycol, filename4);
             //vpImageIo::write(Ioverlay, filename5);
-                //vpImageIo::write(Icol, filename4);
+                vpImageIo::write(Icol, filename4);
                 vpImageIo::write(Imask, filename5);
             }
 
