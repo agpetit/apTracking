@@ -5104,7 +5104,7 @@ void apMbTracker::computeVVSCCDMH(const vpImage<unsigned char>& _I,
 	iter = 0;
 	//vpColVector error_px(nerror);
 
-	while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 12)) {
+        while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 8)) {
 		//        double t0 = vpTime::measureTimeMs();
 #pragma omp parallel for
 		for (int k = 0; k < points[scaleLevel].size(); k++) {
@@ -5676,7 +5676,8 @@ void apMbTracker::computeVVSCCDKltMHPrev(const vpImage<unsigned char>& _I,
 	    	}
 	    }*/
 
-	    CCDTracker.updateParametersPrev(LTCIL,LTCIR);
+            //CCDTracker.updateParametersPrev(LTCIL,LTCIR);
+                CCDTracker.updateParameters(LTCIL,LTCIR);
 				//double t1 = vpTime::measureTimeMs();
 
 		if (iter > 0)
@@ -5787,6 +5788,8 @@ void apMbTracker::computeVVSCCDKltMHPrev(const vpImage<unsigned char>& _I,
 		vpMatrix DKLT;
 		DKLT.diag(WKLT_true);
 		covarianceMatrixKLT = computeCovarianceMatrix(LKLT_true, -v, lambda * weighted_error_klt,DKLT);
+
+
 
 		/*std::cout << " lktl " <<covarianceMatrixKLT[0][0]+ covarianceMatrixKLT[1][1]+ covarianceMatrixKLT[2][2]<< std::endl;
 

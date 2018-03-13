@@ -1,21 +1,21 @@
 conf = {
     ecm = {
         mask = { size = 5, nb_mask = 180 },
-        range = { init = 8, tracking = 10 },
-        contrast = { edge_threshold = 10000, mu1 = 0.5, mu2 = 0.5 }
+        range = { init = 8, tracking = 15 },
+        contrast = { edge_threshold = 5000, mu1 = 0.5, mu2 = 0.5 }
         },
     sample = {
         step = 2,
         nb_sample = 500
         },
     camera = {
-        u0 = 320, v0 = 180,
-        px = 2000, py = 2000
+        u0 = 640, v0 = 360,
+        px = 1000, py = 1000
         },
     rendering = {
         edgeRend_threshold = 20,
-        clipDist = 0.95,
-        sampleRend = 2,
+        clipDist = 1.1,
+        sampleRend = 4,
 	useNPoints = 0,
 	nPoints = 700,
         scaleModel = 1,
@@ -25,12 +25,12 @@ conf = {
         },
     trackingtype = 4,
       --weightme = 0.0,
-    weightme = 0.8,
+    weightme = 0.7,
     --weightccd = 0.0000015,
     --weightklt = 10,
-    weightccd = 0.3,
+    weightccd = 0.4,
      --weightccd = 0.0,
-     weightklt = 0.05,
+     weightklt = 0.0,
      ccd = {
 	gamma_1 = 0.5,
 	gamma_2 = 5,
@@ -49,11 +49,11 @@ conf = {
      klt = {	
         blocksize = 12,
 	npoints = 500,
-	history = 25,
-	windowsize = 18,
-	quality = 0.05,
-	mindist = 7,
-	harrisfree = 0.04,
+        history = 25,
+        windowsize = 18,
+        quality = 0.000001,
+        mindist = 8,
+        harrisfree = 0.01,
 	useharris = 1,
 	pyramidlevels = 1
      },
@@ -62,8 +62,8 @@ conf = {
     kalman = {
     --sigmaqt = 0.04,
     --sigmaqr = 0.001,
-    sigmaqt = 0.04,
-    sigmaqr = 0.0015,
+    sigmaqt = 0.0025,
+    sigmaqr = 0.0004,
     sigmapt = 0.002,
     sigmapr = 0.0001},
     detection = {

@@ -23,14 +23,14 @@ conf = {
         yDir = 1,
         zDir = 1
         },
-    trackingtype = 4,
+    trackingtype = 6,
       --weightme = 0.0,
     weightme = 0.5,
     --weightccd = 0.0000015,
     --weightklt = 10,
     weightccd = 0.5,
      --weightccd = 0.0,
-     weightklt = 0.05,
+     weightklt = 0.1,
      ccd = {
 	gamma_1 = 0.5,
 	gamma_2 = 5,

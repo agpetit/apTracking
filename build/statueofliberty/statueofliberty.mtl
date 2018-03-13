@@ -1,10 +1,44 @@
-# Blender MTL File: 'statueofliberty5.blend'
-# Material Count: 1
+# Blender MTL File: 'statueofliberty30.blend'
+# Material Count: 4
 
-newmtl None
-Ns 0
+newmtl Mat_18_-1
+Ns 29.411765
 Ka 0.000000 0.000000 0.000000
-Kd 0.8 0.8 0.8
-Ks 0.8 0.8 0.8
-d 1
+Kd 0.400000 0.803900 0.666700
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
 illum 2
+
+newmtl Mat_19_10
+Ns 29.411765
+Ka 0.000000 0.000000 0.000000
+Kd 0.776500 0.733300 0.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd /home/antoine/Downloads/estátua+da+liberdade.obj/glass-tinted.jpg
+
+newmtl Mat_20_-1
+Ns 29.411765
+Ka 0.000000 0.000000 0.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 0.690000
+illum 2
+
+newmtl Mat_21_11
+Ns 29.411765
+Ka 0.000000 0.000000 0.000000
+Kd 0.603900 0.588200 0.580400
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd /home/antoine/Downloads/estátua+da+liberdade.obj/Concrete_Aggregate_Smoke3.jpg

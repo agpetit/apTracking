@@ -201,7 +201,7 @@ int main(int argc, char **argv)
     // Paths and file names
     std::string env_ipath;
     std::string env_ipath2;
-    std::string opath,opath1;
+    std::string opath,opath1, opath3;
     std::string vpath;
     std::string opt_ipath;
     std::string ipath;
@@ -282,6 +282,7 @@ int main(int argc, char **argv)
       //opath1 = vpIoTools::path("out") + vpIoTools::path("out") + vpIoTools::path("/imageKalman%06d.png");
       opath1 = vpIoTools::path("out") + object + vpIoTools::path("/mask%06d.png");
 
+      opath3 = vpIoTools::path("out") + object + vpIoTools::path("/imageAR%06d.png");
 
     // Path the views of hierarchical graph are saved
 
@@ -387,6 +388,7 @@ int main(int argc, char **argv)
     vpImage<unsigned char> Ior(height,width);
     // Normal map and texture map
     vpImage<vpRGBa> Inormd(height,width);
+    vpImage<vpRGBa> Icolor(height,width);
     // Texture edge map
     vpImage<unsigned char> Itex(height,width);
     vpImage<unsigned char> Imask(height,width);
@@ -795,7 +797,7 @@ grabber.acquire(Idisplay);*/
             try{
                 tracker.getPose(cMo);
                 t0= vpTime::measureTimeMs();
-                mgr->updateRTT(Inormd,Ior,&cMo);
+                mgr->updateRTTCol(Icolor,Inormd,Ior,&cMo);
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
@@ -812,6 +814,17 @@ grabber.acquire(Idisplay);*/
                 vpTRACE("Error in 3D rendering");
                 throw;
             }
+
+            if(useKalmanFilter)
+            {
+                filt.cMoEst = cMo;
+                filt.predictPose();
+                //filt.getPredPose(cMo);
+                //tracker.setPose(cMo);
+                tracker.predictKLT = true;
+                mgr->updateRTTCol(Icolor,Inormd,Ior,&cMo);
+                a.processEvents(QEventLoop::AllEvents, 1);
+            }
             vpDisplay::display(Icol);
             std::cout << " disp " << im-start_image << std::endl;
             if(im-start_image>0)
@@ -821,16 +834,6 @@ grabber.acquire(Idisplay);*/
 
             t0= vpTime::measureTimeMs();
 
-            if(useKalmanFilter)
-            {
-                filt.cMoEst = cMo;
-                filt.predictPose();
-                //filt.getPredPose(cMo);
-                //tracker.setPose(cMo);
-                tracker.predictKLT = true;
-                mgr->updateRTT(Inormd,Ior,&cMo);
-                a.processEvents(QEventLoop::AllEvents, 1);
-            }
 
             t1= vpTime::measureTimeMs();
             cout << "timeKalman "<<t1-t0<<endl;
@@ -847,6 +850,7 @@ grabber.acquire(Idisplay);*/
                     //if(tracker.getUseRGB())
                         readerRGB.acquire(Icol);
                         Icol1 = Icol;
+                        Icol2 = Icol;
                         for (int i = 0; i<height; i++)
                             for (int j = 0; j<width; j++)
                             {
@@ -891,9 +895,12 @@ grabber.acquire(Idisplay);*/
                     tracker.getCovarianceMatrix(covMat);
                     tracker.getCovarianceMatrixME(covMatME);
                     filt.estimatePose(cMo,covMat);
-                    tracker.setPose(filt.cMoEst);
+                    //if (im >5)
+                    {
                     cMoFilt = filt.cMoEst;
+                    tracker.setPose(filt.cMoEst);
                     cMo = cMoFilt;
+                    }
                     tracker.display(Id,cMoFilt,mcam,vpColor::red,1);
                 }
 
@@ -917,7 +924,7 @@ grabber.acquire(Idisplay);*/
             tracker.getPose(cMo);
 
             //tracker.computeError(error);
-            //tracker.display(Id,cMo,mcam,vpColor::green,1);
+            tracker.display(Id,cMo,mcam,vpColor::green,1);
 
             std::cout<<" cMo out" << cMo <<std::endl;
             std::cout<<" cMo filt" << cMoFilt <<std::endl;
@@ -1011,6 +1018,10 @@ grabber.acquire(Idisplay);*/
             //vpDisplay::getClick(Id);
             fout << im << ' ' << cMo << std::endl;
             // Write images
+            char buf3[FILENAME_MAX];
+            sprintf(buf3, opath3.c_str(), im-start_image);
+            std::string filename3(buf3);
+
             char buf4[FILENAME_MAX];
             sprintf(buf4, opath.c_str(), im-start_image);
             std::string filename4(buf4);
@@ -1018,18 +1029,24 @@ grabber.acquire(Idisplay);*/
             char buf5[FILENAME_MAX];
             sprintf(buf5, opath1.c_str(), im-start_image);
             std::string filename5(buf5);
+
             //std::cout << "Write: " << filename4 << std::endl;
             //if(im%5==0)
             for (int k = 0; k < Icol.getWidth(); k++)
                 for (int l = 0; l < Icol.getHeight(); l++)
                     if (Inormd[l][k].A!=0)
-                    Imask[l][k] = 255;
-                    else Imask[l][k] = 0;
+                    {Imask[l][k] = 255;
+                        Icol2[l][k] = Icolor[l][k];
+                    }
+                    else {Imask[l][k] = 0;
+
+                    }
             //if(im%5==0)
             {
-            vpImageIo::write(Ioverlaycol, filename4);
-            //vpImageIo::write(Ioverlay, filename5);
+           // vpImageIo::write(Ioverlaycol, filename4);
                 vpImageIo::write(Icol, filename4);
+            //vpImageIo::write(Ioverlay, filename5);
+                vpImageIo::write(Icol2, filename3);
                 vpImageIo::write(Imask, filename5);
             }
 
