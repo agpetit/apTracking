@@ -795,11 +795,11 @@ grabber.acquire(Idisplay);*/
             try{
                 tracker.getPose(cMo);
                 t0= vpTime::measureTimeMs();
-                //mgr->updateRTT(Inormd,Ior,&cMo);
+                mgr->updateRTT(Inormd,Ior,&cMo);
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
-                //a.processEvents(QEventLoop::AllEvents, 1);
+                a.processEvents(QEventLoop::AllEvents, 1);
                 //vpImageIo::writePNG(Inormd, "Inormd.png");
                 //vpImageIo::writePNG(Ior, "Ior.png");
                 tracker.Inormdprec = Inormd;

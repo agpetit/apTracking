@@ -2373,7 +2373,7 @@ void apCCDTracker::updateParametersPrev(vpMatrix &LTCIL, vpColVector &LTCIR)
 
             double normal_points_number = floor(ccdParameters.h/ccdParameters.delta_h);
 
-            double lambda_prev = 0.3;
+            double lambda_prev = 0.0;
         // std::cout << "dimension: " << Sigma_Phi.cols << " " << Sigma_Phi.rows << std::endl;
     //    int i =0;
 #pragma omp for nowait

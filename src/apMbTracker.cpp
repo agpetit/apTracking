@@ -7434,7 +7434,7 @@ void apMbTracker::computeVVSCCDMHPrev(const vpImage<unsigned char>& _I,
 	iter = 0;
 	//vpColVector error_px(nerror);
 
-	while (/*((int) ((residu_1 - r) * 1e8) != 0) &&*/ (iter < 8)) {
+        while (/*((int) ((residu_1 - r) * 1e8) != 0) &&*/ (iter < 8)) {
 		//        double t0 = vpTime::measureTimeMs();
 #pragma omp parallel for //shared(L,error)
 		for (int k = 0; k < points[scaleLevel].size(); k++) {
@@ -7520,7 +7520,7 @@ void apMbTracker::computeVVSCCDMHPrev(const vpImage<unsigned char>& _I,
 	    	    vp = (int)p->icpoint->get_v();
 	    	    vpDisplay::displayCross(_I,vp,up,5,vpColor::red,5);
 	    	}
-	    }*/
+            }*/
 
 		CCDTracker.updateParametersPrev(LTCIL,LTCIR);
 				//double t2 = vpTime::measureTimeMs();
@@ -7542,7 +7542,7 @@ void apMbTracker::computeVVSCCDMHPrev(const vpImage<unsigned char>& _I,
 		double wghtCCD = ((double)1/(10*CCDTracker.error_ccd.size()));
 		//double wghtCCD = ((double)1/(CCDTracker.error_ccd.size()))*(1/stdCCD);
 
-		wghtME = 0.7;
+                wghtME = 0.7;
 		//wghtME = sigmag;
 
 		//std::cout << " wghtME " << weight_me*wghtME*LTR << " wght CCD " << weight_ccd*wghtCCD*LTCIR << std::endl;
@@ -7594,7 +7594,7 @@ void apMbTracker::computeVVSCCDMHPrev(const vpImage<unsigned char>& _I,
 						covarianceMatrix = (weight_me + weight_ccd)*(inv.pseudoInverse(DBL_EPSILON));
 
 	}
-	//   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
+        //   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
 	//    std::cout << "error: " << (residu_1 - r) << std::endl;
 }
 
