@@ -140,6 +140,8 @@ namespace luxifer
         const int _w = image_w;
         const int _h = image_h;
 
+        std::cout << "FOV: " << fov << std::endl;
+
 
 
         // The buffer which contain local 3D fragment normal
@@ -287,7 +289,7 @@ namespace luxifer
         const int _w = image_w;
         const int _h = image_h;
 
-
+        std::cout << "FOV: " << fov << std::endl;
 
         // The buffer which contain local 3D fragment normal
         normal_buffer = new Texture2D;
