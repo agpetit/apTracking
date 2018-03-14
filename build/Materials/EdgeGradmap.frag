@@ -81,7 +81,9 @@ void main()
 
         //if (sum*255.0<-1)
 
-        if (sum*255.0>50 || sum*255.0<-50)
+	float edgeRend_threshold = -50.0;
+	//if (sum*255.0>20.0 || sum*255.0<-20.0)
+    if (sum*255.0>(edgeRend_threshold*-1.0) || sum*255.0<edgeRend_threshold)
 	{
 	for( i=0; i<9; i++ )
 	{
