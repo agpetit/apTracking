@@ -281,22 +281,20 @@ int main(int argc, char **argv)
       opath = vpIoTools::path("out") + object + vpIoTools::path("/image%06d.png");
       //opath1 = vpIoTools::path("out") + vpIoTools::path("out") + vpIoTools::path("/imageKalman%06d.png");
       opath1 = vpIoTools::path("out") + object + vpIoTools::path("/mask%06d.png");
-
       opath3 = vpIoTools::path("out") + object + vpIoTools::path("/imageAR%06d.png");
 
-    // Path the views of hierarchical graph are saved
+      // Path the views of hierarchical graph are saved
 
-    vpath = vpIoTools::path("views1/image%06d.png");
+      vpath = vpIoTools::path("views1/image%06d.png");
+      scpath = vpIoTools::path("sc_hist/hist%06d.txt");
 
-    scpath = vpIoTools::path("sc_hist/hist%06d.txt");
 
+      // Path to the segmented images, generated through matlab
 
-    // Path to the segmented images, generated through matlab
+      isegpath = "/local/agpetit/Downloads/FgSeg" + vpIoTools::path("/pics/AC%04d.png");
 
-    isegpath = "/local/agpetit/Downloads/FgSeg" + vpIoTools::path("/pics/AC%04d.png");
-
-    std::string plot0 = object + vpIoTools::path("ccdColx3plotfile0.dat");
-    std::string plot1 = object + vpIoTools::path("ccdColx3plotfile1.dat");
+      std::string plot0 = object + vpIoTools::path("ccdColx3plotfile0.dat");
+      std::string plot1 = object + vpIoTools::path("ccdColx3plotfile1.dat");
 
 	char *plotfile0 = (char *)plot0.c_str();
 	char *plotfile1 = (char *)plot1.c_str();
@@ -332,7 +330,6 @@ int main(int argc, char **argv)
 
     vpMatrix lik;
     vpMatrix outlik;
-
 
     /*lik.loadMatrix("filtlikelihoodspot6k.txt",lik,false);
     outlik.resize(lik.getCols(),lik.getRows());
@@ -464,7 +461,6 @@ int main(int argc, char **argv)
 
 
     getchar();*/
-
 
     vpHomogeneousMatrix cMo, cMo2, cMoFilt, cMoFilt1;
 
@@ -616,7 +612,7 @@ int main(int argc, char **argv)
     MOGL.extract(quatOGL);
 
 
-std:cout << " MOGL  " <<MOGL << " " << quatOGL << " " << quatOCV << std::endl;
+    std:cout << " MOGL  " <<MOGL << " " << quatOGL << " " << quatOCV << std::endl;
 
 
     (MOGL.inverse()).extract(quatOGL);
@@ -822,8 +818,8 @@ grabber.acquire(Idisplay);*/
                 //filt.getPredPose(cMo);
                 //tracker.setPose(cMo);
                 tracker.predictKLT = true;
-                mgr->updateRTTCol(Icolor,Inormd,Ior,&cMo);
-                a.processEvents(QEventLoop::AllEvents, 1);
+                //mgr->updateRTTCol(Icolor,Inormd,Ior,&cMo);
+                //a.processEvents(QEventLoop::AllEvents, 1);
             }
             vpDisplay::display(Icol);
             std::cout << " disp " << im-start_image << std::endl;
@@ -882,11 +878,12 @@ grabber.acquire(Idisplay);*/
                 tracker.track(Id,Icol,Inormd,Ior,Ior,tr[2]);
 
                 //tracker.displayKltPoints(Id);
-
                 //tracker.track(Id, Igrad, Igradx, Igrady, Inormd, Ior, Ior, tr[2]);
                 {
                     tracker.getCovarianceMatrix(covMat);
                     tracker.getCovarianceMatrixME(covMatME);
+
+                    std::cout << " covMat " << covMat << std::endl;
                 }
                 if (useKalmanFilter)
                 {

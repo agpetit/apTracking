@@ -5104,7 +5104,7 @@ void apMbTracker::computeVVSCCDMH(const vpImage<unsigned char>& _I,
 	iter = 0;
 	//vpColVector error_px(nerror);
 
-        while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 8)) {
+        while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 12)) {
 		//        double t0 = vpTime::measureTimeMs();
 #pragma omp parallel for
 		for (int k = 0; k < points[scaleLevel].size(); k++) {
@@ -5198,6 +5198,7 @@ void apMbTracker::computeVVSCCDMH(const vpImage<unsigned char>& _I,
 
 		iter++;
 	}
+
 	if (computeCovariance) {
 		vpMatrix D;
 		D.diag(W_true);
@@ -5208,8 +5209,9 @@ void apMbTracker::computeVVSCCDMH(const vpImage<unsigned char>& _I,
 		covarianceMatrixCCD = CCDTracker.sigmaP;
 
 		vpMatrix inv = (weight_me*(covarianceMatrixME.pseudoInverse()) + weight_ccd*(covarianceMatrixCCD.pseudoInverse()) );
-						covarianceMatrix = inv.pseudoInverse();
+                covarianceMatrix = inv.pseudoInverse();
 	}
+
 	//   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
 	//    std::cout << "error: " << (residu_1 - r) << std::endl;
 }
@@ -5774,6 +5776,7 @@ void apMbTracker::computeVVSCCDKltMHPrev(const vpImage<unsigned char>& _I,
 
 		iter++;
 	}
+
 	if (computeCovariance) {
 		/*vpMatrix D;
 		D.diag(W_true);
@@ -5811,11 +5814,9 @@ void apMbTracker::computeVVSCCDKltMHPrev(const vpImage<unsigned char>& _I,
 		vpMatrix inv = ((double)weight_me)*(covarianceMatrixME.pseudoInverse(DBL_EPSILON)) + ((double)weight_ccd)*(covarianceMatrixCCD.pseudoInverse(DBL_EPSILON)) + ((double)weight_klt)*covarianceMatrixKLT.pseudoInverse( DBL_EPSILON);
 		covarianceMatrix = (weight_me+weight_ccd+weight_klt)*inv.pseudoInverse(DBL_EPSILON);
 
-
 		//vpMatrix inv = ((double)weight_me/(error.size())*(covarianceMatrixME.pseudoInverse(DBL_EPSILON)) + ((double)weight_ccd/(CCDTracker.error_ccd.size()))*(covarianceMatrixCCD.pseudoInverse(DBL_EPSILON)) + ((double)weight_klt/weighted_error_klt.size())*covarianceMatrixKLT.pseudoInverse(DBL_EPSILON));
 		//covarianceMatrix = ((double)weight_me/error.size() + (double)weight_ccd/(CCDTracker.error_ccd.size()) + (double)weight_klt/weighted_error_klt.size())*inv.pseudoInverse(DBL_EPSILON);
 		//covarianceMatrix = (weight_me*(covarianceMatrixME) + weight_ccd*(covarianceMatrixCCD) + weight_klt*covarianceMatrixKLT);
-
 
 
 	}
@@ -6277,7 +6278,10 @@ void apMbTracker::computeVVSCCDKltMHPrevFAST(const vpImage<unsigned char>& _I,
 		//else CCDTracker.updateParametersPrev(LTCIL,LTCIR);
 
 	    //CCDTracker.updateParametersRobustPrev(LTCIL, LTCIR, robustCCD);
-		CCDTracker.updateParametersPrev(LTCIL,LTCIR);
+
+                //CCDTracker.updateParametersPrev(LTCIL,LTCIR);
+                CCDTracker.updateParameters(LTCIL,LTCIR);
+
 				//double t1 = vpTime::measureTimeMs();
 
 		/*if (iter > 0)
@@ -6372,6 +6376,8 @@ void apMbTracker::computeVVSCCDKltMHPrevFAST(const vpImage<unsigned char>& _I,
 
 		iter++;
 	}
+
+
 	if (computeCovariance) {
 		/*vpMatrix D;
 		D.diag(W_true);
@@ -6406,10 +6412,9 @@ void apMbTracker::computeVVSCCDKltMHPrevFAST(const vpImage<unsigned char>& _I,
 
 
 		vpMatrix inv = (weight_me*(covarianceMatrixME.pseudoInverse(DBL_EPSILON)) + weight_ccd*(covarianceMatrixCCD.pseudoInverse(DBL_EPSILON)) + weight_klt*covarianceMatrixKLT.pseudoInverse( DBL_EPSILON));
-		covarianceMatrix = inv.pseudoInverse(DBL_EPSILON);
+                //covarianceMatrix = inv.pseudoInverse(DBL_EPSILON);
 		//covarianceMatrix = (weight_me*(covarianceMatrixME) + weight_ccd*(covarianceMatrixCCD) + weight_klt*covarianceMatrixKLT);
-
-
+                covarianceMatrix = (weight_me+weight_ccd+weight_klt)*inv.pseudoInverse(DBL_EPSILON);
 
 	}
 	//   cout << "\t Robust minimization in " << iter << " iteration " << endl ;
