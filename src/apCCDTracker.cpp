@@ -2235,9 +2235,13 @@ void apCCDTracker::updateParameters(vpMatrix &LTCIL, vpColVector &LTCIR)
                     tmp_jacobian.at<double>(4,n) = -cam.get_px()*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(-nv_ptr[1]*p->xs*p->ys-nv_ptr[0]*(1+p->xs*p->xs));
                     tmp_jacobian.at<double>(5,n) = -cam.get_px()*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(nv_ptr[0]*p->ys-nv_ptr[1]*p->xs);
 
-/*tmp_jacobian.at<double>(5,n) = 0;
-tmp_jacobian.at<double>(4,n) = 0;
-tmp_jacobian.at<double>(3,n) = 0;*/
+                    if (ccdParameters.fixedrotationx == 1) tmp_jacobian.at<double>(3,n) = 0;
+                    if (ccdParameters.fixedrotationy == 1) tmp_jacobian.at<double>(4,n) = 0;
+                    if (ccdParameters.fixedrotationz == 1) tmp_jacobian.at<double>(5,n) = 0;
+
+//tmp_jacobian.at<double>(5,n) = 0;
+//tmp_jacobian.at<double>(4,n) = 0;
+//tmp_jacobian.at<double>(3,n) = 0;
 
                     /*L_ccd[i*2*normal_points_number*3 + j*3 + n][0] = -955*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(-nv_ptr[0]/p->Zs);
               L_ccd[i*2*normal_points_number*3 + j*3 + n][1] = -955*vic_ptr[10*j + 9]*(mean_vic_ptr[n] - mean_vic_ptr[n+3])*(-nv_ptr[1]/p->Zs);

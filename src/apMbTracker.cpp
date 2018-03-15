@@ -4494,9 +4494,12 @@ void apMbTracker::computeVVSCCD(const vpImage<unsigned char>& _I,
 
 		if ((iter == 0) || compute_interaction) {
 			for (int i = 0; i < nerror; i++) {
-				for (int j = 0; j < 6; j++) {
+                                for (int j = 0; j < 3; j++) {
 					L[i][j] = w[i] * factor[i] * L[i][j];
 				}
+                                if (fixedrotationx==1) L[i][3] = 0;
+                                if (fixedrotationy==2) L[i][4] = 0;
+                                if (fixedrotationz==3) L[i][5] = 0;
 			}
 		}
 
@@ -4522,12 +4525,22 @@ void apMbTracker::computeVVSCCD(const vpImage<unsigned char>& _I,
 		wghtME = 0.7;
 		//std::cout << "t3 = " <<  weight_me*wghtME*LTR << std::endl;
 
-		//std::cout << "t4 = " << -weight_ccd * wghtCCD *  LTCIR << std::endl;
-
+                //std::cout << "t4 = " << -weight_ccd * wghtCCD *  LTCIR << std::endl;
+                std::cout << "v " << v << std::endl;
 
 		//wghtME = 1;
 		v = - lambda * (weight_me * wghtME*LTL + weight_ccd * wghtCCD * LTCIL).pseudoInverse(LTL.getRows() * DBL_EPSILON) * (weight_me*wghtME*LTR - weight_ccd * wghtCCD *  LTCIR);
-
+                /*vpRxyzVector veuler;
+                vpThetaUVector tu;
+                tu[0] = v[0];
+                tu[1] = v[1];
+                tu[2] = v[2];
+                veuler.buildFrom(tu);
+                veuler[1] = 0;
+                tu.buildFrom(veuler);*/
+                //v[3] = tu[0];
+                //v[4] = 0;
+                //v[5] = tu[2];
 		//v = -0.7 * (LTL + weight_ccd * LTCIL).pseudoInverse(LTL.getRows()* DBL_EPSILON) * (LTR - weight_ccd * LTCIR);
 		cMo = vpExponentialMap::direct(v).inverse() * cMo;
 
@@ -9004,6 +9017,9 @@ void apMbTracker::loadConfigFile(const char* filename) {
 	ccdParams.resolution = cfg.getAsNumber("conf.ccd.resolution");
 	ccdParams.degree = cfg.getAsNumber("conf.ccd.degree");
 	ccdParams.phi_dim = cfg.getAsNumber("conf.ccd.phi_dim");
+        ccdParams.fixedrotationx = cfg.getAsNumber("conf.fixedrotationx");
+        ccdParams.fixedrotationy = cfg.getAsNumber("conf.fixedrotationy");
+        ccdParams.fixedrotationz = cfg.getAsNumber("conf.fixedrotationz");
 
 	apKLTTrackerParameters kltParams;
 	kltParams.blocksize = cfg.getAsNumber("conf.klt.blocksize");
@@ -9128,6 +9144,10 @@ void apMbTracker::loadConfigFile(const char* filename) {
 	weight_me =  cfg.getAsNumber("conf.weightme");
 	weight_ccd = cfg.getAsNumber("conf.weightccd");
 	weight_klt = cfg.getAsNumber("conf.weightklt");
+
+        fixedrotationx = cfg.getAsNumber("conf.fixedrotationx");
+        fixedrotationy = cfg.getAsNumber("conf.fixedrotationy");
+        fixedrotationz = cfg.getAsNumber("conf.fixedrotationz");
 
 	setCameraParameters(camera);
 	setMovingEdge(meParser);

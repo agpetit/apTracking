@@ -87,6 +87,10 @@ struct apCCDParameters
   int resolution;
   int degree;
   int phi_dim;
+  int fixedrotationx;
+  int fixedrotationy;
+  int fixedrotationz;
+
 };
 
 class VISP_EXPORT apCCDTracker
@@ -120,6 +124,7 @@ public:
 	int scaleLevel;
 	int resolution;
 	int nerror_ccd;
+
     double tol;
     double tol_old;
     bool convergence;

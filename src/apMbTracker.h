@@ -265,6 +265,8 @@ class VISP_EXPORT apMbTracker: public vpMbTracker, public apControlPointTracker
 	vpHomogeneousMatrix c0Mo;
 	vpHomogeneousMatrix ctTc0;
 
+        int fixedrotationx, fixedrotationy, fixedrotationz;
+
 private:
 
     zmq::context_t     m_context{1};
