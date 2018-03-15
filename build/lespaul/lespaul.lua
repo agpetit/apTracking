@@ -10,7 +10,7 @@ conf = {
         },
     camera = {
         u0 = 320, v0 = 180,
-        px = 1500, py =1500
+        px = 1800, py =1800
         },
     rendering = {
         edgeRend_threshold = 20,
@@ -30,7 +30,7 @@ conf = {
     --weightklt = 10,
     weightccd = 0.5,
      --weightccd = 0.0,
-     weightklt = 0.1,
+     weightklt = 0.0,
      ccd = {
 	gamma_1 = 0.5,
 	gamma_2 = 5,
@@ -62,8 +62,8 @@ conf = {
     kalman = {
     --sigmaqt = 0.04,
     --sigmaqr = 0.001,
-    sigmaqt = 0.005,
-    sigmaqr = 0.0002,
+    sigmaqt = 0.002,
+    sigmaqr = 0.0005,
     sigmapt = 0.002,
     sigmapr = 0.0001},
     detection = {

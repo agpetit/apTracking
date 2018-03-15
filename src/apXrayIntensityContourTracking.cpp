@@ -549,6 +549,9 @@ int main(int argc, char **argv)
 
     vpHomogeneousMatrix oMct;
     vpHomogeneousMatrix cMct = cMo;
+    cMct[0][3] /= 100.0;
+    cMct[1][3] /= 100.0;
+    cMct[2][3] /= 100.0;
 
 
     // Manual initialization of the tracker
@@ -662,8 +665,8 @@ int main(int argc, char **argv)
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
                 a.processEvents(QEventLoop::AllEvents, 1);
-                vpImageIo::writePNG(Inormd, "Inormd.png");
-                vpImageIo::writePNG(Ior, "Ior.png");
+                //vpImageIo::writePNG(Inormd, "Inormd.png");
+                //vpImageIo::writePNG(Ior, "Ior.png");
                 tracker.Inormdprec = Inormd;
                 tracker.Iorprec = Ior;
                 tracker.Itexprec = Ior;

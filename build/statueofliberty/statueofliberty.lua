@@ -1,7 +1,7 @@
 conf = {
     ecm = {
         mask = { size = 5, nb_mask = 180 },
-        range = { init = 8, tracking = 15 },
+        range = { init = 8, tracking = 10 },
         contrast = { edge_threshold = 5000, mu1 = 0.5, mu2 = 0.5 }
         },
     sample = {
@@ -40,7 +40,7 @@ conf = {
         beta = 0.06,
         kappa = 0.5,
         c = 0.25,
-        h = 15,
+        h = 10,
         delta_h = 1,
         resolution = 300,
         degree = 4,
@@ -62,7 +62,7 @@ conf = {
     kalman = {
     --sigmaqt = 0.04,
     --sigmaqr = 0.001,
-    sigmaqt = 0.0025,
+    sigmaqt = 0.0015,
     sigmaqr = 0.0004,
     sigmapt = 0.002,
     sigmapr = 0.0001},

@@ -1043,7 +1043,7 @@ grabber.acquire(Idisplay);*/
            // vpImageIo::write(Ioverlaycol, filename4);
                 vpImageIo::write(Icol, filename4);
             //vpImageIo::write(Ioverlay, filename5);
-                vpImageIo::write(Icol2, filename3);
+                vpImageIo::write(Ioverlaycol, filename3);
                 vpImageIo::write(Imask, filename5);
             }
 
