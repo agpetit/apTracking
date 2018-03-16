@@ -1042,14 +1042,9 @@ grabber.acquire(Idisplay);*/
             {
             //vpImageIo::write(Ioverlaycol, filename4);
             //vpImageIo::write(Ioverlay, filename5);
-<<<<<<< HEAD
-                vpImageIo::write(Ioverlaycol, filename3);
-                vpImageIo::write(Imask, filename5);
-=======
                 //vpImageIo::write(Icol, filename4);
             //    vpImageIo::write(Imask, filename5);
 
->>>>>>> save diff
             }
 
             im++;
