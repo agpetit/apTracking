@@ -10,7 +10,7 @@ conf = {
         },
     camera = {
         u0 = 640, v0 = 360,
-        px = 3000, py = 3000
+        px = 1000, py = 1000
         },
     rendering = {
         edgeRend_threshold = 20,
@@ -25,10 +25,10 @@ conf = {
         },
     trackingtype = 4,
       --weightme = 0.0,
-    weightme = 0.7,
+    weightme = 0.5,
     --weightccd = 0.0000015,
     --weightklt = 10,
-    weightccd = 0.4,
+    weightccd = 0.5,
      --weightccd = 0.0,
      weightklt = 0.0,
      ccd = {
@@ -40,7 +40,7 @@ conf = {
         beta = 0.06,
         kappa = 0.5,
         c = 0.25,
-        h = 10,
+        h = 15,
         delta_h = 1,
         resolution = 300,
         degree = 4,
@@ -62,8 +62,8 @@ conf = {
     kalman = {
     --sigmaqt = 0.04,
     --sigmaqr = 0.001,
-    sigmaqt = 0.0015,
-    sigmaqr = 0.0004,
+    sigmaqt = 0.001,
+    sigmaqr = 0.0003,
     sigmapt = 0.002,
     sigmapr = 0.0001},
     detection = {

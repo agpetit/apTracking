@@ -293,8 +293,8 @@ int main(int argc, char **argv)
 
       isegpath = "/local/agpetit/Downloads/FgSeg" + vpIoTools::path("/pics/AC%04d.png");
 
-      std::string plot0 = object + vpIoTools::path("ccdColx3plotfile0.dat");
-      std::string plot1 = object + vpIoTools::path("ccdColx3plotfile1.dat");
+      std::string plot0 = object + vpIoTools::path("plotfile0.dat");
+      std::string plot1 = object + vpIoTools::path("plotfile1.dat");
 
 	char *plotfile0 = (char *)plot0.c_str();
 	char *plotfile1 = (char *)plot1.c_str();
@@ -620,8 +620,6 @@ int main(int argc, char **argv)
 
     st:cout << " MOGL inverse " <<MOGL.inverse() << " " << quatOGL << " " << quatOCV << std::endl;
 
-    //getchar();
-
 
     //vpDisplay::getClick(Id);
     /*cMo2 = cMo;
@@ -693,7 +691,7 @@ grabber.acquire(Idisplay);*/
 
     vpColVector error(6);
 
-    fstream fout("out/tracking.txt", std::ios_base::out);
+    fstream fout("tracking.txt", std::ios_base::out);
     /*fstream fin(truthpath, std::ios_base::in);
     for (int k = 0; k<firstFrame; k++)
     {
@@ -781,7 +779,7 @@ grabber.acquire(Idisplay);*/
     Icol2 = Icol;
 
 
-
+ vpHomogeneousMatrix cMoMes;
 
     // Main tracking loop
     try
@@ -873,6 +871,7 @@ grabber.acquire(Idisplay);*/
             //tracker.setPose(cMo);
             cMo.extract(tr);
             // Pose tracking
+
             try{
                 t0= vpTime::measureTimeMs();
                 tracker.track(Id,Icol,Inormd,Ior,Ior,tr[2]);
@@ -888,6 +887,7 @@ grabber.acquire(Idisplay);*/
                 if (useKalmanFilter)
                 {
                     tracker.getPose(cMo);
+                    cMoMes = cMo;
                     //tracker.display(Id,cMo,mcam,vpColor::red,1);
                     tracker.getCovarianceMatrix(covMat);
                     tracker.getCovarianceMatrixME(covMatME);
@@ -1013,7 +1013,7 @@ grabber.acquire(Idisplay);*/
             vpDisplay::flush(Id);
             vpDisplay::getImage(Id,Ioverlay);
             //vpDisplay::getClick(Id);
-            fout << im << ' ' << cMo << std::endl;
+            fout << im << ' ' << (cMo.inverse())[0][3] << ' ' << (cMo.inverse())[1][3] << ' ' << (cMo.inverse())[2][3] << ' ' << (cMoMes.inverse())[0][3] << ' ' << (cMoMes.inverse())[1][3] << ' ' << (cMoMes.inverse())[2][3] <<   std::endl;
             // Write images
             char buf3[FILENAME_MAX];
             sprintf(buf3, opath3.c_str(), im-start_image);
@@ -1049,8 +1049,8 @@ grabber.acquire(Idisplay);*/
 
             im++;
             //vpDisplay::getClick(Id,true);
-            //A.saveData(0,plotfile0);
-            //A.saveData(1,plotfile1);
+            A.saveData(0,plotfile0);
+            A.saveData(1,plotfile1);
         }
         //grabber.close();
     }
