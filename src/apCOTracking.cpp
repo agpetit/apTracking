@@ -620,6 +620,8 @@ int main(int argc, char **argv)
 
     st:cout << " MOGL inverse " <<MOGL.inverse() << " " << quatOGL << " " << quatOCV << std::endl;
 
+    getchar();
+
 
     //vpDisplay::getClick(Id);
     /*cMo2 = cMo;
@@ -816,7 +818,7 @@ grabber.acquire(Idisplay);*/
                 //filt.getPredPose(cMo);
                 //tracker.setPose(cMo);
                 tracker.predictKLT = true;
-                //mgr->updateRTTCol(Icolor,Inormd,Ior,&cMo);
+                mgr->updateRTTCol(Icolor,Inormd,Ior,&cMo);
                 //a.processEvents(QEventLoop::AllEvents, 1);
             }
             vpDisplay::display(Icol);

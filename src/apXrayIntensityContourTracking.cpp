@@ -576,6 +576,7 @@ int main(int argc, char **argv)
         }
     }
 
+
     tracker.setIprec(Id);
     tracker.cMoprec = cMo;
     tracker.setIprecRGB(Icol);
@@ -596,6 +597,12 @@ int main(int argc, char **argv)
 
     tracker.init(Id,cMo);
     tracker.initComm();
+
+    oMct = cMo.inverse()*cMct;
+
+    std::cout << " cMo " << cMo << " cMct " <<  cMct << " oMct " << oMct << std::endl;
+
+   // getchar();
     if (opt_display)
         vpDisplay::flush(Id);
     double px = mcam.get_px() ;
