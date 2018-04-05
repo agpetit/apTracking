@@ -2199,8 +2199,8 @@ void apPFilter::displayTemp(vpImage<unsigned char> &I)
 			ip1.set_v(i+prcl.get_v()-(int)I.getHeight()/2);
 			ip2.set_u(prcl.get_u());
 			ip2.set_v(prcl.get_v());
-	vpDisplay::displayCross(I,ip1,2,vpColor::green,2);
-	vpDisplay::displayCross(I,ip2,2,vpColor::blue,2);
+        //vpDisplay::displayCross(I,ip1,2,vpColor::green,2);
+        //vpDisplay::displayCross(I,ip2,2,vpColor::blue,2);
 		}
 	}
 	}
@@ -2250,8 +2250,8 @@ void apPFilter::displayBestTemp(vpImage<unsigned char> &I)
 			ip1.set_v(i+prcl.get_v()-(int)I.getHeight()/2);
 			ip2.set_u(prcl.get_u());
 			ip2.set_v(prcl.get_v());
-	vpDisplay::displayCross(I,ip1,2,vpColor::green,2);
-	vpDisplay::displayCross(I,ip2,2,vpColor::blue,2);
+        //vpDisplay::displayCross(I,ip1,2,vpColor::green,2);
+        //vpDisplay::displayCross(I,ip2,2,vpColor::blue,2);
 		}
 	}
 	}

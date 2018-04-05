@@ -12,7 +12,7 @@
 #include <visp/vpImageFilter.h>
 #include <visp/vpMbTracker.h>
 #include <visp/vpDisplay.h>
-#include <visp/vpDisplayX.h>
+#include <visp/vpDisplay.h>
 #include <visp/vpDisplayGTK.h>
 #include <visp/vpDisplayGDI.h>
 #include <visp/vpDisplayOpenCV.h>
@@ -20,6 +20,7 @@
 #include <visp/vpPoint.h>
 #include <visp/vpMe.h>
 #include <visp/vpFeatureLuminance.h>
+#include <visp/vpImageTools.h>
 #include "apControlPoint.h"
 #include "apHoughVote.h"
 #include "apRend.h"

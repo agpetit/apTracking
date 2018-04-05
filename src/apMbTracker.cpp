@@ -14,7 +14,7 @@
 #include <visp/vpImageIo.h>
 #include <visp/vpRobust.h>
 #include <visp/vpDisplayOpenCV.h>
-#include <visp/vpDisplayX.h>
+#include <visp/vpDisplay.h>
 #include <visp/vpDisplayGDI.h>
 #include <visp/vpMatrixException.h>
 #include <visp/vpMatrix.h>
@@ -8868,9 +8868,8 @@ void apMbTracker::initKltTracker(const vpImage<unsigned char>& I)
 	std::cout << " init " << std::endl;
 	if(trackingType == apTrackingType::CCD_MH_KLT || trackingType == apTrackingType::CCD_LINES_MH_KLT)
 	{
-IplImage *frame_;
-frame_ = NULL;
 
+cv::Mat frame_;
 vpImageConvert::convert(I,frame_);
 nkltPointsO = 0;
 kltTracker.setTrackerId(1);//1
@@ -9573,8 +9572,7 @@ vpImagePoint iP0T;
 	}*/
 //getchar();
 
-IplImage *frame_;
-frame_ = NULL;
+cv::Mat frame_;
 vpImageConvert::convert(I, frame_);
 kltTracker.track(frame_);
 
@@ -10573,8 +10571,7 @@ void apMbTracker::extractControlPointsLines(
 				}
 			}
 
-			IplImage* Ip = NULL;
-			IplImage* Ip1;
+                        cv::Mat Ip,Ip1;
 			vpImageConvert::convert(Ip0, Ip);
 			Mat color_dst;
 			vector<Vec4i> linesV;
@@ -11297,8 +11294,7 @@ void apMbTracker::extractControlPointsLinesCCD(
 				}
 			}
 
-			IplImage* Ip = NULL;
-			IplImage* Ip1;
+                        cv::Mat Ip, Ip1;
 			vpImageConvert::convert(Ip0, Ip);
 			Mat color_dst;
 			vector<Vec4i> linesV;
@@ -11539,13 +11535,11 @@ void apMbTracker::extractKltControlPointsFAST(
 			else Isil[k][l] = 0;
 		}
 
-	CvRect rect;
-	CvSeq* contours = 0;
-	CvMemStorage* storage = NULL;
-	IplImage *frame_1;
-	frame_1 = NULL;
- vpImageConvert::convert(Isil,frame_1);
- storage = cvCreateMemStorage(0);
+        cv::Rect rect;
+        std::vector<std::vector<cv::Point> > contours;
+        vector< Vec4i> hierarchy;
+        cv::Mat frame_1;
+       vpImageConvert::convert(Isil,frame_1);
 /*    std::vector<vpImagePoint> pointssil;
     pointssil.resize(0);
 vpImagePoint pt;
@@ -11559,15 +11553,15 @@ vpImagePoint pt;
 				pointssil.push_back(pt);
 			}
 		}*/
-	cvFindContours(frame_1, storage, &contours );
+        cv::findContours(frame_1, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE );
 
 	int area = 0;
 	int indx;
 	int kkk =0;
 	int wd,hg,xx,yy;
-	for(; contours!=0; contours = contours->h_next)
+        for(int ic; ic < contours.size(); ic++)
 	{
-		rect = cvBoundingRect(contours, 0);
+                rect = cv::boundingRect(contours[ic]);
 	    if(rect.height*rect.width>area && rect.height < 450)
 	    {
 	        indx = kkk;
@@ -11642,9 +11636,8 @@ vpImagePoint pt;
 				if (frame0 <= 1 || frame0%1 == 0)
 				{
 					kltPoints[i].clear();
-					kltPoints[i] = std::map<int, apKltControlPoint>();
-					IplImage *frame_;
-					frame_ = NULL;
+                                        kltPoints[i] = std::map<int, apKltControlPoint>();
+                                        cv::Mat frame_;
 					vpImageConvert::convert(Ibound,frame_);
 					kltTracker1.initTracking(frame_);
 				}
@@ -11771,9 +11764,8 @@ void apMbTracker::extractKltControlPoints(
 				//if (frame0 <= 1 || frame0%20 == 0)
 				{
 					kltPoints[i].clear();
-					kltPoints[i] = std::map<int, apKltControlPoint>();
-					IplImage *frame_;
-					frame_ = NULL;
+					kltPoints[i] = std::map<int, apKltControlPoint>();				
+                                        cv::Mat frame_;
 					vpImageConvert::convert(Iprec,frame_);
 					kltTracker.initTracking(frame_);
 				}
@@ -12151,16 +12143,14 @@ void apMbTracker::initPyramid(const vpImage<unsigned char>& _I,
 			vpImage<unsigned char>* I = new vpImage<unsigned char> (
 					_I.getHeight() / cScale, _I.getWidth() / cScale);
 #ifdef VISP_HAVE_OPENCV
-			IplImage* vpI0 = cvCreateImageHeader(cvSize(_I.getWidth(),
-					_I.getHeight()), IPL_DEPTH_8U, 1);
-			vpI0->imageData = (char*) (_I.bitmap);
-			IplImage* vpI = cvCreateImage(cvSize(_I.getWidth() / cScale,
-					_I.getHeight() / cScale), IPL_DEPTH_8U, 1);
-			cvResize(vpI0, vpI, CV_INTER_NN);
+                        cv::Mat vpI0,vpI;
+                        vpI0.create(_I.getWidth(),_I.getHeight(),CV_8U);
+                        vpI0.data = (uchar*) (_I.bitmap);
+                        vpI.create(_I.getWidth()/cScale,_I.getHeight()/cScale,CV_8U);
+                        cv::resize(vpI0, vpI, vpI.size(), 0, 0, INTER_NEAREST);
 			vpImageConvert::convert(vpI, *I);
-			cvReleaseImage(&vpI);
-			vpI0->imageData = NULL;
-			cvReleaseImageHeader(&vpI0);
+                        vpI.release();
+                        vpI0.release();
 #else
 			for (unsigned int k = 0, ii = 0; k < I->getHeight(); k += 1, ii += cScale) {
 				for (unsigned int l = 0, jj = 0; l < I->getWidth(); l += 1, jj += cScale) {
@@ -12191,16 +12181,15 @@ void apMbTracker::initPyramid(const vpImage<vpRGBa>& _I, std::vector<
 			vpImage<vpRGBa>* I = new vpImage<vpRGBa> (_I.getHeight() / cScale,
 					_I.getWidth() / cScale);
 #ifdef VISP_HAVE_OPENCV
-			IplImage* vpI0 = cvCreateImageHeader(cvSize(_I.getWidth(),
-					_I.getHeight()), IPL_DEPTH_8U, 3);
-			vpI0->imageData = (char*) (_I.bitmap);
-			IplImage* vpI = cvCreateImage(cvSize(_I.getWidth() / cScale,
-					_I.getHeight() / cScale), IPL_DEPTH_8U, 3);
-			cvResize(vpI0, vpI, CV_INTER_NN);
-			vpImageConvert::convert(vpI, *I);
-			cvReleaseImage(&vpI);
-			vpI0->imageData = NULL;
-			cvReleaseImageHeader(&vpI0);
+
+                        cv::Mat vpI0,vpI;
+                        vpI0.create(_I.getWidth(),_I.getHeight(),CV_8U);
+                        vpI0.data = (uchar*) (_I.bitmap);
+                        vpI.create(_I.getWidth()/cScale,_I.getHeight()/cScale,CV_8U);
+                        cv::resize(vpI0, vpI, vpI.size(), 0, 0, INTER_NEAREST);
+                        vpImageConvert::convert(vpI, *I);
+                        vpI.release();
+                        vpI0.release();
 #else
 			for (unsigned int k = 0, ii = 0; k < I->getHeight(); k += 1, ii += cScale) {
 				for (unsigned int l = 0, jj = 0; l < I->getWidth(); l += 1, jj += cScale) {

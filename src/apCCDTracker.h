@@ -161,8 +161,8 @@ public:
 	void computeLocalStatisticsPrevSpace();
 	void updateParameters(vpMatrix &LTCIL, vpColVector &LTCIR);
 	void updateParametersPrev(vpMatrix &LTCIL, vpColVector &LTCIR);
-	void updateParametersRobust(vpMatrix &LTCIL, vpColVector &LTCIR, vpRobust &robust);
-	void updateParametersRobustPrev(vpMatrix &LTCIL, vpColVector &LTCIR, vpRobust &robust);
+        void updateParametersRobust(vpMatrix &LTCIL, vpColVector &LTCIR, vpRobust &robust);
+        void updateParametersRobustPrev(vpMatrix &LTCIL, vpColVector &LTCIR, vpRobust &robust);
 	void checkCCDConvergence();
 	void choleskyDecomposition(cv::Mat &A, cv::Mat &L,int n);
 	vpMatrix computeCovarianceMatrix(const vpMatrix &A, const vpColVector &x, const vpColVector &b);

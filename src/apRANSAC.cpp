@@ -285,7 +285,8 @@ void apRANSAC::RANSACFunctionHomography (std::vector<std::vector<CvPoint2D32f> >
 
     Frame = min_born;
     std::cout << " nb points " << Frame << std::endl;
-    H.ransac(nb_computed_point, xb, yb, xa, ya, aHb, inliers, residual, consensus, threshold, area);
+
+    //H.ransac(nb_computed_point, xb, yb, xa, ya, aHb, inliers, residual, consensus, threshold, area);
 
 
 	for (int i = 0; i < nb_computed_point ; i++)
@@ -405,7 +406,8 @@ void apRANSAC::RANSACFunctionH0 (std::vector<std::vector<CvPoint2D32f> > &trajec
     //Frame = min_born;
 	Frame = size;
     //std::cout << " nb points " << Frame << std::endl;
-    H.ransac(nb_computed_point, xb, yb, xa, ya, aHb, inliers, residual, consensus, threshold, area);
+
+     //H.ransac(nb_computed_point, xb, yb, xa, ya, aHb, inliers, residual, consensus, threshold, area);
 
 
 	for (int i = 0; i < nb_computed_point ; i++)
@@ -535,7 +537,8 @@ void apRANSAC::RANSACFunctionH (std::vector<std::vector<CvPoint2D32f> > &traject
     //Frame = min_born;
 	Frame = size;
     //std::cout << " nb points " << Frame << std::endl;
-    H.ransac(nb_computed_point, xb, yb, xa, ya, aHb, inliers, residual, consensus, threshold, area);
+
+       //H.ransac(nb_computed_point, xb, yb, xa, ya, aHb, inliers, residual, consensus, threshold, area);
 
 
 	/*for (int i = 0; i < nb_computed_point ; i++)

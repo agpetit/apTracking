@@ -11,7 +11,7 @@
 #include <visp/vpImageIo.h>
 #include <visp/vpFeatureLine.h>
 #include <visp/vpList.h>
-#include <visp/vpDisplayX.h>
+//#include <visp3/gui/vpDisplayX.h>
 #include <visp/vpCameraParameters.h>
 //#include <GL/glew.h>
 //#include <GL/glext.h>

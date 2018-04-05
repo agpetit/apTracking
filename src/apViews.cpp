@@ -11,6 +11,7 @@
 #include <visp/vpDot2.h>
 #include <visp/vpDot.h>
 #include <visp/vpFeatureDisplay.h>
+#include <visp/vpImageTools.h>
 #include "apLogPolarHist.h"
 //#include "vpAROgre.h"
 #include <cv.h>
@@ -27,10 +28,6 @@
 
 using namespace std ;
 using namespace cv;
-
-
-
-
 
 /*!
  * \Initialize apViews
@@ -411,8 +408,8 @@ void apViews::bin(vpImage<unsigned char> &I1)
 void apViews::computePosOri(vpImage<unsigned char> &I1, vpImagePoint &cog,double &angle, int &surface)
 {
 vpImage<vpRGBa> Ioverlay;
-vpDisplayX display1;
-display1.init(I1, 800, 10, "Dots");
+//vpDisplayX display1;
+//display1.init(I1, 800, 10, "Dots");
 for (int n=0; n < I1.getHeight() ; n++)
 {
 for (int m=0 ; m < I1.getWidth(); m++)
@@ -431,7 +428,7 @@ vpDot2 d;
 d.setGraphics(true);
 d.setWidth(50.0);
 d.setHeight(50.0);
-d.setSurface(5000);
+d.setArea(5000);
 d.setGrayLevelMin(200);
 d.setGrayLevelMax(255);
 d.setGrayLevelPrecision(opt_grayLevelPrecision);
@@ -443,7 +440,7 @@ vpImagePoint cog0;
 double angle0;
 surface = 0;
 angle = 0;
-vpDisplay::display(I1);
+//vpDisplay::display(I1);
 vpList<vpDot2>* list_d;
 vpDot2 dotB;
 dotB.setGraphics(true);
@@ -465,11 +462,11 @@ dotB.setGraphics(true);
           tmp_d.setGraphics(true);
           tmp_d = list_d->value();
           tmp_d.track(I1);
-          tmp_d.display(I1,vpColor::red,2);
+          //tmp_d.display(I1,vpColor::red,2);
           double theta;
 	  cog0 = tmp_d.getCog();
 	  angle0 = 0.5*atan2(2*tmp_d.mu11,(tmp_d.mu20-tmp_d.mu02));
-	  surface0 = tmp_d.getSurface();
+          surface0 = tmp_d.getArea();
 	  if (surface0>surface && cog0.get_i()>100 && cog0.get_j()>100 )
 	  {
 		  surface = surface0;
@@ -481,15 +478,15 @@ dotB.setGraphics(true);
         }
       }
     }
-    vpDisplay::displayCross(I1, cog, 20, vpColor::green) ;
-    dotB.display(I1,vpColor::green,2);
+    //vpDisplay::displayCross(I1, cog, 20, vpColor::green) ;
+    //dotB.display(I1,vpColor::green,2);
     angle = angle;
     cout << " Dot of the segmented image : "  <<  " COG : " << cog0.get_u() << " " << cog0.get_v() << " Angle : " << angle << " Surface : " << surface << endl;
 
     // free memory allocated for the list of dots found in d.searchDotsInArea()
     list_d->kill();
     delete list_d;
-    vpDisplay::flush(I1);
+    //vpDisplay::flush(I1);
     /*vpDisplay::getImage(I1,Ioverlay);
     vpImageIo::writePPM(I1, "Iseg0.pgm");*/
 }
@@ -497,8 +494,8 @@ dotB.setGraphics(true);
 void apViews::computePosOriMean(vpImage<unsigned char> &I1, vpImagePoint &cog,double &angle, int &surface)
 {
 vpImage<vpRGBa> Ioverlay;
-vpDisplayX display1;
-display1.init(I1, 800, 10, "Dots");
+//vpDisplayX display1;
+//display1.init(I1, 800, 10, "Dots");
 for (int n=10; n < I1.getHeight()-10 ; n++)
 {
 for (int m=10 ; m < I1.getWidth()-10; m++)
@@ -517,7 +514,7 @@ vpDot2 d;
 d.setGraphics(true);
 d.setWidth(50.0);
 d.setHeight(50.0);
-d.setSurface(5000);
+d.setArea(5000);
 d.setGrayLevelMin(200);
 d.setGrayLevelMax(255);
 d.setGrayLevelPrecision(opt_grayLevelPrecision);
@@ -539,7 +536,7 @@ mu02mean = 0;
 m11s = 0;
 m20s = 0;
 m02s = 0;
-vpDisplay::display(I1);
+//vpDisplay::display(I1);
 vpList<vpDot2>* list_d;
 vpDot2 dotB;
 dotB.setGraphics(true);
@@ -564,7 +561,7 @@ dotB.setGraphics(true);
           //tmp_d.track(I1);
           //tmp_d.display(I1,vpColor::red,2);
           double theta;
-	  surface0 = tmp_d.getSurface();
+          surface0 = tmp_d.getArea();
 
 	  if(surface0>100)
 	  sumsurface = sumsurface + surface0;
@@ -580,7 +577,7 @@ dotB.setGraphics(true);
           //tmp_d.track(I1);
           //tmp_d.display(I1,vpColor::red,2);
           double theta;
-	  surface0 = tmp_d.getSurface();
+          surface0 = tmp_d.getArea();
 	  cog0 = tmp_d.getCog();
 	  tmp_d.track(I1);
 	  angle0 = 0.5*atan2(2*tmp_d.mu11,(tmp_d.mu20-tmp_d.mu02));
@@ -605,13 +602,13 @@ dotB.setGraphics(true);
         cog = cogmean;
       }
     }
-    vpDisplay::displayCross(I1, cog, 20, vpColor::green) ;
-    dotB.display(I1,vpColor::green,2);
+    //vpDisplay::displayCross(I1, cog, 20, vpColor::green) ;
+   // dotB.display(I1,vpColor::green,2);
     angle = angle;
     cout << " Dot of the segmented image ok : "  <<  " COG : " << cog.get_u() << " " << cog.get_v() << " Angle : " << angle << " Surface : " << surface << endl;
-    vpDisplay::flush(I1);
-    vpDisplay::getImage(I1,Ioverlay);
-    vpImageIo::writePNG(Ioverlay, "Idot10.png");
+    //vpDisplay::flush(I1);
+   // vpDisplay::getImage(I1,Ioverlay);
+    //vpImageIo::writePNG(Ioverlay, "Idot10.png");
     // free memory allocated for the list of dots found in d.searchDotsInArea()
     list_d->kill();
     delete list_d;
@@ -722,7 +719,7 @@ d.track(Itemp);
 cog = d.getCog();
 angle = 0.5*atan2(2*d.mu11,(d.mu20-d.mu02));
 surface = d.m00;
-vpDisplay::displayCross(Itemp, cog, 20, vpColor::red);
+//vpDisplay::displayCross(Itemp, cog, 20, vpColor::red);
 std::cout << "Dot synthetic view : " << " COG : " << cog.get_u() << " " << cog.get_v() << " Angle : " << angle << " Surface : " << surface << std::endl;
 
     /*vpDisplay::display(I1);
@@ -835,12 +832,12 @@ for (m = 3 ; m < width-3; m++)
   }
 }
 
-IplImage* Ip = NULL;
+Mat Ip;
 Mat dst0;
 vpImageConvert::convert(I0, Ip);
-Mat src0=Mat(Ip,true);
-IplImage* dst = cvCreateImage( cvSize(I0.getWidth(),I0.getHeight()), 8, 1);
-cvCanny( Ip, dst, cannyTh1, cannyTh2, 3 );
+Mat src0 = Ip.clone();
+Mat dst ( Size(I0.getWidth(),I0.getHeight()), CV_8U);
+Canny( Ip, dst, cannyTh1, cannyTh2, 3 );
 //cvCanny( Ip, dst, 150,210, 3 );
 vpImageConvert::convert(dst, I1);
 //vpImageIo::writePNG(I1, "Iseg3.png");
@@ -904,12 +901,12 @@ for (m = 3 ; m < width-3; m++)
   }
 }
 
-IplImage* Ip = NULL;
+Mat Ip;
 Mat dst0;
 vpImageConvert::convert(I0, Ip);
-Mat src0=Mat(Ip,true);
-IplImage* dst = cvCreateImage( cvSize(I0.getWidth(),I0.getHeight()), 8, 1 );
-cvCanny( Ip, dst, cannyTh1, cannyTh2, 3 );
+Mat src0=Ip.clone();
+Mat dst(Size(I0.getWidth(),I0.getHeight()), CV_8U);
+Canny( Ip, dst, cannyTh1, cannyTh2, 3 );
 vpImageConvert::convert(dst, I1);
 //vpImageIo::writePNG(I1, "Iseg4.png");
 double a,b;
@@ -2956,7 +2953,7 @@ std::vector<double> apViews::computeSC(vpImage<unsigned char> &Iseg, vpImage<uns
 	vpImage<unsigned char> I1(Iseg.getHeight(),Iseg.getWidth());
 	std::vector<double> logHist;
 	apLogPolarHist lgpHist;
-	vpDisplayX display1;
+        //vpDisplayX display1;
 	/*display1.init(I1, 800, 10, "Dots");
 	vpDisplay::display(I1);*/
 	vpImagePoint ip;
@@ -2980,7 +2977,7 @@ std::vector<double> apViews::computeSC(vpImage<unsigned char> &Iseg, vpImage<uns
 	d.setGraphics(true);
 	d.setWidth(50.0);
 	d.setHeight(50.0);
-	d.setSurface(5000);
+        d.setArea(5000);
 	d.setGrayLevelMin(200);
 	d.setGrayLevelMax(255);
 	d.setGrayLevelPrecision(opt_grayLevelPrecision);
@@ -3006,7 +3003,7 @@ std::vector<double> apViews::computeSC(vpImage<unsigned char> &Iseg, vpImage<uns
 	m02s = 0;
 
 
-	vpDisplay::display(Idot);
+        //vpDisplay::display(Idot);
 	vpList<vpDot2>* list_d;
 	vpDot2 dotB;
 	dotB.setGraphics(true);
@@ -3034,9 +3031,9 @@ std::vector<double> apViews::computeSC(vpImage<unsigned char> &Iseg, vpImage<uns
           tmp_d.setGraphics(true);
           tmp_d = list_d->value();
           tmp_d.track(Idot);
-          tmp_d.display(Idot,vpColor::red,2);
+          //tmp_d.display(Idot,vpColor::red,2);
           double theta;
-	  surface0 = tmp_d.getSurface();
+          surface0 = tmp_d.getArea();
 	  if(surface0>500)
 	  sumsurface = sumsurface + surface0;
 
@@ -3051,7 +3048,7 @@ std::vector<double> apViews::computeSC(vpImage<unsigned char> &Iseg, vpImage<uns
 	          tmp_d = list_d->value();
 	          //tmp_d.track(Idot);
 	          double theta;
-		  surface0 = tmp_d.getSurface();
+                  surface0 = tmp_d.getArea();
 		  cog0 = tmp_d.getCog();
 		  angle0 = 0.5*atan2(2*tmp_d.mu11,(tmp_d.mu20-tmp_d.mu02));
 		  if(surface0>500)
@@ -3107,7 +3104,7 @@ std::vector<double> apViews::computeSC(vpImage<unsigned char> &Iseg, vpImage<uns
 	    // free memory allocated for the list of dots found in d.searchDotsInArea()
 	    list_d->kill();
 	    delete list_d;
-	    vpDisplay::flush(Idot);
+            //vpDisplay::flush(Idot);
 	    /*vpDisplay::getImage(I1,Ioverlay);
 	    vpImageIo::writePPM(I1, "Iseg0.pgm");*/
 	    return logHist;
@@ -3121,7 +3118,7 @@ vpImage<vpRGBa>* apViews::dtOSeg(vpImage<unsigned char> &Iseg)
 	vpImage<unsigned char> I1(Iseg.getHeight(),Iseg.getWidth());
 	std::vector<double> logHist;
 	apLogPolarHist lgpHist;
-	vpDisplayX display1;
+        //vpDisplayX display1;
 	/*display1.init(I1, 800, 10, "Dots");
 	vpDisplay::display(I1);*/
 	vpImagePoint ip;
@@ -3147,7 +3144,7 @@ vpImage<vpRGBa>* apViews::dtOSeg(vpImage<unsigned char> &Iseg)
 	d.setGraphics(true);
 	d.setWidth(50.0);
 	d.setHeight(50.0);
-	d.setSurface(5000);
+        d.setArea(5000);
 	d.setGrayLevelMin(200);
 	d.setGrayLevelMax(255);
 	d.setGrayLevelPrecision(opt_grayLevelPrecision);
@@ -3173,7 +3170,7 @@ vpImage<vpRGBa>* apViews::dtOSeg(vpImage<unsigned char> &Iseg)
 	m02s = 0;
 
 
-	vpDisplay::display(Idot);
+        //vpDisplay::display(Idot);
 	vpList<vpDot2>* list_d;
 	vpDot2 dotB;
 	dotB.setGraphics(true);
@@ -3201,9 +3198,9 @@ vpImage<vpRGBa>* apViews::dtOSeg(vpImage<unsigned char> &Iseg)
           tmp_d.setGraphics(true);
           tmp_d = list_d->value();
           tmp_d.track(Idot);
-          tmp_d.display(Idot,vpColor::red,2);
+          //tmp_d.display(Idot,vpColor::red,2);
           double theta;
-	  surface0 = tmp_d.getSurface();
+          surface0 = tmp_d.getArea();
 	  if(surface0>100)
 	  sumsurface = sumsurface + surface0;
 
@@ -3218,7 +3215,7 @@ vpImage<vpRGBa>* apViews::dtOSeg(vpImage<unsigned char> &Iseg)
 	          tmp_d = list_d->value();
 	          //tmp_d.track(Idot);
 	          double theta;
-		  surface0 = tmp_d.getSurface();
+                  surface0 = tmp_d.getArea();
 		  cog0 = tmp_d.getCog();
 		  //tmp_d.track(Idot,cog0);
 		  angle0 = 0.5*atan2(2*tmp_d.mu11,(tmp_d.mu20-tmp_d.mu02));

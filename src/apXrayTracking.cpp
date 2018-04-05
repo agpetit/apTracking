@@ -21,7 +21,7 @@
 #include <cstdlib>
 #include <visp/vpDebug.h>
 #include <visp/vpConfig.h>
-#include <visp/vpDisplayX.h>
+//#include <visp/vpDisplayX.h>
 #include <visp/vpDisplayGTK.h>
 #include <visp/vpDisplayGDI.h>
 #include <visp/vpDisplayOpenCV.h>

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.6)
 PROJECT(apTracking)
 
+find_package(OpenCV)
+
 FIND_PACKAGE(VISP REQUIRED)
 IF(VISP_FOUND)
   INCLUDE(${VISP_USE_FILE})
@@ -89,6 +91,7 @@ QT4_WRAP_CPP(QT_SOURCE_FILES ${QT_HEADERS})
   INCLUDE_DIRECTORIES(
     ${OPENGL_INCLUDE_DIR}
 	${CMAKE_SOURCE_DIR}/src 
+	${OpenCV_INCLUDE_DIRS}
 	${VISP_INCLUDE_DIR}
     ${OPENSCENEGRAPH_INCLUDE_DIRS}
     ${GLEW_INCLUDE_DIR}
@@ -148,7 +151,7 @@ SET(TRACKER_COMMON_FILES
     graph.cpp							graph.h
     									block.h
     maxflow.cpp							energy.h
-    motionTools.cpp						apLibMotion.h
+    #motionTools.cpp						apLibMotion.h
     apSegMotionCol.cpp					apSegMotionCol.h
     apKernel.cpp						apKernel.h
     apRANSAC.cpp						apRANSAC.h
@@ -195,6 +198,7 @@ ADD_EXECUTABLE(apXrayContourCorrespondences
     ${TRACKER_COMMON_FILES}
   )
 
+
 ADD_EXECUTABLE(apCOTrackingCom
     apCOTrackingCom.cpp
     ${TRACKER_COMMON_FILES}
@@ -207,6 +211,12 @@ ADD_EXECUTABLE(apCTContourCorrespondences
 
 ADD_EXECUTABLE(apSimilarityRetexturing
     apSimilarityRetexturing.cpp
+    ${TRACKER_COMMON_FILES}
+  )
+
+
+ADD_EXECUTABLE(apTrainHOG
+    apTrainHOG.cpp
     ${TRACKER_COMMON_FILES}
   )
   
@@ -259,6 +269,8 @@ ADD_EXECUTABLE(apSimilarityRetexturing
     ${QT_LIBRARIES}
     ${GLEW_LIBRARY}
     ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
+    ${OpenCV_LIBS}
+    ${VISP_LIBRARIES}
   )
 
   TARGET_LINK_LIBRARIES(apXrayContourCorrespondences
@@ -291,6 +303,18 @@ ADD_EXECUTABLE(apSimilarityRetexturing
     ${QT_LIBRARIES}
     ${GLEW_LIBRARY}
     ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
+    ${OpenCV_LIBS}
+    ${VISP_LIBRARIES}
+  )
+
+  TARGET_LINK_LIBRARIES(apTrainHOG
+        ${OPENGL_LIBRARIES}
+    ${OPENSCENEGRAPH_LIBRARIES}
+    ${QT_LIBRARIES}
+    ${GLEW_LIBRARY}
+    ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
+    ${OpenCV_LIBS}
+    ${VISP_LIBRARIES}
   )
   
 #    TARGET_LINK_LIBRARIES(apCOAR

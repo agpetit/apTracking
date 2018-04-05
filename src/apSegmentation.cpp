@@ -41,12 +41,11 @@ void apSegmentation::init(vpImage<vpRGBa> &_I)
 		vpImage<vpRGBa> I_col (ypic ,xpic);
 		//vpImage<unsigned char> I_uchar (ypic ,xpic);
 		vpImageConvert::convert(I_col,I_uchar);
-		CvSize frame_size;
+                cv::Size frame_size;
 		frame_size.height = I_uchar.getHeight();
 		frame_size.width =  I_uchar.getWidth();
-		frame_1c_orig = NULL;
-		allocateOnDemand( &frame_1c_orig, frame_size, IPL_DEPTH_8U, 1 );
-		vpImageConvert::convert(_I,I_uchar);
+                frame_1c_orig.create(frame_size,CV_8U);
+                vpImageConvert::convert(_I,I_uchar);
 		vpImageConvert::convert(I_uchar, frame_1c_orig) ;
 		std::cout << " npoints " << segParam.KLTParams.nbPoints << std::endl;
 		display.init(I_uchar, 0 ,1500 ,"__1");
