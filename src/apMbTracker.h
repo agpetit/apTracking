@@ -7,6 +7,7 @@
 
 #ifndef apMbTracker_h
 #define apMbTracker_h
+
 #include <visp/vpKltOpencv.h>
 #include <visp/vpConfig.h>
 #include <visp/vpImageFilter.h>

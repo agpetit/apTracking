@@ -13,6 +13,12 @@
 
 #include "structures.h"
 #include <QApplication>
+
+#include <opencv2/objdetect.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+
+
 #include "surrender/scenemanager.h"
 #include "surrender/sceneviewer.h"
 
@@ -56,12 +62,6 @@
 #undef True
 #undef False
 #endif
-
-#include <cv.h>
-
-#include <opencv2/objdetect/objdetect.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
 
 #include "apMbTracker.h"
 #include "apDetector.h"
