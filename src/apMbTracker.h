@@ -475,6 +475,10 @@ private:
   void initFaceFromCorners(vpMbtPolygon&){};
   void initFaceFromLines(vpMbtPolygon&){};
   void testTracking(){};
+  vpColVector getError() const {};
+  vpColVector getRobustWeights() const {};
+  void computeVVSInit(){};
+  void computeVVSInteractionMatrixAndResidu(){};
   void initPyramid(const vpImage<unsigned char>& _I, std::vector<const vpImage<unsigned char>* >& _pyramid);
   void initPyramid(const vpImage<vpRGBa>& _I, std::vector<const vpImage<vpRGBa>* >& _pyramid);
   void cleanPyramid(std::vector<const vpImage<unsigned char>* >& _pyramid);

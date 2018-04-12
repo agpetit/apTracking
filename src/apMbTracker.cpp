@@ -9543,7 +9543,7 @@ void apMbTracker::trackKltControlPoints(const vpImage<unsigned char> &I) {
 
 
 float x, y;
-int id=0;
+long id=0;
 vpImagePoint iP0T;
 /*if (predictKLT)
 	for (int j = 0; j < kltPoints[scaleLevel].size();j++)
@@ -11628,7 +11628,8 @@ vpImagePoint pt;
 				const int m1 = cols - 30;
 
 				float x,y;
-				int id,n,m;
+                                long id;
+                                int n,m;
 				id =0;
 				double t0 = vpTime::measureTimeMs();
 
@@ -11757,7 +11758,8 @@ void apMbTracker::extractKltControlPoints(
 				const int m1 = cols - 30;
 
 				float x,y;
-				int id,n,m;
+                                long id;
+                                int n,m;
 				id =0;
 
 

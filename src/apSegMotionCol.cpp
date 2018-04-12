@@ -125,7 +125,7 @@ void apSegMotionCol::initTrajectories(cv::Mat Img){
 	nbPointToTrack = 0;
 	for (int i = 0; i< tracker.getNbFeatures(); i++)
 	{
-		float x,y;int id;
+                float x,y;long id;
 		tracker.getFeature(i, id, x, y);
 		ID_trajectory[nbPointToTrack] = id;
 		nb_trajectory[nbPointToTrack] = 1;
@@ -215,7 +215,7 @@ void apSegMotionCol::updateTrajectories(){
 
 	for(int i = 0; i < nbPointToTrack; i++)
 	{
-		float x,y;int id;
+                float x,y;long id;
 		tracker.getFeature(i, id, x, y);
 		//tracker.g
 
@@ -240,7 +240,8 @@ void apSegMotionCol::fusionTrajectories(apSegMotionCol tracker_tmp){
 	for (int i = 0; i < tracker_tmp.tracker.getNbFeatures(); i++)
 	{
 		float x1,y1;
-		int id1, max_id;
+                long id1;
+                int max_id;
 		tracker_tmp.tracker.getFeature(i, id1, x1, y1);
 
 		bool isNewFeature = true;
@@ -249,7 +250,7 @@ void apSegMotionCol::fusionTrajectories(apSegMotionCol tracker_tmp){
 		for(int j = 0; j < trackerCount && isNewFeature; j++)
 		{
 			float x2,y2;
-			int id2;
+                        long id2;
 
 			//printf(" %d,  %d \n", i, j );
 			tracker.getFeature(j, id2, x2, y2);

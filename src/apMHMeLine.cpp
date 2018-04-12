@@ -892,7 +892,7 @@ int apMHMeLine::findLinesByKmean(const vpImage< unsigned char> &I,int display_mo
 	int nbIterMax = 10;
 	float rate_nbpts_min = 0.5;
 
-	vpColVector class_size = 0;
+        vpColVector class_size;
 	vpColVector numberOfCandidates;
 
 	class_size.resize(nbclasses);
@@ -1621,7 +1621,7 @@ int apMHMeLine::findLinesByKmean_2(const vpImage< unsigned char> &I,int display_
 	int nbIterMax = 1;
 	float rate_nbpts_min = 0.4;
 
-	vpColVector class_size = 0;
+        vpColVector class_size;
 	vpColVector numberOfCandidates;
 
 	class_size.resize(nbclasses);
@@ -2405,7 +2405,7 @@ int apMHMeLine::findLinesByKmean_3(const vpImage< unsigned char> &I,int display_
 	bool recomputeline = true;
 	float rate_nbpts_min = 0.1;
 
-	vpColVector class_size = 0;
+        vpColVector class_size;
 	vpColVector numberOfCandidates;
 
 	class_size.resize(nbclasses);
