@@ -356,6 +356,7 @@ private:
   void trackPred(const vpImage<unsigned char> &I);
   void track(const vpImage<unsigned char>& I){};
   void trackXray(const vpImage<unsigned char>& I, double dist);
+  void trackXrayIntensityContour(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist);
   void track(const vpImage<unsigned char> &I, const vpImage<double> &Igrad, const vpImage<double> &Igradx, const vpImage<double> & Igrady, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist);
   void display(const vpImage<unsigned char>&, const vpHomogeneousMatrix&, const vpCameraParameters&, const vpColor&, unsigned int, bool){};
   void display(const vpImage<unsigned char>& I, const vpHomogeneousMatrix &cMo, const vpCameraParameters &cam, const vpColor& col , const unsigned int l=1);
@@ -445,6 +446,7 @@ private:
   void computeVVSCCD(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void computeVVSCCDPrev(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void computeVVSCCDMH(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
+  void computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void computeVVSCCDMHPrev(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void computeVVSCCDMHPrevSpace(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void computeVVSPointsLinesCCDMHPrev(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
