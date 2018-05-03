@@ -14,9 +14,11 @@
 #include <visp/vpImageConvert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/core/core.hpp"
+
+#include <opencv2/objdetect.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+
 #include <time.h>
 #include <visp/vpVideoReader.h>
 #include <visp/vpImage.h>

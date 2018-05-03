@@ -56,11 +56,9 @@
 #undef False
 #endif
 
-#include <cv.h>
-
-#include <opencv2/objdetect/objdetect.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/objdetect.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "apMbTracker.h"
 #include "apDetector.h"
@@ -196,8 +194,8 @@ typedef struct point_struct{
 
 int main(int argc, char **argv)
 {
-    QApplication a(argc, argv);
 
+    QApplication a(argc, argv);
     // Paths and file names
     std::string env_ipath;
     std::string env_ipath2;
@@ -261,7 +259,7 @@ int main(int argc, char **argv)
      if (!opt_object.empty())
        object = opt_object;
      else
-    	object = "soyuz";
+        object = "soyuz";
 
      if (configFile.empty())
          configFile = object + vpIoTools::path("/") + object + vpIoTools::path(".lua");
@@ -296,8 +294,8 @@ int main(int argc, char **argv)
       std::string plot0 = object + vpIoTools::path("plotfile0.dat");
       std::string plot1 = object + vpIoTools::path("plotfile1.dat");
 
-	char *plotfile0 = (char *)plot0.c_str();
-	char *plotfile1 = (char *)plot1.c_str();
+        char *plotfile0 = (char *)plot0.c_str();
+        char *plotfile1 = (char *)plot1.c_str();
 
     apMbTracker tracker;
     // Set tracking and rendering parameters
@@ -334,12 +332,12 @@ int main(int argc, char **argv)
     /*lik.loadMatrix("filtlikelihoodspot6k.txt",lik,false);
     outlik.resize(lik.getCols(),lik.getRows());
     for (int i =0; i<10;i++)
-    	for (int j =0; j<53;j++)
-    		outlik[i][j] = lik[j][i];
+        for (int j =0; j<53;j++)
+                outlik[i][j] = lik[j][i];
 
-    		         outlik.saveMatrix("filtlikelihoodspot6kT.txt",outlik,false);
+                         outlik.saveMatrix("filtlikelihoodspot6kT.txt",outlik,false);
 
-    		         getchar();*/
+                         getchar();*/
 
     SceneViewer viewer;
     SceneManager *mgr = new SceneManager(const_cast<QGLContext*>(viewer.context()));
@@ -366,7 +364,7 @@ int main(int argc, char **argv)
     vpVideoReader readerRGB;
     //if(tracker.getUseRGB())
     {
-    	readerRGB.setFileName(ipath.c_str());
+        readerRGB.setFileName(ipath.c_str());
         readerRGB.setFirstFrameIndex(start_image);
         readerRGB.open(Icol);
         readerRGB.acquire(Icol);
@@ -464,7 +462,7 @@ int main(int argc, char **argv)
 
     vpHomogeneousMatrix cMo, cMo2, cMoFilt, cMoFilt1;
 
-	cout << "time2 "<< opt_detect << endl;
+        cout << "time2 "<< opt_detect << endl;
 
     //Automatic initialization of the tracker
 
@@ -473,36 +471,36 @@ int main(int argc, char **argv)
 
         // File where the graph is stored
 /*    	std::string hf = "h" + object + ".txt";
-    	char *hfile = (char *)hf.c_str();
-    	// File to store the data (pose...) of each view at the first level
-    	std::string data0f = "data" + object + "0.txt";
-    	char *data0file = (char *)data0f.c_str();
-    	//File to store the data (pose...) of the views at each level of the hierarchical view graph
-    	std::string data1f = "data" + object + "1.txt";
-    	char *data1file = (char *)data1f.c_str();*/
-    	// File to store the transition probabilities between each prototype view at the last level of the hierarchy
-    	std::string transP = "transProb" + object + ".txt";
-    	char *transProba = (char *)transP.c_str();
+        char *hfile = (char *)hf.c_str();
+        // File to store the data (pose...) of each view at the first level
+        std::string data0f = "data" + object + "0.txt";
+        char *data0file = (char *)data0f.c_str();
+        //File to store the data (pose...) of the views at each level of the hierarchical view graph
+        std::string data1f = "data" + object + "1.txt";
+        char *data1file = (char *)data1f.c_str();*/
+        // File to store the transition probabilities between each prototype view at the last level of the hierarchy
+        std::string transP = "transProb" + object + ".txt";
+        char *transProba = (char *)transP.c_str();
 
         if(opt_learn)
-    	{
-    		//Learn the 3D model to build the hierarchical view graph
-        	apViews views;
-        	// Initialize the view sphere
-        	views.initViewSphere(learn,object);
-    		//Build the view graph - the resulting views are saved and the hierarchical graph is stored in txt file (hfile)
-    		views.buildViewGraph(mcam,mgr,vpath, height, width);
-    	}
+        {
+                //Learn the 3D model to build the hierarchical view graph
+                apViews views;
+                // Initialize the view sphere
+                views.initViewSphere(learn,object);
+                //Build the view graph - the resulting views are saved and the hierarchical graph is stored in txt file (hfile)
+                views.buildViewGraph(mcam,mgr,vpath, height, width);
+        }
 
-    	int fr;
-    	apDetector detector;
-    	detector.init(detect,object);
-    	detector.loadViews(vpath);
-    	detector.setFilters(vpath, mcam);
-    	detector.computeTransitionProbV(transProba);
-    	detector.setSegmentationParameters(seg);
+        int fr;
+        apDetector detector;
+        detector.init(detect,object);
+        detector.loadViews(vpath);
+        detector.setFilters(vpath, mcam);
+        detector.computeTransitionProbV(transProba);
+        detector.setSegmentationParameters(seg);
         //detector.setTracker(tracker);
-    	std::cout << " Ok particle filters set - Click to detect " << std::endl;
+        std::cout << " Ok particle filters set - Click to detect " << std::endl;
         //while(!vpDisplay::getClick(Id,false))
         {
             vpDisplay::display(Id);

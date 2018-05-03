@@ -21,8 +21,8 @@
 #include <cstdlib>
 #include <visp/vpDebug.h>
 #include <visp/vpConfig.h>
-//#include <visp/vpDisplayX.h>
-#include <visp/vpDisplayGTK.h>
+#include <visp/vpDisplayX.h>
+//#include <visp/vpDisplayGTK.h>
 #include <visp/vpDisplayGDI.h>
 #include <visp/vpDisplayOpenCV.h>
 #include <visp/vpPose.h>
@@ -57,11 +57,9 @@
 #undef False
 #endif
 
-#include <cv.h>
-
-#include <opencv2/objdetect/objdetect.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/objdetect.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "apMbTracker.h"
 #include "apDetector.h"
@@ -263,7 +261,7 @@ int main(int argc, char **argv)
      if (!opt_object.empty())
        object = opt_object;
      else
-    	object = "soyuz";
+        object = "soyuz";
 
      if (configFile.empty())
          configFile = object + vpIoTools::path("/") + object + vpIoTools::path(".lua");
@@ -298,8 +296,8 @@ int main(int argc, char **argv)
     std::string plot0 = object + vpIoTools::path("ccdColx3plotfile0.dat");
     std::string plot1 = object + vpIoTools::path("ccdColx3plotfile1.dat");
 
-	char *plotfile0 = (char *)plot0.c_str();
-	char *plotfile1 = (char *)plot1.c_str();
+        char *plotfile0 = (char *)plot0.c_str();
+        char *plotfile1 = (char *)plot1.c_str();
 
     apMbTracker tracker;
     // Set tracking and rendering parameters
@@ -337,12 +335,12 @@ int main(int argc, char **argv)
     /*lik.loadMatrix("filtlikelihoodspot6k.txt",lik,false);
     outlik.resize(lik.getCols(),lik.getRows());
     for (int i =0; i<10;i++)
-    	for (int j =0; j<53;j++)
-    		outlik[i][j] = lik[j][i];
+        for (int j =0; j<53;j++)
+                outlik[i][j] = lik[j][i];
 
-    		         outlik.saveMatrix("filtlikelihoodspot6kT.txt",outlik,false);
+                         outlik.saveMatrix("filtlikelihoodspot6kT.txt",outlik,false);
 
-    		         getchar();*/
+                         getchar();*/
 
     SceneViewer viewer;
     SceneManager *mgr = new SceneManager(const_cast<QGLContext*>(viewer.context()));
@@ -369,7 +367,7 @@ int main(int argc, char **argv)
     vpVideoReader readerRGB;
     //if(tracker.getUseRGB())
     {
-    	readerRGB.setFileName(ipath.c_str());
+        readerRGB.setFileName(ipath.c_str());
         readerRGB.setFirstFrameIndex(start_image);
         readerRGB.open(Icol);
         readerRGB.acquire(Icol);
@@ -458,7 +456,7 @@ int main(int argc, char **argv)
 
     vpHomogeneousMatrix cMo, cMo2, cMoFilt;
 
-	cout << "time2 "<< opt_detect << endl;
+        cout << "time2 "<< opt_detect << endl;
 
        // tx="192.169",ty="-350",tz="226", R00= "-0.231176", R01="2.1603e-16", R02="0.972912" , R10="0.972912", R11="1.73796e-16" , R12="0.231176", R20="-1.19147e-16" , R21="1" , R22="-2.50356e-16"
 
@@ -495,7 +493,7 @@ int main(int argc, char **argv)
        cMo[2][1] = 1;
        cMo[2][2] = -2.50356e-16;
 
-       // pose real image -222.375 154.59 379.542 [0.989822 -3.09578e-17 0.142311,0.136547 0.281733 -0.949727,-0.0400937 0.959493 0.278865
+       // pose real image liver1.png -222.375 154.59 379.542 [0.989822 -3.09578e-17 0.142311,0.136547 0.281733 -0.949727,-0.0400937 0.959493 0.278865
 
        cMo[0][3] =-222.375;
        cMo[1][3] = 154.59;
@@ -510,6 +508,90 @@ int main(int argc, char **argv)
        cMo[2][1] = 0.959493;
        cMo[2][2] = 0.278865;
 
+       /*0.9958088264  0.08254072254  0.03939508347  -199.9189609
+       0.01511400765  0.2763081441  -0.9609501357  201.4935037
+       -0.09020270353  0.9575182186  0.2739020766  390.7839107*/
+
+       cMo[0][3] =-209.9189609;
+       cMo[1][3] = 201.4935037;
+       cMo[2][3] = 390.7839107;
+       cMo[0][0] = 0.9958088264;
+       cMo[0][1] = 0.08254072254;
+       cMo[0][2] = 0.03939508347;
+       cMo[1][0] = 0.01511400765;
+       cMo[1][1] = 0.2763081441;
+       cMo[1][2] = -0.9609501357;
+       cMo[2][0] = -0.09020270353;
+       cMo[2][1] = 0.9575182186;
+       cMo[2][2] = 0.2739020766;
+
+
+       //pose liver5.png 0.9594919448  -2.630000004e-08  -0.2817363055  -85.00534936 0.263972639  -0.3494652134  0.8989953551  276.0144642 -0.09845705498  -0.936949413  -0.3353090272  352.4944063
+
+
+       //0.994456 0.103823 0.016656 -213.757,-0.017116 0.316122 -0.948564 194.718,-0.103748 0.943021 0.316146 365.778
+       /*cMo[0][3] =-213;
+       cMo[1][3] = 194;
+       cMo[2][3] = 365;
+       cMo[0][0] = 0.989822;
+       cMo[0][1] = -3.09578e-17;
+       cMo[0][2] = 0.142311;
+       cMo[1][0] = 0.136547;
+       cMo[1][1] = 0.281733;
+       cMo[1][2] = -0.949727;
+       cMo[2][0] = -0.0400937;
+       cMo[2][1] = 0.959493;
+       cMo[2][2] = 0.278865;*/
+
+       //0.989821  -1.09198e-16  -0.142318  -85.00534936
+       //-0.133345  0.349464  -0.927412  276.0144642
+      // 0.0497352  0.93695  0.345907  352.4944063
+
+       /*cMo[0][3] = -85.00534936;
+       cMo[1][3] = 276.0144642;
+       cMo[2][3] = 352.4944063;
+       cMo[0][0] =  0.989821;
+       cMo[0][1] = -1.09198e-16;
+       cMo[0][2] = -0.142318;
+       cMo[1][0] = -0.133345;
+       cMo[1][1] = 0.349464;
+       cMo[1][2] =  -0.927412;
+       cMo[2][0] = 0.0497352;
+       cMo[2][1] = 0.93695;
+       cMo[2][2] = 0.345907 ;*/
+
+
+       // pose liver2.png 0.989821  -4.74415e-17  -0.142318  -108.9137742 -0.141956  0.0713392  -0.987299  281.6685308 0.0101529  0.997452  0.070613  436.65255
+
+       /*cMo[0][3] = -108.9137742;
+       cMo[1][3] = 281.6685308;
+       cMo[2][3] = 436.65255;
+       cMo[0][0] =  0.989821;
+       cMo[0][1] = -1.09198e-16;
+       cMo[0][2] = -0.142318;
+       cMo[1][0] = -0.141956 ;
+       cMo[1][1] = 0.0713392;
+       cMo[1][2] = -0.987299;
+       cMo[2][0] = 0.0101529;
+       cMo[2][1] = 0.997452 ;
+       cMo[2][2] = 0.070613 ;*/
+
+
+
+       // lung Belarus Rt [-1 1.58413e-17 3.67321e-06 182.168,-3.66385e-06 -0.0713392 -0.997452 166.304,2.62043e-07 -0.997452 0.0713392 1038.49]
+
+       /*cMo[0][3] = 202.168;
+       cMo[1][3] = 156.304;
+       cMo[2][3] = 1038.49;
+       cMo[0][0] = -1;
+       cMo[0][1] = 1.58413e-17;
+       cMo[0][2] = 3.67321e-06;
+       cMo[1][0] = -3.66385e-06;
+       cMo[1][1] = -0.0713392;
+       cMo[1][2] = -0.997452;
+       cMo[2][0] = 2.62043e-07;
+       cMo[2][1] = -0.997452;
+       cMo[2][2] = 0.0713392;*/
 
    /* -0.231176  0.972912  -1.19147e-16  384.9440607
     2.1603e-16  1.73796e-16  1  -226
@@ -573,7 +655,7 @@ int main(int argc, char **argv)
         //std::cout << " cmo inv " << R0*ta << std::endl;
              // getchar();
 
-        vpRxyzVector vdelta(0.0,0.0,-0.1);
+        vpRxyzVector vdelta(0.0,0.0,-0.0);
         vpTranslationVector tdelta(0,0,0);
 
         vpRxyzVector vdelta1(0.,0.0,-0.0);
@@ -794,13 +876,13 @@ grabber.acquire(Idisplay);*/
             timeKalman = t1-t0;
 
             // Acquire images
-            /*try{
+            try{
                 for (int sp = 0; sp < sample ; sp++)
                 {
 
                     reader.acquire(Id);
                     //if(tracker.getUseRGB())
-                        readerRGB.acquire(Icol);
+                        /*readerRGB.acquire(Icol);
                         Icol1 = Icol;
                         for (int i = 0; i<height; i++)
                             for (int j = 0; j<width; j++)
@@ -810,16 +892,17 @@ grabber.acquire(Idisplay);*/
                                 Icol1[i][j].G = Icol1[i][j].R;
                                 Icol1[i][j].B = Icol1[i][j].R;
 
-                            }
+                            }*/
                         //Icol = Icol1;
                 }
             }
             catch(...){
                 break;
-            }*/
+            }
 
             //vpImageIo::read(Id,"socketimage10.png");
-            vpImageIo::read(Id,"imagePig3.png");
+            //vpImageIo::read(Id,"imagePig3.png");
+            //vpImageIo::read(Id,"lung936.png");
             vpDisplay::display(Id);
 
             //tracker.setPose(cMo);

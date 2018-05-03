@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.5)
 PROJECT(apTracking)
+
+# Find includes in corresponding build directories
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(OpenCV)
 
@@ -49,8 +52,23 @@ set(CMAKE_MODULE_PATH
 #ADD_DEFINITIONS( -Wall -msse -msse2 -ffast-math -funroll-loops -mfpmath=sse)
 ADD_DEFINITIONS( -Wall -msse -msse2 -ffast-math -funroll-loops -mfpmath=sse -fomit-frame-pointer)
 
-FIND_PACKAGE(Qt4 4.6.2 REQUIRED QtCore QtGui QtOpenGL)
-include(${QT_USE_FILE})
+find_package(Qt5)
+FIND_PACKAGE(Qt5Widgets)
+find_package(Qt5Core)
+find_package(Qt5Gui)
+find_package(Qt5OpenGL)
+
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+add_definitions(${Qt5Widgets_DEFINITIONS})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS}")
+
+get_target_property(QtCore_location Qt5::Core LOCATION)
+get_target_property(QtGui_location Qt5::Gui LOCATION)
+get_target_property(QtOpenGL_location Qt5::OpenGL LOCATION)
+
+#include(${QT5_USE_FILE})
 FIND_PACKAGE(GLEW)
 IF(NOT GLEW_FOUND)
     MESSAGE(CRITICAL GLEW not found!)
@@ -59,7 +77,7 @@ FIND_PACKAGE(Lua51)
 IF(NOT LUA51_FOUND)
     MESSAGE(CRITICAL Lua not found!)
 ENDIF(NOT LUA51_FOUND)
-FIND_PACKAGE(OpenSceneGraph 3.0.0 REQUIRED osgDB osgGA osgSim osgViewer)
+FIND_PACKAGE(OpenSceneGraph REQUIRED osgDB osgGA osgSim osgViewer)
 FIND_PACKAGE(OpenGL)
 IF(NOT OPENGL_FOUND)
     MESSAGE(CRITICAL OpenGL not found!)
@@ -85,8 +103,7 @@ SET(QT_SOURCE_FILES surrender/sceneviewer.cpp surrender/scenemanager.cpp)
 SET(QT_HEADERS surrender/sceneviewer.h surrender/scenemanager.h)
 
 
-
-QT4_WRAP_CPP(QT_SOURCE_FILES ${QT_HEADERS})
+QT5_WRAP_CPP(QT_SOURCE_FILES ${QT_HEADERS})
 
   INCLUDE_DIRECTORIES(
     ${OPENGL_INCLUDE_DIR}
@@ -96,6 +113,10 @@ QT4_WRAP_CPP(QT_SOURCE_FILES ${QT_HEADERS})
     ${OPENSCENEGRAPH_INCLUDE_DIRS}
     ${GLEW_INCLUDE_DIR}
     ${LUA_INCLUDE_DIR}
+${Qt5Widgets_INCLUDE_DIRS}
+${Qt5Core_INCLUDE_DIRS}
+${Qt5Gui_INCLUDE_DIRS}
+${Qt5OpenGL_INCLUDE_DIRS}
   )
 
 SET(SURRENDER_FILES
@@ -250,7 +271,14 @@ ADD_EXECUTABLE(apTrainHOG
   TARGET_LINK_LIBRARIES(apCOTracking
         ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
-    ${QT_LIBRARIES}
+    Qt5::Widgets
+    ${QT5_LIBRARIES}
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Gui_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
+    ${QtCore_location}
+    ${QtGui_location}
+    ${QtOpenGL_location}
     ${GLEW_LIBRARY}
     ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
     ${OpenCV_LIBS}
@@ -260,7 +288,14 @@ ADD_EXECUTABLE(apTrainHOG
   TARGET_LINK_LIBRARIES(apXrayTracking
     ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
-    ${QT_LIBRARIES}
+    Qt5::Widgets
+    ${QT5_LIBRARIES}
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Gui_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
+    ${QtCore_location}
+    ${QtGui_location}
+    ${QtOpenGL_location}
     ${GLEW_LIBRARY}
     ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
     ${OpenCV_LIBS}
@@ -270,7 +305,14 @@ ADD_EXECUTABLE(apTrainHOG
   TARGET_LINK_LIBRARIES(apXrayIntensityContourTracking
     ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
-    ${QT_LIBRARIES}
+    Qt5::Widgets
+    ${QT5_LIBRARIES}
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Gui_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
+    ${QtCore_location}
+    ${QtGui_location}
+    ${QtOpenGL_location}
     ${GLEW_LIBRARY}
     ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
     ${OpenCV_LIBS}
@@ -280,7 +322,14 @@ ADD_EXECUTABLE(apTrainHOG
   TARGET_LINK_LIBRARIES(apXrayContourCorrespondences
     ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
-    ${QT_LIBRARIES}
+    Qt5::Widgets
+    ${QT5_LIBRARIES}
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Gui_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
+    ${QtCore_location}
+    ${QtGui_location}
+    ${QtOpenGL_location}
     ${GLEW_LIBRARY}
     ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
     ${OpenCV_LIBS}
@@ -290,7 +339,13 @@ ADD_EXECUTABLE(apTrainHOG
   TARGET_LINK_LIBRARIES(apCOTrackingCom
     ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
-    ${QT_LIBRARIES}
+    Qt5::Widgets
+    ${QT5_LIBRARIES}
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Gui_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
+    ${QtCore_location}
+    ${QtOpenGL_location}
     ${GLEW_LIBRARY}
     ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
     ${OpenCV_LIBS}
@@ -300,7 +355,14 @@ ADD_EXECUTABLE(apTrainHOG
   TARGET_LINK_LIBRARIES(apCTContourCorrespondences
     ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
-    ${QT_LIBRARIES}
+    Qt5::Widgets
+    ${QT5_LIBRARIES}
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Gui_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
+    ${QtCore_location}
+    ${QtGui_location}
+    ${QtOpenGL_location}
     ${GLEW_LIBRARY}
     ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
     ${OpenCV_LIBS}
@@ -310,7 +372,14 @@ ADD_EXECUTABLE(apTrainHOG
   TARGET_LINK_LIBRARIES(apSimilarityRetexturing
     ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
-    ${QT_LIBRARIES}
+    Qt5::Widgets
+    ${QT5_LIBRARIES}
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Gui_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
+    ${QtCore_location}
+    ${QtGui_location}
+    ${QtOpenGL_location}
     ${GLEW_LIBRARY}
     ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
     ${OpenCV_LIBS}
@@ -318,9 +387,12 @@ ADD_EXECUTABLE(apTrainHOG
   )
 
   TARGET_LINK_LIBRARIES(apTrainHOG
-        ${OPENGL_LIBRARIES}
+    ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
-    ${QT_LIBRARIES}
+    Qt5::Widgets
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Gui_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
     ${GLEW_LIBRARY}
     ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
     ${OpenCV_LIBS}

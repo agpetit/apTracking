@@ -999,7 +999,7 @@ void
  nerrorG = Lsd.getRows();
  vpColVector errorT(nerror+nerrorG);
  vpDisplayX displayo;
- displayo.init(Idiff, 10, 10, "display");
+ //displayo.init(Idiff, 10, 10, "display");
  double mu = 0.000;
  vpMatrix diagHsd(6,6);
  vpMatrix diagLTL(6,6);
@@ -1015,8 +1015,8 @@ void
  /*** First phase ***/
   vpImageTools::imageDifference(Ig,Igdgroundtruth,Idiff);
 
-  vpDisplay::display(Idiff);
-  vpDisplay::flush(Idiff);
+  //vpDisplay::display(Idiff);
+  //vpDisplay::flush(Idiff);
 
   vpVideoWriter writer1;
   writer1.setCodec( CV_FOURCC('P','I','M','1') );
@@ -1041,7 +1041,7 @@ void
   vpRotationMatrix R0;
   vpTranslationVector t0;
 
-  while ( reloop == true && iter<700)
+  while ( reloop == true && iter<3)
  {
       double t00= vpTime::measureTimeMs();
       R0[0][0] = cMo[0][0];
@@ -1084,7 +1084,6 @@ void
          uchar sockData[imgSize];
          int bytes;*/
 
-
          zmq::message_t message1;
 
          bool status1 = m_socketSub->recv(&message1);
@@ -1123,10 +1122,10 @@ void
  sI.error(sId, errorG);
 
  vpImageTools::imageDifference(Ig,Igdgroundtruth,Idiff);
- vpDisplay::display(Idiff);
- vpDisplay::flush(Idiff);
+ //vpDisplay::display(Idiff);
+ //vpDisplay::flush(Idiff);
 
- vpImageIo::write(Idiff, "Idiff.png");
+ //vpImageIo::write(Idiff, "Idiff.png");
 
 
  if (iter >1){
@@ -1150,7 +1149,6 @@ v =  -1*e;
  iter++;
  }
   std::cout << " cmo diff0 " << cMo1.inverse()*cMo << std::endl;
-  getchar();
  std::cout << "\t First minimization in " << iter << " iteration00 " << std::endl ;
 
  //   cout << "\t Robust minimization in " << iter << " iteration " << endl ;

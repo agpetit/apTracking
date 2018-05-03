@@ -424,7 +424,35 @@ int main(int argc, char **argv)
        cMo[2][1] = 1;
        cMo[2][2] = -2.50356e-16;
 
-       // pose real image -222.375 154.59 379.542 [0.989822 -3.09578e-17 0.142311,0.136547 0.281733 -0.949727,-0.0400937 0.959493 0.278865
+       // pose real image liver1.png -222.375 154.59 379.542 [0.989822 -3.09578e-17 0.142311,0.136547 0.281733 -0.949727,-0.0400937 0.959493 0.278865
+
+       /*cMo[0][3] =-209.9189609;
+       cMo[1][3] = 201.4935037;
+       cMo[2][3] = 390.7839107;
+       cMo[0][0] = 0.9958088264;
+       cMo[0][1] = 0.08254072254;
+       cMo[0][2] = 0.03939508347;
+       cMo[1][0] = 0.01511400765;
+       cMo[1][1] = 0.2763081441;
+       cMo[1][2] = -0.9609501357;
+       cMo[2][0] = -0.09020270353;
+       cMo[2][1] = 0.9575182186;
+       cMo[2][2] = 0.2739020766;*/
+
+       /*cMo -0.9725939864  0.07627547874  -0.2196428671  -0.04488710902
+      -0.05719987694  -0.994120001  -0.09194344866  -0.1764133453
+      -0.2253643978  -0.07686010028  0.9712380827  6.745699447
+      0  0  0  1
+
+      cMct 0.9958088264  0.08254072254  0.03939508347  -2.099189609
+      0.01511400765  0.2763081441  -0.9609501357  2.014935037
+      -0.09020270353  0.9575182186  0.2739020766  3.907839107
+      0  0  0  1
+
+      oMct -0.9490537176  -0.3118739189  -0.04507696832  2.512210086
+      0.06786364651  -0.3419825657  0.9372524876  -2.117037932
+      -0.3077202405  0.8864439542  0.3457243481  -2.506505272*/
+
 
        cMo[0][3] =-222.375;
        cMo[1][3] = 154.59;
@@ -438,6 +466,7 @@ int main(int argc, char **argv)
        cMo[2][0] = -0.0400937;
        cMo[2][1] = 0.959493;
        cMo[2][2] = 0.278865;
+
 
 
    /* -0.231176  0.972912  -1.19147e-16  384.9440607
@@ -502,7 +531,7 @@ int main(int argc, char **argv)
         //std::cout << " cmo inv " << R0*ta << std::endl;
              // getchar();
 
-        vpRxyzVector vdelta(0.0,0.0,-0.1);
+        vpRxyzVector vdelta(0.0,0.0,-0.0);
         vpTranslationVector tdelta(0,0,0);
 
         vpRxyzVector vdelta1(0.,0.0,-0.0);
@@ -598,16 +627,33 @@ int main(int argc, char **argv)
     tracker.init(Id,cMo);
     tracker.initComm();
 
+
+    /*-0.9725939864  0.07627547874  -0.2196428671  -0.04488710902
+    -0.05719987694  -0.994120001  -0.09194344866  -0.1764133453
+    -0.2253643978  -0.07686010028  0.9712380827  6.745699447*/
+
+    /*cMo[0][3] = -0.04488710902;
+    cMo[1][3] = -0.1764133453;
+    cMo[2][3] = 6.745699447;
+    cMo[0][0] = -0.9725939864;
+    cMo[0][1] = 0.07627547874;
+    cMo[0][2] = -0.2196428671;
+    cMo[1][0] = -0.05719987694;
+    cMo[1][1] = -0.994120001;
+    cMo[1][2] = -0.09194344866;
+    cMo[2][0] = -0.2253643978;
+    cMo[2][1] = -0.07686010028;
+    cMo[2][2] = 0.9712380827;
+
     oMct = cMo.inverse()*cMct;
 
-    std::cout << " cMo " << cMo << " cMct " <<  cMct << " oMct " << oMct << std::endl;
+    std::cout << " cMo " << cMo << " cMct " <<  cMct << " oMct " << oMct << std::endl;*/
 
    // getchar();
     if (opt_display)
         vpDisplay::flush(Id);
     double px = mcam.get_px() ;
     double py = mcam.get_py() ;
-
 
     vpMatrix pose;
     vpMatrix covariance;
@@ -665,15 +711,17 @@ int main(int argc, char **argv)
 
             // Render the 3D model, get the depth edges, normal and texture maps
             try{
-                tracker.getPose(cMo);
+                std::cout << "render " << std::endl;
+
+                //tracker.getPose(cMo);
                 t0= vpTime::measureTimeMs();
                 mgr->updateRTT(Inormd,Ior,&cMo);
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
                 a.processEvents(QEventLoop::AllEvents, 1);
-                //vpImageIo::writePNG(Inormd, "Inormd.png");
-                //vpImageIo::writePNG(Ior, "Ior.png");
+                vpImageIo::writePNG(Inormd, "Inormd.png");
+                vpImageIo::writePNG(Ior, "Ior.png");
                 tracker.Inormdprec = Inormd;
                 tracker.Iorprec = Ior;
                 tracker.Itexprec = Ior;
@@ -742,8 +790,8 @@ int main(int argc, char **argv)
             try{
                 t0= vpTime::measureTimeMs();
 
-                //tracker.trackXray(Id, tr[2]);
-                tracker.track(Id,Icol,Inormd,Ior,Ior,tr[2]);
+                tracker.trackXray(Id, tr[2]);
+                //tracker.track(Id,Icol,Inormd,Ior,Ior,tr[2]);
 
                 //tracker.displayKltPoints(Id);
                 //tracker.track(Id, Igrad, Igradx, Igrady, Inormd, Ior, Ior, tr[2]);
@@ -785,7 +833,7 @@ int main(int argc, char **argv)
                 throw;
             }
             // Display 3D model
-            tracker.getPose(cMo);
+            //tracker.getPose(cMo);
             //tracker.computeError(error);
             tracker.display(Id,cMo,mcam,vpColor::green,1);
 
