@@ -618,7 +618,7 @@ int main(int argc, char **argv)
 
     st:cout << " MOGL inverse " <<MOGL.inverse() << " " << quatOGL << " " << quatOCV << std::endl;
 
-    getchar();
+    //getchar();
 
 
     //vpDisplay::getClick(Id);

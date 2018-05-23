@@ -87,7 +87,7 @@ using namespace cv;
 
 using namespace luxifer;
 
-#define GETOPTARGS  "o:i:c:s:l:m:I:dh"
+#define GETOPTARGS  "o:i:j:c:s:l:m:I:dh"
 
 
 void usage(const char *name, const char *badparam)
@@ -141,6 +141,7 @@ OPTIONS:                                               \n\
 bool getOptions(int argc, char **argv,
                 std::string &object,
                 std::string &ipath,
+                std::string &ipathN,
                 bool &display,
                 int &start_image,
                 std::string &configfile,
@@ -156,6 +157,7 @@ bool getOptions(int argc, char **argv,
     switch (c) {
     case 'o': object = optarg; break;
     case 'i': ipath = optarg; break;
+    case 'j': ipathN = optarg; break;
     case 'd': display = false; break;
     case 'c': configfile = optarg; break;
     case 's': start_image = atoi(optarg);   break;
@@ -205,8 +207,8 @@ int main(int argc, char **argv)
     std::string env_ipath2;
     std::string opath,opath1;
     std::string vpath;
-    std::string opt_ipath;
-    std::string ipath;
+    std::string opt_ipath,opt_ipathN;
+    std::string ipath, ipathN;
     std::string isegpath;
     std::string scpath;
     std::string configFile;
@@ -242,7 +244,7 @@ int main(int argc, char **argv)
 
 
     // Read the command line options
-    if (!getOptions(argc, argv, opt_object, opt_ipath, opt_display, start_image, configFile, opt_learn, opt_detect, inline_init)) {
+    if (!getOptions(argc, argv, opt_object, opt_ipath, opt_ipathN, opt_display, start_image, configFile, opt_learn, opt_detect, inline_init)) {
       return (-1);
     }
 
@@ -253,6 +255,8 @@ int main(int argc, char **argv)
      {
        ipath = opt_ipath;// + vpIoTools::path("/image%06d.png");
 //       truthpath = opt_ipath + vpIoTools::path("/truth.txt");
+       ipathN = opt_ipathN;// + vpIoTools::path("/image%06d.png");
+
      }
      else
      {
@@ -324,7 +328,7 @@ int main(int argc, char **argv)
     viewer.move(200, 200);
 
     vpImage<unsigned char> Id;
-    vpImage<unsigned char> Id1;
+    vpImage<unsigned char> IdN;
     vpImage<vpRGBa> Icol;
     vpImage<vpRGBa> Ioverlay;
     vpImage<vpRGBa> Ioverlaycol;
@@ -337,8 +341,15 @@ int main(int argc, char **argv)
     reader.setFirstFrameIndex(start_image);
     reader.open(Id);
     reader.acquire(Id);
-    vpVideoReader readerRGB;
 
+    //VideoReader to read images from disk
+    vpVideoReader readerN;
+    readerN.setFileName(ipathN.c_str());
+    readerN.setFirstFrameIndex(start_image);
+    readerN.open(IdN);
+    readerN.acquire(IdN);
+
+    vpVideoReader readerRGB;
 
     //if(tracker.getUseRGB())
     {
@@ -376,9 +387,9 @@ int main(int argc, char **argv)
     vpDisplayX display2;
     if (opt_display)
     {
-        display1.init(Id, 10, 10, "Test tracking");
-        vpDisplay::display(Id) ;
-        vpDisplay::flush(Id);
+        display1.init(IdN, 10, 10, "Test tracking");
+        vpDisplay::display(IdN) ;
+        vpDisplay::flush(IdN);
         //if(tracker.getUseRGB())
         {
         display2.init(Icol, 10, 1000, "Test tracking");
@@ -387,7 +398,7 @@ int main(int argc, char **argv)
         }
     }
 
-    vpHomogeneousMatrix cMo, cMo2, cMoFilt;
+    vpHomogeneousMatrix cMo, cMct, cMo2, cMoFilt;
 
        // tx="192.169",ty="-350",tz="226", R00= "-0.231176", R01="2.1603e-16", R02="0.972912" , R10="0.972912", R11="1.73796e-16" , R12="0.231176", R20="-1.19147e-16" , R21="1" , R22="-2.50356e-16"
 
@@ -411,8 +422,21 @@ int main(int argc, char **argv)
 
        // pose simulated image, amera frame
 
-       cMo[0][3] =-175.4532513;
+       /*cMo[0][3] =-175.4532513;
        cMo[1][3] = -239.2093021 ;
+       cMo[2][3] = 350;
+       cMo[0][0] = -0.231176;
+       cMo[0][1] = 2.1603e-16;
+       cMo[0][2] = 0.972912;
+       cMo[1][0] = 0.972912;
+       cMo[1][1] = 1.73796e-16;
+       cMo[1][2] = 0.231176;
+       cMo[2][0] = -1.19147e-16;
+       cMo[2][1] = 1;
+       cMo[2][2] = -2.50356e-16;*/
+
+       cMo[0][3] =-125.4532513;
+       cMo[1][3] = -209.2093021 ;
        cMo[2][3] = 350;
        cMo[0][0] = -0.231176;
        cMo[0][1] = 2.1603e-16;
@@ -424,20 +448,233 @@ int main(int argc, char **argv)
        cMo[2][1] = 1;
        cMo[2][2] = -2.50356e-16;
 
+
+        /*cMo[0][0] = -0.9613614331;
+         cMo[0][1] = 0.03993317522;
+          cMo[0][2] = -0.2723777705;
+           cMo[0][3] = 50.72351262;
+        cMo[1][0] = 0.07272809439;
+         cMo[1][1] = -0.9174234902;
+          cMo[1][2] = -0.3912081096;
+           cMo[1][3] =-1.271723929;
+        cMo[2][0] = -0.2655081983;
+         cMo[2][1] =-0.3959033812;
+          cMo[2][2] = 0.8790714588;
+           cMo[2][3] = 764.62899;*/
+
+
+       // cmo liverarterial
+
+       /*-0.8745552532  -0.07832134238  -0.4785591671  51.9363909
+       0.01943402532  -0.9917387423  0.1267934768  -15.75471437
+       -0.4845363018  0.1015875702  0.8688524258  848.9974414*/
+
+       /*-0.9116938252  -0.03241268358  -0.4095897789  49.30029281
+       -0.09153943476  -0.9558036689  0.27939198  -17.90655017
+       -0.4005432573  0.2922135598  0.8684332643  803.5308036*/
+
+       cMo[0][3] =49.30029281;
+       cMo[1][3] = -17.90655017;
+       cMo[2][3] = 803.5308036;
+       cMo[0][0] = -0.9116938252;
+       cMo[0][1] = -0.03241268358;
+       cMo[0][2] = -0.4095897789;
+       cMo[1][0] = -0.09153943476;
+       cMo[1][1] = -0.9558036689;
+       cMo[1][2] = 0.27939198;
+       cMo[2][0] = -0.4005432573;
+       cMo[2][1] =0.2922135598;
+       cMo[2][2] = 0.8684332643;
+
+       // cmo liverarterial2
+
+       /*-0.9904289509  0.01516469256  0.1371879195  17.41429606
+       -0.03270942238  -0.9914201938  -0.1265547034  -14.248832
+       0.1340917105  -0.1298307797  0.9824272908  751.603716*/
+
+       cMo[0][3] =17.41429606;
+       cMo[1][3] = -14.248832;
+       cMo[2][3] = 751.603716;
+       cMo[0][0] = -0.9904289509;
+       cMo[0][1] = 0.01516469256;
+       cMo[0][2] = 0.1371879195;
+       cMo[1][0] = -0.03270942238;
+       cMo[1][1] = -0.9914201938;
+       cMo[1][2] = -0.1265547034;
+       cMo[2][0] = 0.1340917105;
+       cMo[2][1] =-0.1298307797;
+       cMo[2][2] = 0.9824272908;
+
+
        // pose real image liver1.png -222.375 154.59 379.542 [0.989822 -3.09578e-17 0.142311,0.136547 0.281733 -0.949727,-0.0400937 0.959493 0.278865
 
-       /*cMo[0][3] =-209.9189609;
-       cMo[1][3] = 201.4935037;
-       cMo[2][3] = 390.7839107;
-       cMo[0][0] = 0.9958088264;
-       cMo[0][1] = 0.08254072254;
-       cMo[0][2] = 0.03939508347;
-       cMo[1][0] = 0.01511400765;
-       cMo[1][1] = 0.2763081441;
-       cMo[1][2] = -0.9609501357;
-       cMo[2][0] = -0.09020270353;
-       cMo[2][1] = 0.9575182186;
-       cMo[2][2] = 0.2739020766;*/
+       cMct[0][3] =-209.9189609;
+       cMct[1][3] = 201.4935037;
+       cMct[2][3] = 390.7839107;
+       cMct[0][0] = 0.9958088264;
+       cMct[0][1] = 0.08254072254;
+       cMct[0][2] = 0.03939508347;
+       cMct[1][0] = 0.01511400765;
+       cMct[1][1] = 0.2763081441;
+       cMct[1][2] = -0.9609501357;
+       cMct[2][0] = -0.09020270353;
+       cMct[2][1] = 0.9575182186;
+       cMct[2][2] = 0.2739020766;
+
+
+       /*cMct[0][3] =-149.9189609;
+       cMct[1][3] = 200.4935037;
+       cMct[2][3] = 440.7839107;
+       cMct[0][0] = 0.9958088264;
+       cMct[0][1] = 0.08254072254;
+       cMct[0][2] = 0.03939508347;
+       cMct[1][0] = 0.01511400765;
+       cMct[1][1] = 0.2763081441;
+       cMct[1][2] = -0.9609501357;
+       cMct[2][0] = -0.09020270353;
+       cMct[2][1] = 0.9575182186;
+       cMct[2][2] = 0.2739020766;*/
+
+       // pose real image liver2.png -222.375 154.59 379.542 [0.989822 -3.09578e-17 0.142311,0.136547 0.281733 -0.949727,-0.0400937 0.959493 0.278865
+
+       /*0.9216657489  -0.3875581562  0.01819937037  -27.08472031
+       -0.0003092703658  -0.04764536662  -0.9988638197  288.357135
+       0.3879851763  0.9206133542  -0.04403458774  459.7173749*/
+
+       cMct[0][0] = 0.9216657489;
+       cMct[0][1] =-0.3875581562;
+       cMct[0][2] = 0.01819937037;
+       cMct[0][3] = -27.08472031;
+       cMct[1][0] = -0.0003092703658;
+       cMct[1][1] = -0.04764536662;
+       cMct[1][2] = -0.9988638197;
+       cMct[1][3] = 288.357135;
+       cMct[2][0] = 0.3879851763;
+       cMct[2][1] = 0.9206133542;
+       cMct[2][2] = -0.04403458774;
+       cMct[2][3] = 459.7173749;
+
+
+       // pose cMct liverarterial
+
+       /*0.9727540217  -0.2313178327  0.01557545484  -102.8474708
+       0.001544650804  -0.06076014755  -0.9981489679  286.2505651
+       0.2318372463  0.9709801039  -0.05875412225  472.1949346
+       0  0  0  1*/
+
+       cMct[0][0] = 0.9727540217;
+       cMct[0][1] =-0.2313178327;
+       cMct[0][2] = 0.01557545484;
+       cMct[0][3] = -102.8474708;
+       cMct[1][0] = 0.001544650804;
+       cMct[1][1] = -0.06076014755;
+       cMct[1][2] = -0.9981489679;
+       cMct[1][3] = 286.2505651;
+       cMct[2][0] = 0.2318372463;
+       cMct[2][1] = 0.9709801039 ;
+       cMct[2][2] = -0.05875412225;
+       cMct[2][3] = 472.1949346;
+
+       // pose cMct liverarterial2
+
+       /*0.9440248108  0.3024631792  -0.1316733848  -248.9080472
+       0.02249722709  -0.4572246991  -0.8890633984  374.8788921
+       -0.3291083603  0.8363394629  -0.4384340284  695.9622335*/
+
+       /*cMct[0][0] = 0.9440248108;
+       cMct[0][1] =0.3024631792;
+       cMct[0][2] = -0.1316733848;
+       cMct[0][3] = -248.9080472;
+       cMct[1][0] = 0.02249722709;
+       cMct[1][1] = -0.4572246991;
+       cMct[1][2] = -0.8890633984;
+       cMct[1][3] = 374.8788921;
+       cMct[2][0] = -0.3291083603;
+       cMct[2][1] = 0.8363394629;
+       cMct[2][2] = -0.4384340284;
+       cMct[2][3] = 695.9622335;*/
+
+       /*0.9997087892  -0.02225662832  0.009479929242  -170.230371
+       0.008485226754  -0.04585260741  -0.9989056292  288.5724427
+       0.02266890147  0.9987035984  -0.04566821881  458.5403444*/
+
+       /*cMct[0][0] = 0.9997087892;
+       cMct[0][1] =-0.02225662832;
+       cMct[0][2] = 0.009479929242;
+       cMct[0][3] =-170.230371;
+       cMct[1][0] = 0.008485226754;
+       cMct[1][1] = -0.04585260741;
+       cMct[1][2] = -0.9989056292;
+       cMct[1][3] =288.5724427;
+       cMct[2][0] = 0.02266890147;
+       cMct[2][1] = 0.9987035984;
+       cMct[2][2] = -0.04566821881;
+       cMct[2][3] = 458.5403444;*/
+
+       /*0.9975085117  -0.06574516179  0.02563329375  -164.6963909
+       0.004403865048  -0.3049865928  -0.9523383771  332.0290646
+       0.07043377305  0.9500841341  -0.3039573124  487.3573959*/
+
+       cMct[0][0] = 0.9975085117;
+              cMct[0][1] =-0.06574516179;
+              cMct[0][2] =0.02563329375 ;
+              cMct[0][3] =-164.6963909;
+              cMct[1][0] = 0.004403865048;
+              cMct[1][1] =-0.3049865928;
+              cMct[1][2] = -0.9523383771;
+              cMct[1][3] = 332.0290646;
+              cMct[2][0] = 0.07043377305;
+              cMct[2][1] = 0.9500841341;
+              cMct[2][2] = -0.3039573124;
+              cMct[2][3] = 487.3573959;
+
+
+              /*-8.15615e-22  -3.67321e-06  -142.168
+              -3.67321e-06  -9.95799e-17  -1  286.001
+              4.49838e-22  1  -9.95799e-17  450*/
+
+
+              cMct[0][0] = 1;
+                     cMct[0][1] =0;
+                     cMct[0][2] =0;
+                     cMct[0][3] =-142.168;
+                     cMct[1][0] = 0;
+                     cMct[1][1] =0;
+                     cMct[1][2] = -1;
+                     cMct[1][3] = 286.001;
+                     cMct[2][0] = 0;
+                     cMct[2][1] = 1;
+                     cMct[2][2] = 0;
+                     cMct[2][3] = 450;
+
+                    /* 1  -6.2558e-17  -3.67321e-06  -129.1136655
+                     -3.52441e-06  0.281733  -0.959493  263.8653516
+                     1.03486e-06  0.959493  0.281733  352.4670312*/
+
+                     cMct[0][0] = 1;
+                            cMct[0][1] =-6.2558e-17;
+                            cMct[0][2] =-3.67321e-06;
+                            cMct[0][3] =-129.1136655;
+                            cMct[1][0] = -3.52441e-06;
+                            cMct[1][1] =0.281733 ;
+                            cMct[1][2] = -0.959493 ;
+                            cMct[1][3] =  263.8653516;
+                            cMct[2][0] = 1.03486e-06;
+                            cMct[2][1] = 0.959493;
+                            cMct[2][2] = 0.281733;
+                            cMct[2][3] = 352.4670312;
+
+
+
+
+
+       /*vpHomogeneousMatrix oMct0 = cMo.inverse()*cMct;
+
+       std::cout << " cmct0 " << oMct0 << std::endl;
+
+       getchar();*/
+
+
 
        /*cMo -0.9725939864  0.07627547874  -0.2196428671  -0.04488710902
       -0.05719987694  -0.994120001  -0.09194344866  -0.1764133453
@@ -454,18 +691,18 @@ int main(int argc, char **argv)
       -0.3077202405  0.8864439542  0.3457243481  -2.506505272*/
 
 
-       cMo[0][3] =-222.375;
-       cMo[1][3] = 154.59;
-       cMo[2][3] = 379.542;
-       cMo[0][0] = 0.989822;
-       cMo[0][1] = -3.09578e-17;
-       cMo[0][2] = 0.142311;
-       cMo[1][0] = 0.136547;
-       cMo[1][1] = 0.281733;
-       cMo[1][2] = -0.949727;
-       cMo[2][0] = -0.0400937;
-       cMo[2][1] = 0.959493;
-       cMo[2][2] = 0.278865;
+       /*cMct[0][3] =-222.375;
+       cMct[1][3] = 154.59;
+       cMct[2][3] = 379.542;
+       cMct[0][0] = 0.989822;
+       cMct[0][1] = -3.09578e-17;
+       cMct[0][2] = 0.142311;
+       cMct[1][0] = 0.136547;
+       cMct[1][1] = 0.281733;
+       cMct[1][2] = -0.949727;
+       cMct[2][0] = -0.0400937;
+       cMct[2][1] = 0.959493;
+       cMct[2][2] = 0.278865;*/
 
 
 
@@ -531,12 +768,23 @@ int main(int argc, char **argv)
         //std::cout << " cmo inv " << R0*ta << std::endl;
              // getchar();
 
-        vpRxyzVector vdelta(0.0,0.0,-0.0);
-        vpTranslationVector tdelta(0,0,0);
+        /*vpRxyzVector vdelta(-0.3,0.5,0.05);
+        vpTranslationVector tdelta(0,0,0);*/
 
-        vpRxyzVector vdelta1(0.,0.0,-0.0);
+       /*vpRxyzVector vdelta(-0.0,-0.15,-0.08);
+       vpTranslationVector tdelta(23,5,0);*/
+
+       /*vpRxyzVector vdelta(0.0,-0.2,0.07);
+              vpTranslationVector tdelta(18,-22,-40);*/
+
+        /*vpRxyzVector vdelta(-0.1,0.0,0.05);
+        vpTranslationVector tdelta(5,15,15);*/
+
+        vpRxyzVector vdelta(-0.0,-0.0,-0.0);
+        vpTranslationVector tdelta(0,0,-0);
+
+        vpRxyzVector vdelta1(-0.0,0.0,-0.0);
         vpTranslationVector tdelta1(0,0,0);
-
 
         vpRotationMatrix Rdelta;
         Rdelta.buildFrom(vdelta);
@@ -550,6 +798,9 @@ int main(int argc, char **argv)
 
 
         cMo = Mdelta1*cMo*Mdelta;
+        //cMct = Mdelta1*cMct*Mdelta;
+
+
 
         std::cout << " cmo " << cMo << std::endl;
 
@@ -574,17 +825,202 @@ int main(int argc, char **argv)
         }
     //Icol = Icol1;
 
-    tracker.setPose(cMo);
-
     vpHomogeneousMatrix oMct;
-    vpHomogeneousMatrix cMct = cMo;
-    cMct[0][3] /= 100.0;
+
+    /*-0.9490537176  -0.3118739189  -0.04507696832  2.512210086
+    0.06786364651  -0.3419825657  0.9372524876  -2.117037932
+    -0.3077202405  0.8864439542  0.3457243481  -2.506505272*/
+
+    oMct[0][0] = -0.9490537176;
+    oMct[0][1] = -0.3118739189;
+    oMct[0][2] = -0.04507696832;
+    oMct[0][3] = 2.512210086;
+    oMct[1][0] = 0.06786364651;
+    oMct[1][1] = -0.3419825657;
+    oMct[1][2] = 0.9372524876;
+    oMct[1][3] = -2.117037932;
+    oMct[2][0] = -0.3077202405;
+    oMct[2][1] = 0.8864439542;
+    oMct[2][2] = 0.3457243481;
+    oMct[2][3] = -2.506505272;
+
+
+    // with liver1.png
+
+
+    oMct[0][0] = -0.9490537176;
+    oMct[0][1] = -0.3118739189;
+    oMct[0][2] = -0.04507696832;
+    oMct[0][3] = 251.2210086;
+    oMct[1][0] = 0.06786364651;
+    oMct[1][1] = -0.3419825657;
+    oMct[1][2] = 0.9372524876;
+    oMct[1][3] = -211.7037932;
+    oMct[2][0] = -0.3077202405;
+    oMct[2][1] = 0.8864439542;
+    oMct[2][2] = 0.3457243481;
+    oMct[2][3] = -250.6505272;
+
+
+    // with liver2.png
+
+    oMct[0][0] = -0.989089643;
+    oMct[0][1] = 0.1246879147;
+    oMct[0][2] = -0.07845009089;
+    oMct[0][3] = 176.8225229;
+    oMct[1][0] = -0.1165158714;
+    oMct[1][1] = -0.3362393889;
+    oMct[1][2] = 0.9345413325;
+    oMct[1][3] = -148.103909;
+    oMct[2][0] = 0.09014642217;
+    oMct[2][1] = 0.9334864046;
+    oMct[2][2] = 0.3470969734;
+    oMct[2][3] = -360.1510237;
+
+
+    // with liver arterial
+
+
+    /*-0.9630306829  -0.2693556972  -0.004551143056  323.1983557
+-0.0541675083  0.177014825  0.982714423  -294.4167861
+-0.2638921489  0.9466336977  -0.1850612163  -219.0154268
+*/
+
+    /*-0.9798560773  -0.1724665443  0.1007035138  243.5841544
+    0.03474003582  0.3493059563  0.9363608521  -382.6038031
+    -0.196663365  0.9210009432  -0.3362783978  -140.4458628*/
+
+    oMct[0][0] = -0.9798560773;
+    oMct[0][1] = -0.1724665443;
+    oMct[0][2] =  0.1007035138 ;
+    oMct[0][3] = 243.5841544;
+    oMct[1][0] = 0.03474003582;
+    oMct[1][1] = 0.3493059563;
+    oMct[1][2] =  0.9363608521;
+    oMct[1][3] = -382.6038031;
+    oMct[2][0] = -0.196663365;
+    oMct[2][1] = 0.9210009432;
+    oMct[2][2] = -0.3362783978;
+    oMct[2][3] = -140.4458628;
+
+     // with liver arterial2
+    /*-0.9873783624  0.1574612951  0.01716070019  136.646233
+    0.003804730132  -0.08454078087  0.9964081132  -265.0200545
+    0.158344671  0.9839031931  0.08285103292  -351.9794923*/
+
+    oMct[0][0] = -0.9873783624;
+    oMct[0][1] =  0.1574612951;
+    oMct[0][2] =  0.01716070019 ;
+    oMct[0][3] = 136.646233;
+    oMct[1][0] = 0.003804730132;
+    oMct[1][1] = -0.08454078087;
+    oMct[1][2] =  0.9964081132;
+    oMct[1][3] = -265.0200545;
+    oMct[2][0] = 0.158344671;
+    oMct[2][1] = 0.9839031931;
+    oMct[2][2] = 0.08285103292;
+    oMct[2][3] = -351.9794923;
+
+    // with true data
+   /*-0.9873783624  0.1574612951  0.01716070019  136.646233
+   0.003804730132  -0.08454078087  0.9964081132  -265.0200545
+   0.158344671  0.9839031931  0.08285103292  -351.9794923*/
+
+    /*oMct[0][0] = 1;
+    oMct[0][1] =  0;
+    oMct[0][2] =  0;
+    oMct[0][3] = -192.633;
+    oMct[1][0] = 0.003804730132;
+    oMct[1][1] = -0.08454078087;
+    oMct[1][2] =  0.9964081132;
+    oMct[1][3] = -265.0200545;
+    oMct[2][0] = 0.158344671;
+    oMct[2][1] = 0.9839031931;
+    oMct[2][2] = 0.08285103292;
+    oMct[2][3] = -351.9794923;*/
+
+
+    vpQuaternionVector qoct;
+    vpRotationMatrix Roct;
+
+    vpHomogeneousMatrix ctMo = oMct.inverse();
+
+    vpHomogeneousMatrix ctMo1, o1Mo, oMo1, o1Mct ;
+
+    ctMo1[0][0] = 1;
+    ctMo1[0][1] =  0;
+    ctMo1[0][2] =  0;
+    ctMo1[0][3] = 192.633;
+    ctMo1[1][0] = 0;
+    ctMo1[1][1] = 1;
+    ctMo1[1][2] =  0;
+    ctMo1[1][3] = 313.133;
+    ctMo1[2][0] = 0;
+    ctMo1[2][1] = 0;
+    ctMo1[2][2] = 1;
+    ctMo1[2][3] = 967.5;
+
+    vpRxyzVector vdelta2(-0.0,0.0,M_PI);
+    vpTranslationVector tdelta2(0,0,0);
+
+    vpRotationMatrix Rdelta2;
+    Rdelta2.buildFrom(vdelta2);
+    vpHomogeneousMatrix Mdelta2;
+    Mdelta2.buildFrom(tdelta2,Rdelta2);
+
+    ctMo1 = ctMo1*Mdelta2;
+
+
+    oMo1[0][0] = 1;
+    oMo1[0][1] =  0;
+    oMo1[0][2] =  0;
+    oMo1[0][3] = 12.50376;
+    oMo1[1][0] = 0;
+    oMo1[1][1] = 1;
+    oMo1[1][2] =  0;
+    oMo1[1][3] = -109.75430;
+    oMo1[2][0] = 0;
+    oMo1[2][1] = 0;
+    oMo1[2][2] = 1;
+    oMo1[2][3] = 663.00940;
+
+    o1Mo = oMo1.inverse();
+
+    ctMo = ctMo1*o1Mo;
+
+    oMct = ctMo.inverse();
+
+    Roct.buildFrom(oMct);
+    qoct.buildFrom(Roct);
+    vpRxyzVector rxyz;
+    rxyz.buildFrom(Roct);
+
+    std::cout << "ctmo " << oMct.inverse() << " q oct " <<  oMct <<  std::endl;
+
+    //getchar();
+
+    /*cMct[0][3] /= 100.0;
     cMct[1][3] /= 100.0;
-    cMct[2][3] /= 100.0;
+    cMct[2][3] /= 100.0;*/
+
+    cMo = cMct*oMct.inverse();
+
+    cMo = Mdelta*cMo*Mdelta1;
+
+    cMct = cMo*oMct;
+
+
+    /*cMo[0][3] *= 100.0;
+    cMo[1][3] *= 100.0;
+    cMo[2][3] *= 100.0;*/
+
+
+    tracker.setPose(cMo);
 
 
     // Manual initialization of the tracker
-    if (opt_display && opt_click_allowed && !opt_detect)
+
+    /*if (opt_display && opt_click_allowed && !opt_detect)
     {
         if (inline_init.empty())
         {
@@ -603,7 +1039,7 @@ int main(int argc, char **argv)
             memcpy(cMo.data, inline_init.data(), sizeof(double) * inline_init.size());
             tracker.setPose(cMo);
         }
-    }
+    }*/
 
 
     tracker.setIprec(Id);
@@ -644,14 +1080,13 @@ int main(int argc, char **argv)
     cMo[2][0] = -0.2253643978;
     cMo[2][1] = -0.07686010028;
     cMo[2][2] = 0.9712380827;
-
     oMct = cMo.inverse()*cMct;
 
     std::cout << " cMo " << cMo << " cMct " <<  cMct << " oMct " << oMct << std::endl;*/
 
    // getchar();
     if (opt_display)
-        vpDisplay::flush(Id);
+        vpDisplay::flush(IdN);
     double px = mcam.get_px() ;
     double py = mcam.get_py() ;
 
@@ -704,6 +1139,10 @@ int main(int argc, char **argv)
     vpImage<vpRGBa> Icol2(height,width);
     Icol2 = Icol;
 
+    vpHomogeneousMatrix cMobj;
+
+    std::cout << " cmct " << cMct << std::endl;
+
     // Main tracking loop
     try
     {
@@ -712,26 +1151,30 @@ int main(int argc, char **argv)
             // Render the 3D model, get the depth edges, normal and texture maps
             try{
                 std::cout << "render " << std::endl;
-
-                //tracker.getPose(cMo);
+                tracker.getPose(cMo);
                 t0= vpTime::measureTimeMs();
                 mgr->updateRTT(Inormd,Ior,&cMo);
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
                 std::cout << "timerender " << t1 - t0 << std::endl;
                 a.processEvents(QEventLoop::AllEvents, 1);
-                vpImageIo::writePNG(Inormd, "Inormd.png");
-                vpImageIo::writePNG(Ior, "Ior.png");
+                //vpImageIo::writePNG(Inormd, "Inormd.png");
+                //vpImageIo::writePNG(Ior, "Ior.png");
                 tracker.Inormdprec = Inormd;
                 tracker.Iorprec = Ior;
                 tracker.Itexprec = Ior;
                 tracker.cMoprec = cMo;
+                tracker.oMct = oMct;
 
             }
             catch(...){
                 vpTRACE("Error in 3D rendering");
                 throw;
             }
+
+            cMct = cMo*oMct;
+
+            std::cout << "cMct " << cMct << std::endl;
 
             vpDisplay::display(Icol);
             std::cout << " disp " << im-start_image << std::endl;
@@ -762,9 +1205,11 @@ int main(int argc, char **argv)
                 for (int sp = 0; sp < sample ; sp++)
                 {
 
+                    if (im < 59){
                     reader.acquire(Id);
+                    readerN.acquire(IdN);
                     //if(tracker.getUseRGB())
-                        readerRGB.acquire(Icol);
+                        readerRGB.acquire(Icol);}
                         Icol1 = Icol;
                         for (int i = 0; i<height; i++)
                             for (int j = 0; j<width; j++)
@@ -782,7 +1227,7 @@ int main(int argc, char **argv)
                 break;
             }
             //vpImageIo::read(Id,"imagePig3.png");
-            vpDisplay::display(Id);
+            vpDisplay::display(IdN);
 
             //tracker.setPose(cMo);
             cMo.extract(tr);
@@ -790,8 +1235,10 @@ int main(int argc, char **argv)
             try{
                 t0= vpTime::measureTimeMs();
 
-                tracker.trackXray(Id, tr[2]);
+                //tracker.trackXray(Id, tr[2]);
                 //tracker.track(Id,Icol,Inormd,Ior,Ior,tr[2]);
+                tracker.IdN = IdN;
+                tracker.trackXrayIntensityContour(Id,Icol,Inormd,Ior,Ior,tr[2]);
 
                 //tracker.displayKltPoints(Id);
                 //tracker.track(Id, Igrad, Igradx, Igrady, Inormd, Ior, Ior, tr[2]);
@@ -833,7 +1280,7 @@ int main(int argc, char **argv)
                 throw;
             }
             // Display 3D model
-            //tracker.getPose(cMo);
+            tracker.getPose(cMo);
             //tracker.computeError(error);
             tracker.display(Id,cMo,mcam,vpColor::green,1);
 
@@ -905,8 +1352,8 @@ int main(int argc, char **argv)
             tracker2.getPose(cMo2);
             tracker2.display(Id,cMo2,mcam,vpColor::red,1);*/
 
-            vpDisplay::flush(Id);
-            vpDisplay::getImage(Id,Ioverlay);
+            vpDisplay::flush(IdN);
+            vpDisplay::getImage(IdN,Ioverlay);
             //vpDisplay::getClick(Id);
             fout << im << ' ' << cMo << std::endl;
             // Write images
@@ -921,7 +1368,7 @@ int main(int argc, char **argv)
             //if(im%5==0)
             {
             vpImageIo::write(Ioverlaycol, filename4);
-            //vpImageIo::write(Ioverlay, filename5);
+            vpImageIo::write(Inormd, filename5);
             }
 
             im++;

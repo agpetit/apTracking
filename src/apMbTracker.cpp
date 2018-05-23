@@ -5244,12 +5244,16 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
         CCDTracker.init(CCDParameters, cam);
         CCDTracker.setImage(_IRGB);
 
+        vpTranslationVector tr;
+        cMo.extract(tr);
+
         unsigned int iter = 0;
 
         //Nombre de moving edges
-        int nbrow = 0;
+        int nbrow  = 0;
 
-#pragma omp parallel for
+
+        #pragma omp parallel for
         for (int k = 0; k < points[scaleLevel].size(); k++) {
                 apControlPoint *p = (points[scaleLevel])[k];
                 p->initInteractionMatrixError();
@@ -5263,7 +5267,17 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                                 "\n\t\t Error-> not enough data in the interaction matrix...");
         }
 
-        vpMatrix L(nbrow, 6);
+
+        vpFeatureLine fli;
+
+
+        vpMatrix L(nbrow,6), Lsd, LT;
+        vpColVector LTG;
+        // matrice d'interaction a la position desiree
+        vpMatrix Hsd;  // hessien a la position desiree
+        vpMatrix H ; // Hessien utilise pour le levenberg-Marquartd
+
+        vpColVector errorG;
 
         vpMatrix LTCIL(6, 6);
         vpColVector LTCIR(6);
@@ -5279,6 +5293,89 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
         //Parametre pour la premiere phase d'asservissement
         bool reloop = true;
         double count = 0;
+
+        int nerrorG;
+
+        int hght = _I.getHeight();
+        int wdth = _I.getWidth();
+
+        int nbr =hght;
+        int nbc = wdth;
+        vpImage<unsigned char> imG(hght,wdth);
+        vpImage<unsigned char> Igd(hght,wdth);
+        vpImage<unsigned char> Igdgroundtruth(hght,wdth);
+        vpImage<unsigned char> Ig(hght,wdth);
+        vpImage<unsigned char> Idiff(hght,wdth);
+        vpColVector e;
+
+        //vpImageIo::read(Igdgroundtruth, "imagePig3.png");
+        //Igdgroundtruth = _I;
+        Igdgroundtruth = IdN;
+
+        //Igd = _I;
+        Igd = IdN;
+
+        vpHomogeneousMatrix cMo1 = cMo;
+        vpHomogeneousMatrix cMo0, cMct;
+
+        vpRotationMatrix R0;
+        vpTranslationVector t0;
+
+        cMct = cMo*oMct;
+        /*cMct[0][3] *= 100.0;
+        cMct[1][3] *= 100.0;
+        cMct[2][3] *= 100.0;*/
+
+        /*for (int k = 0; k < imG.getHeight(); k++)
+                for (int l = 0; l < imG.getWidth(); l++) {
+                        if (Inormdprec[k][l].A != 0)
+                        Igd[k][l] = 0;
+                }*/
+
+        sId.init(imG.getHeight(), imG.getWidth(), tr[2]);
+        sI.init(imG.getHeight(), imG.getWidth(), tr[2]);
+        sId.buildFrom(Igd);
+        sId.interaction(Lsd);
+        //Lsd=2*Lsd;
+        nerrorG = Lsd.getRows();
+        vpColVector errorT(nerror+nerrorG);
+        vpDisplayX displayo;
+        //displayo.init(Idiff, 10, 10, "display");
+        double mu = 0.000;
+        vpMatrix diagHsd(6,6);
+        vpMatrix diagLTL(6,6);
+        std::cout << " cmo " << cMo << std::endl;
+
+
+        Hsd = Lsd.AtA();
+        diagHsd.eye(6);
+        for(int i = 0 ; i < 6 ; i++) diagHsd[i][i] = Hsd[i][i];
+
+        H = ((mu * diagHsd) + Hsd).pseudoInverse();
+
+        /*** First phase ***/
+         vpImageTools::imageDifference(Ig,Igdgroundtruth,Idiff);
+
+         //vpDisplay::display(Idiff);
+         //vpDisplay::flush(Idiff);
+
+         vpVideoWriter writer1;
+         writer1.setCodec( CV_FOURCC('P','I','M','1') );
+         writer1.setFileName("I_d.mpg");
+
+         vpVideoWriter writer2;
+         writer2.setCodec( CV_FOURCC('P','I','M','1') );
+         writer2.setFileName("I.mpg");
+
+         vpVideoWriter writer3;
+         writer3.setCodec( CV_FOURCC('P','I','M','1') );
+         writer3.setFileName("I_diff.mpg");
+
+         writer1.open(Igd);
+         writer2.open(Ig);
+         writer3.open(Idiff);
+
+
 
         /*** First phase ***/
 
@@ -5405,8 +5502,142 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
         iter = 0;
         //vpColVector error_px(nerror);
 
-        while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 12)) {
+        while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 15)) {
                 //        double t0 = vpTime::measureTimeMs();
+
+            cMct = cMo*oMct;
+            /*cMct[0][3] *= 100.0;
+            cMct[1][3] *= 100.0;
+            cMct[2][3] *= 100.0;*/
+
+            double t00= vpTime::measureTimeMs();
+            R0[0][0] = cMct[0][0];
+            R0[0][1] = cMct[0][1];
+            R0[0][2] = cMct[0][2];
+            R0[1][0] = cMct[1][0];
+            R0[1][1] = cMct[1][1];
+            R0[1][2] = cMct[1][2];
+            R0[2][0] = cMct[2][0];
+            R0[2][1] = cMct[2][1];
+            R0[2][2] = cMct[2][2];
+
+            t0[0]=-cMct[0][3];
+            t0[1]=-cMct[1][3];
+            t0[2]=-cMct[2][3];
+
+            t0 = R0.inverse()*t0;
+
+            cMo0.buildFrom(t0,R0);
+            string messageStr;
+            messageStr = std::to_string(cMo0[0][3]) + " " + std::to_string(cMo0[1][3]) + " " + std::to_string(cMo0[2][3]) + " "
+                    + std::to_string(cMo0[0][0]) + " " + std::to_string(cMo0[0][1]) + " " + std::to_string(cMo0[0][2]) + " "
+                    + std::to_string(cMo0[1][0]) + " " + std::to_string(cMo0[1][1]) + " " + std::to_string(cMo0[1][2]) + " "
+                    + std::to_string(cMo0[2][0]) + " " + std::to_string(cMo0[2][1]) + " " + std::to_string(cMo0[2][2]) + " ";
+
+            zmq::message_t message(messageStr.length());
+            std::cout << "cmo" <<  cMo0 << std::endl;
+            memcpy(message.data(), messageStr.c_str(), messageStr.length());
+
+            bool status = m_socketPub->send(message);
+
+            if(!status)
+               std::cout << "Problem with communication" << std::endl;
+
+                     std::cout << " ok send " << std::endl;
+
+               cv::Mat  img;
+               cv::Mat img1 = Mat::zeros( hght,wdth, CV_8UC1);
+               //int  imgSize = img.total()*img.elemSize();
+               //uchar sockData[imgSize];
+               //int bytes;
+
+               zmq::message_t message1;
+
+               bool status1 = m_socketSub->recv(&message1);
+               if(status1){
+               std::string rpl = std::string(static_cast<char*>(message1.data()), message1.size());
+               const char *cstr = rpl.c_str();
+              loadImage(img,cstr);
+
+              // memcpy(img.data, message1.data(), imgSize);
+
+               std::cout << " ok receive " << std::endl;
+
+               //for (int i = 0; i < imgSize; i += bytes) {
+               //bytes=m_socket1.recv(sockData +i) == 0;
+               //}
+
+             // Assign pixel value to img
+
+             int ptr=0;
+             for (int i = 0;  i < img1.rows; i++) {
+              for (int j = 0; j < img1.cols; j++) {
+               img1.at<uchar>(i,j) = img.at<uchar>(0,i*img1.cols+j);
+               ptr=ptr+3;
+               }
+              }
+
+             cv::imwrite("socketimage100.png", img1);
+               }
+
+       cMo.extract(tr);
+
+       sI.init(Ig.getHeight(), Ig.getWidth(),tr[2]);
+       vpImageConvert::convert(img1,Ig);
+
+       /*for (int k = 0; k < imG.getHeight(); k++)
+               for (int l = 0; l < imG.getWidth(); l++) {
+                       if (Inormdprec[k][l].A != 0)
+                       Ig[k][l] = 0;
+               }*/
+
+       sI.buildFrom(Ig);
+       sI.interaction(Lsd);
+       sI.error(sId, errorG);
+
+       vpImageTools::imageDifference(Ig,Igdgroundtruth,Idiff);
+       //vpDisplay::display(Idiff);
+       //vpDisplay::flush(Idiff);
+
+       //vpImageIo::write(Idiff, "Idiff.png");
+
+
+       if (iter >1){
+
+           writer1.saveFrame(Igd);
+           writer2.saveFrame(Ig);
+           writer3.saveFrame(Idiff);
+
+           /*for (int il = 0; il < Lsd.getRows(); il++ )
+           {
+           Lsd[il][0] *= 100;
+           Lsd[il][1] *= 100;
+           Lsd[il][2] *= 100;
+           }*/
+
+           Hsd = Lsd.AtA();
+           diagHsd.eye(6);
+           for(int i = 0 ; i < 6 ; i++) diagHsd[i][i] = Hsd[i][i];
+
+           H = ((mu * diagHsd) + Hsd).pseudoInverse();
+
+           computeJTR(Lsd, errorG, LTG);
+
+           /*LTG[0] /= 100;
+           LTG[1] /= 100;
+           LTG[2] /= 100;*/
+
+       //	compute the control law
+
+      //e = H * Lsd.t() *errorG;
+      //v =  -1*e;
+      //v[0] /= 100;
+      //v[1] /= 100;
+      //v[2] /= 100;
+       //cMo =  vpExponentialMap::direct(v).inverse() * cMo;
+
+       std::cout << " v " << v << " cmo " << cMo << std::endl;
+
 #pragma omp parallel for
                 for (int k = 0; k < points[scaleLevel].size(); k++) {
                         const int n = k;
@@ -5420,6 +5651,8 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                 //        std::cout << "t0 = " << vpTime::measureTimeMs() - t0 << std::endl;
                 //        t0 = vpTime::measureTimeMs();
 
+                std::cout << " v00 " << v << " cmo " << cMo << std::endl;
+
                 if (iter == 0) {
                         weighted_error.resize(nerror);
                         w.resize(nerror);
@@ -5431,6 +5664,9 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                         robust.setIteration(iter);
                         robust.MEstimator(vpRobust::TUKEY, error, w);
                 }
+
+                std::cout << " v0 " << v << " cmo " << cMo << std::endl;
+
 
                 residu_1 = r;
 
@@ -5461,6 +5697,9 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                         }
                 }
 
+                std::cout << " v1 " << v << " cmo " << cMo << std::endl;
+
+
                 //        std::cout << "t1 = " << vpTime::measureTimeMs() - t0 << std::endl;
                 //        t0 = vpTime::measureTimeMs();
                 robustCCD.setIteration(iter);
@@ -5473,6 +5712,9 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                 //		double t0 = vpTime::measureTimeMs();
                 //CCDTracker.updateParametersRobust(LTCIL, LTCIR, robustCCD);
                 CCDTracker.updateParameters(LTCIL,LTCIR);
+
+                std::cout << " v2 " << v << " cmo " << cMo << std::endl;
+
                 //		double t1 = vpTime::measureTimeMs();
                 //std::cout << " timeupdate " << t1 -t0 << std::endl;
                 if (iter > 0)
@@ -5491,12 +5733,21 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
 
                 wghtME = 0.7;
 
-                v = -lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).pseudoInverse(LTL.getRows()* DBL_EPSILON) * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR);
+                //double weight_P = 0.0000000004;
 
+                double weight_P = 0.0000000004;
+
+                if (iter<5)
+                v = -2*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL ).pseudoInverse((LTL.getRows()) * DBL_EPSILON) * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR );
+                else//
+                v = -4*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).pseudoInverse() * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR + weight_P*LTG);
+                /*v[0] /= 100;
+                v[1] /= 100;
+                v[2] /= 100;*/
                 //v = -lambda * (LTL + weight_ccd * LTCIL).pseudoInverse(LTL.getRows() * DBL_EPSILON) * (LTR - weight_ccd * LTCIR);
                 cMo = vpExponentialMap::direct(v).inverse() * cMo;
-                        //std::cout << "t3 = " << v << std::endl;
-
+                std::cout << " ltr " <<  weight_me* wghtME*LTR << " ltg " <<0.000001* LTG <<  std::endl;
+        }
                 iter++;
         }
 
@@ -9129,7 +9380,8 @@ void apMbTracker::trackXrayIntensityContour(const vpImage<unsigned char> &I, con
                                         case CCD_MH:
                                                 //if (frame > 1300 && frame < 3100)
                                                 //if (frame > 300 && frame < 1460)
-                                                //computeVVSCCDMHPrevSpace(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                               // computeVVSCCDMHPrevSpace(*Ipyramid[lvl], *IRGBpyramid[lvl]);
+                                                //computeVVSCCDMH(*Ipyramid[lvl], *IRGBpyramid[lvl]);
                                                 //else
                                                 {
                                                 computeVVSCCDMHPhotometric(*Ipyramid[lvl], *IRGBpyramid[lvl]);
@@ -9332,8 +9584,12 @@ void apMbTracker::init(const vpImage<unsigned char>& I,
 
 	sId.init(I.getHeight(), I.getWidth(), 1);
 	sI.init(I.getHeight(), I.getWidth(), 1);
-	sId.setCameraParameters(cam);
-	sI.setCameraParameters(cam);
+
+        vpCameraParameters camCt(cam.get_px(), cam.get_py(), cam.get_u0(), cam.get_v0() );
+
+
+        sId.setCameraParameters(cam);
+        sI.setCameraParameters(cam);
 
 	/*apControlPoint *p;
 	 vpColVector norm(3);

@@ -289,10 +289,13 @@ private:
 
     vpHomogeneousMatrix cMoprec;
     vpHomogeneousMatrix opMo;
+    vpHomogeneousMatrix oMct;
+
 
     vpImage<vpRGBa> Inormdprec;
     vpImage<unsigned char> Iorprec;
     vpImage<unsigned char> Itexprec;
+    vpImage<unsigned char> IdN;
 
     double timeextract;
     double timeextractklt;
