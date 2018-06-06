@@ -183,6 +183,7 @@ SET(TRACKER_COMMON_FILES
     p_helper.h
     serialization.h
     zhelpers.h
+    apHOGDetector.cpp                     apHOGDetector.h
     ${QT_SOURCE_FILES}                  ${QT_SOURCE_HEADERS}
     ${SURRENDER_FILES}
 )

@@ -128,7 +128,7 @@ struct apKLTTrackerParameters
   \brief Make the complete tracking of an object by using its CAD model.
 */
 
-class VISP_EXPORT apMbTracker: public vpMbTracker, public apControlPointTracker
+class apMbTracker: public vpMbTracker, public apControlPointTracker
 {
   public :
 	  typedef enum
@@ -267,7 +267,10 @@ class VISP_EXPORT apMbTracker: public vpMbTracker, public apControlPointTracker
 	vpHomogeneousMatrix c0Mo;
 	vpHomogeneousMatrix ctTc0;
 
+
         int fixedrotationx, fixedrotationy, fixedrotationz;
+
+        std::vector<point3d> controlpoints;
 
 private:
 
@@ -306,6 +309,8 @@ private:
     double sigmag;
     double sigmap;
 
+            int itert;
+
 
   
   apMbTracker();
@@ -339,6 +344,7 @@ private:
   void sendPose();
   void loadPointsNormals2d(std::vector<std::vector<point2d>> points2d, std::vector<std::vector<point2dd>> normals2d);
   void loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
+  void loadImagePoseMeshControlPoints( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
   void savepair(std::string &message, const std::pair<point3d, point2d> &pair);
   void save3dpoint(std::string &message, const point3d &point3d);
   void save2dpoint(std::string &message, const point2d &point2d);
@@ -373,6 +379,7 @@ private:
   void buildControlPoints2D(const vpImage<unsigned char> &I, std::vector<point2d> &points2d, std::vector<point2dd> &normals);
   void buildCorrespondencesEdges2D(std::vector<point2d> &trackededges, std::vector<int> &suppress);
   void exportCorrespondencesEdges2D(std::vector<std::vector<point2d>> &trackededgesIm, std::vector<std::vector<int>> &suppressIm);
+  void exportCorrespondencesEdgesMean(const vpImage<unsigned char> &I);
   //void reInitModel(const vpImage<unsigned char>& I, const char* cad_name, const vpHomogeneousMatrix& _cMo);
   //void reInitConfigModel(const vpImage<unsigned char>& I, const char* cad_name, const char* config_name, const vpHomogeneousMatrix& _cMo);
 

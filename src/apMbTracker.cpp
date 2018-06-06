@@ -81,6 +81,7 @@ apMbTracker::apMbTracker() {
 	timevvs =0;
 	sigmag = 0.7;
 	sigmap = 10;
+        controlpoints.resize(0);
 
 
 }
@@ -897,6 +898,171 @@ void apMbTracker::loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std
 
                  //std::cout << " triangle " <<  tri.v1 << " " <<  tri.v2  << " " <<  tri.v3 << std::endl;
                  triangles.push_back(tri);
+
+             }
+         }
+
+
+}
+
+void apMbTracker::loadImagePoseMeshControlPoints( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles)
+{
+
+    zmq::message_t message1;
+
+    std::cout << " status 0 " << std::endl;
+
+    bool status1 = m_socketSub->recv(&message1);
+
+    std::cout << " status 1 " << status1 << std::endl;
+    if(status1){
+    std::string rpl = std::string(static_cast<char*>(message1.data()), message1.size());
+    const char *cstr = rpl.c_str();
+
+    ifstream file;//(filename.c_str(), ios_base::in);
+    float x, y, z, w;
+    string line;
+    int n;
+
+    //if ((n = parseFormat(line.c_str(), "v %f %f %f %f", x, y, z, w)) > 0)
+    std::stringstream stream;
+    stream << cstr;
+
+    vpCameraParameters camparam;
+    vpRotationMatrix R0;
+    vpTranslationVector t0,t;
+    vpMatrix intrinsic;
+    intrinsic.resize(3,3);
+
+    vertices.resize(0);
+    normals.resize(0);
+    triangles.resize(0);
+    controlpoints.resize(0);
+
+   // for( size_t i=0; i<stream.length(); i++)
+        //char c = stream[i];
+        //if( c == '[' ) i++;
+
+    //std::cout << " str " << stream.str() << std::endl;
+
+    //getchar();
+
+        if (stream.peek() == '[')
+            stream.ignore();
+
+            //while (stream[i] != ']')
+             for (int j = 0; j < 3; j++)
+                 for (int k = 0; k < 3; k++){
+             stream >> intrinsic[j][k];
+             if (stream.peek() == ',')
+                 stream.ignore();
+             std::cout << " camparam " << intrinsic[j][k] << std::endl;
+                 }
+                 stream.ignore();
+                 stream.ignore();
+
+        if (stream.peek() == '[')
+            stream.ignore();
+
+            for (int j = 0; j < 3; j++)
+                for (int k = 0; k < 3; k++){
+                 stream >> R0[j][k];
+                 if (stream.peek() == ',')
+                     stream.ignore();
+                 std::cout << " rotation " << R0[j][k] << std::endl;
+                }
+                stream.ignore();
+                stream.ignore();
+
+        if (stream.peek() == '[')
+            stream.ignore();
+
+            for (int k = 0; k < 3; k++){
+                stream >> t0[k];
+                if (stream.peek() == ',')
+                    stream.ignore();
+                std::cout << " translation " << t0[k] << std::endl;
+                }
+                stream.ignore();
+                stream.ignore();
+
+                t[0]=-t0[0];
+                t[1]=-t0[1];
+                t[2]=-t0[2];
+
+                t0 = R0*t;
+
+                cMo.buildFrom(t0,R0);
+
+             int npoints = 0;
+
+             desserialize(stream,mat);
+
+             stream.ignore();
+             stream.ignore();
+
+             while (stream.peek()!=';')
+             {
+                 point3d vertex;
+
+                 stream >> vertex.x;
+                 stream >> vertex.y;
+                 stream >> vertex.z;
+
+
+                 //std::cout << " vertex " <<  vertex.x << " " <<  vertex.y << " " <<  vertex.z << std::endl;
+                 npoints ++;
+
+
+                 vertices.push_back(vertex);
+
+             }
+             stream.ignore();
+
+             while (stream.peek()!=';')
+             {
+                 point3d normal;
+
+                 stream >> normal.x;
+                 stream >> normal.y;
+                 stream >> normal.z;
+
+                 //std::cout << " normals " <<  normal.x << " " <<  normal.y << " " <<  normal.z << std::endl;
+
+                 normals.push_back(normal);
+
+             }
+             stream.ignore();
+
+             while (stream.peek()!=';')
+             {
+                 triangle tri;
+
+                 stream >> tri.v1;
+                 tri.n1 = tri.v1;
+                 stream >> tri.v2;
+                 tri.n2 = tri.v2;
+                 stream >> tri.v3;
+                 tri.n3 = tri.v3;
+
+                 //std::cout << " triangle " <<  tri.v1 << " " <<  tri.v2  << " " <<  tri.v3 << std::endl;
+                 triangles.push_back(tri);
+
+             }
+
+             stream.ignore();
+
+             while (stream.peek()!=';')
+             {
+                 point3d controlpoint;
+
+                 stream >> controlpoint.x;
+                 stream >> controlpoint.y;
+                 stream >> controlpoint.z;
+
+                 //std::cout << " normals " <<  normal.x << " " <<  normal.y << " " <<  normal.z << std::endl;
+
+                 controlpoints.push_back(controlpoint);
 
              }
          }
@@ -5312,8 +5478,9 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
         //Igdgroundtruth = _I;
         Igdgroundtruth = IdN;
 
-        //Igd = _I;
+        //if (itert<10)
         Igd = IdN;
+        //else Igd = _I;
 
         vpHomogeneousMatrix cMo1 = cMo;
         vpHomogeneousMatrix cMo0, cMct;
@@ -5334,6 +5501,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
 
         sId.init(imG.getHeight(), imG.getWidth(), tr[2]);
         sI.init(imG.getHeight(), imG.getWidth(), tr[2]);
+
         sId.buildFrom(Igd);
         sId.interaction(Lsd);
         //Lsd=2*Lsd;
@@ -5502,7 +5670,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
         iter = 0;
         //vpColVector error_px(nerror);
 
-        while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 15)) {
+        while (((int) ((residu_1 - r) * 1e8) != 0) && (iter < 30)) {
                 //        double t0 = vpTime::measureTimeMs();
 
             cMct = cMo*oMct;
@@ -5585,11 +5753,13 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
        sI.init(Ig.getHeight(), Ig.getWidth(),tr[2]);
        vpImageConvert::convert(img1,Ig);
 
-       /*for (int k = 0; k < imG.getHeight(); k++)
+       /*if (itert >= 10){
+       for (int k = 0; k < imG.getHeight(); k++)
                for (int l = 0; l < imG.getWidth(); l++) {
-                       if (Inormdprec[k][l].A != 0)
-                       Ig[k][l] = 0;
-               }*/
+                       if (Inormdprec[k][l].A == 0)
+                       Ig[k][l] = 127;
+               }
+       }*/
 
        sI.buildFrom(Ig);
        sI.interaction(Lsd);
@@ -5636,7 +5806,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
       //v[2] /= 100;
        //cMo =  vpExponentialMap::direct(v).inverse() * cMo;
 
-       std::cout << " v " << v << " cmo " << cMo << std::endl;
+       //std::cout << " v " << v << " cmo " << cMo << std::endl;
 
 #pragma omp parallel for
                 for (int k = 0; k < points[scaleLevel].size(); k++) {
@@ -5651,7 +5821,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                 //        std::cout << "t0 = " << vpTime::measureTimeMs() - t0 << std::endl;
                 //        t0 = vpTime::measureTimeMs();
 
-                std::cout << " v00 " << v << " cmo " << cMo << std::endl;
+                //std::cout << " v00 " << v << " cmo " << cMo << std::endl;
 
                 if (iter == 0) {
                         weighted_error.resize(nerror);
@@ -5665,7 +5835,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                         robust.MEstimator(vpRobust::TUKEY, error, w);
                 }
 
-                std::cout << " v0 " << v << " cmo " << cMo << std::endl;
+                //std::cout << " v0 " << v << " cmo " << cMo << std::endl;
 
 
                 residu_1 = r;
@@ -5697,7 +5867,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                         }
                 }
 
-                std::cout << " v1 " << v << " cmo " << cMo << std::endl;
+                //std::cout << " v1 " << v << " cmo " << cMo << std::endl;
 
 
                 //        std::cout << "t1 = " << vpTime::measureTimeMs() - t0 << std::endl;
@@ -5737,16 +5907,95 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
 
                 double weight_P = 0.0000000004;
 
-                if (iter<5)
-                v = -2*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL ).pseudoInverse((LTL.getRows()) * DBL_EPSILON) * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR );
-                else//
-                v = -4*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).pseudoInverse() * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR + weight_P*LTG);
+                std::cout << " hessian " <<  weight_P*Hsd << std::endl;
+                std::cout << " ltcil " << weight_ccd* wghtCCD*LTCIL << std::endl;
+
+                std::cout << " ltl " << weight_me* wghtME*LTL << std::endl;
+
+                std::cout << " sum hessian " << weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + weight_P*Hsd << std::endl;
+
+                std::cout << " pseudo inverse 1 " << (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).pseudoInverse()  << std::endl;
+
+                std::cout << " pseudo inverse 2 " << (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).pseudoInverse((LTL.getRows()) * DBL_EPSILON)  << std::endl;
+
+                std::cout << " pseudo inverse 3 " << (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).pseudoInverse((LTL.getRows()) * DBL_EPSILON)  << std::endl;
+                std::cout << " pseudo inverse 4 " << (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).inverseByLU()  << std::endl;
+
+
+                if (itert < 80)
+                {v = -3*lambda * ((1 * diagHsd) + Hsd).inverseByLU() * (LTG);
+                 //v = -4*lambda * (wghtME*LTL +  weight_P*Hsd).pseudoInverse() * (wghtME*LTR + weight_P*LTG);
+                 v = -4*lambda * (weight_me* wghtME*LTL + 0.25*weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).pseudoInverse() * (weight_me* wghtME*LTR - 0.25*weight_ccd * wghtCCD * LTCIR + weight_P*LTG);
+
+                }
+               else
+                {
+
+                    for(int i = 0 ; i < 6 ; i++) diagHsd[i][i] = (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + 0.5*weight_P*Hsd)[i][i];
+
+                    this->me.range = 60;
+
+                    //v = -1*lambda * ((0.01 * diagHsd) + weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + 0.5*weight_P*Hsd).inverseByLU() * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR + 0.5*weight_P*LTG);
+                    v = -1*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).pseudoInverse((LTL.getRows()) * DBL_EPSILON) * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR);
+
+                    //if (iter<10)
+                    {
+                    v = -1*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).pseudoInverse((LTL.getRows()) * DBL_EPSILON) * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR);
+                    }
+                    //else v = -2*lambda * (weight_P*Hsd ).pseudoInverse() * (weight_P*LTG );
+
+                }
+
+                /*if (itert < 10)
+                {
+
+                    for(int i = 0 ; i < 6 ; i++) diagHsd[i][i] = (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + weight_P*Hsd)[i][i];
+
+                    //v = -3*lambda * ((0.1 * diagHsd) + weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).inverseByLU() * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR + weight_P*LTG);
+                    v = -4*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).pseudoInverse() * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR + weight_P*LTG);
+
+                    //v = -1*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL ).pseudoInverse((LTL.getRows()) * DBL_EPSILON) * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR);
+
+                    //v = -3*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).pseudoInverse((LTL.getRows()) * DBL_EPSILON) * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR);
+
+
+                    //v = -0.21*lambda * (weight_P*Hsd).pseudoInverse() * (weight_P*LTG);
+
+                    //v += -1*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).pseudoInverse((LTL.getRows()) * DBL_EPSILON) * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR);
+                }*/
+
+
+                   // v = -1*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).pseudoInverse((LTL.getRows()) * DBL_EPSILON) * (weight_me* wghtME*LTR - 4*weight_ccd * wghtCCD * LTCIR);
+
+               // if (itert < 60)
+               // {wghtME = 0;
+                //   wghtCCD = 0;
+               //    v = -4*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).pseudoInverse() * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR + weight_P*LTG);
+               // }
+               // else if (itert < 80)
+               // {
+               // if (iter<5)
+               // v = -1*lambda * (weight_me* wghtME*LTL /*+ weight_ccd* wghtCCD * LTCIL*/ + 0.1*weight_P*Hsd ).pseudoInverse((LTL.getRows()) * DBL_EPSILON) * (weight_me* wghtME*LTR /*- weight_ccd * wghtCCD * LTCIR */ + 0.1*weight_P*LTG );
+               // else
+               // v = -2*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + 0.1*weight_P*Hsd).pseudoInverse() * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR + 0.1*weight_P*LTG);
+               // }
+               // else
+                //{
+                    //if (iter<5){
+                     //v = -1*lambda * (weight_me* wghtME*LTL /*+ weight_ccd* wghtCCD * LTCIL*/ + 0.1*weight_P*Hsd ).pseudoInverse((LTL.getRows()) * DBL_EPSILON) * (weight_me* wghtME*LTR /*- weight_ccd * wghtCCD * LTCIR */ + 0.1*weight_P*LTG );
+                    //v = -1*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL ).pseudoInverse((LTL.getRows()) * DBL_EPSILON) * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR);
+                    //}
+                    //else
+                    //v = -2*lambda * (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + 1*weight_P*Hsd).pseudoInverse() * (weight_me* wghtME*LTR - weight_ccd * wghtCCD * LTCIR + 1*weight_P*LTG);
+               // }
+
+
                 /*v[0] /= 100;
                 v[1] /= 100;
                 v[2] /= 100;*/
                 //v = -lambda * (LTL + weight_ccd * LTCIL).pseudoInverse(LTL.getRows() * DBL_EPSILON) * (LTR - weight_ccd * LTCIR);
                 cMo = vpExponentialMap::direct(v).inverse() * cMo;
-                std::cout << " ltr " <<  weight_me* wghtME*LTR << " ltg " <<0.000001* LTG <<  std::endl;
+                //std::cout << " ltr " <<  weight_me* wghtME*LTR << " ltg " <<0.000001* LTG << " itert " << itert <<  std::endl;
         }
                 iter++;
         }
@@ -8759,10 +9008,10 @@ void apMbTracker::trackDef(const vpImage<unsigned char> &I, const vpImage<
                                         double t4 = vpTime::measureTimeMs();
                                         switch (trackingType) {
                                         case POINTS_SH:
-                                                exportCorrespondencesEdges(*Ipyramid[lvl]);
+                                                exportCorrespondencesEdgesMean(*Ipyramid[lvl]);
                                                 break;
                                         case POINTS_MH:
-                                                exportCorrespondencesEdges(*Ipyramid[lvl]);
+                                                exportCorrespondencesEdgesMean(*Ipyramid[lvl]);
                                                 break;
                                         /*case CCD_SH:
                                                 exportCorrespondencesEdgesCCD(*Ipyramid[lvl], *IRGBpyramid[lvl]);
@@ -10149,6 +10398,110 @@ int length = 0;
             correspondences.push_back(correspondence);
 
             save3dpoint(messagePoint3d,p3d);
+            messageStr += messagePoint3d;
+            length += messagePoint3d.length();
+            }
+
+        }
+
+        messageStr += ";";
+
+        for (int k = 0; k < points[scaleLevel].size(); k++)
+        {
+            vpPointSite site = points[scaleLevel][k]->s;
+
+            point2d p2d;
+            p2d.i = site.i;
+            p2d.j = site.j;
+
+            if (site.suppress==0){
+            save2dpoint(messagePoint2d,p2d);
+            messageStr += messagePoint2d;
+            length += messagePoint2d.length();
+            }
+
+        }
+        zmq::message_t message(length);
+
+        memcpy(message.data(), messageStr.c_str(), length);
+        //std::cout << " message correspondences " << messageStr << std::endl;
+
+        bool status = m_socketPub->send(message);
+        std::cout << "Problem with communication" <<  messageStr.length() << std::endl;
+
+}
+
+/*!
+ Export 3D-2d correspondences in the image.
+
+ \param I : the image.
+ */
+void apMbTracker::exportCorrespondencesEdgesMean(const vpImage<unsigned char> &I) {
+
+std::vector <std::pair <point3d,point2d>> correspondences;
+
+string messageStr;
+string messagePoint3d;
+string messagePoint2d;
+
+int length = 0;
+
+
+//#pragma omp parallel for
+        for (int k = 0; k < controlpoints.size(); k++)
+        {
+            std::pair <point3d,point2d> correspondence;
+
+            int kk = 0;
+            double meancorri = 0;
+            double meancorrj = 0;
+
+            for (int j = 0; j< points[scaleLevel].size(); j++)
+            {
+            point3d p3d;
+            vpPointSite site = points[scaleLevel][k]->s;
+
+
+            vpColVector vertexop(4);
+
+            vertexop[0] = points[scaleLevel][k]->cpointo.get_oX();
+            vertexop[1] = points[scaleLevel][k]->cpointo.get_oY();
+            vertexop[2] = points[scaleLevel][k]->cpointo.get_oZ();
+            vertexop[3] = 1;
+
+            double i0, j0;
+
+
+            vpMeterPixelConversion::convertPoint(cam, vertexop[0], vertexop[1], j0,i0);
+
+            if (sqrt((i0 - site.i_1)*(i0 - site.i_1) + (j0 - site.j_1)*(j0 - site.j_1)) < 20 && site.suppress==0)
+            {
+
+            meancorri += site.i;
+            meancorrj += site.j;
+
+            kk++;
+
+            }
+
+            //vertex = opMo*vertexop;
+            }
+
+            meancorri /= (double)kk;
+            meancorrj /= (double)kk;
+
+            point2d p2d;
+            p2d.i = (int)meancorri;
+            p2d.j = (int)meancorrj;
+
+            correspondence.first = controlpoints[k];
+            correspondence.second = p2d;
+
+
+            {
+            correspondences.push_back(correspondence);
+
+            save3dpoint(messagePoint3d,controlpoints[k]);
             messageStr += messagePoint3d;
             length += messagePoint3d.length();
             }

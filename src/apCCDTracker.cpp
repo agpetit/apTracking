@@ -2502,15 +2502,15 @@ tmp_jacobian.at<double>(3,n) = 0;*/
         for(int jj = 0; jj <6; jj++)
         	LTCIR[jj] = nabla_E.at<double>(jj,0);
 
-//    double t0= vpTime::measureTimeMs();
-//    cv::Mat Sigma_Phi_inv = Sigma_Phi.inv(cv::DECOMP_CHOLESKY);
-//    double t1= vpTime::measureTimeMs();
-    //std::cout << " time chol " << t1 - t0 << std::endl;
-    //hessian_E += Sigma_Phi_inv;
-    //nabla_E += 2*Sigma_Phi_inv*Phi;
+    double t0= vpTime::measureTimeMs();
+    cv::Mat Sigma_Phi_inv = Sigma_Phi.inv(cv::DECOMP_CHOLESKY);
+    double t1= vpTime::measureTimeMs();
+    std::cout << " time chol " << t1 - t0 << std::endl;
+    hessian_E += Sigma_Phi_inv;
+    nabla_E += 2*Sigma_Phi_inv*Phi;
     //cv::Mat hessian_E_inv = hessian_E.inv(cv::DECOMP_CHOLESKY);
 
-    //cv::Mat hessian_E_inv = hessian_E.inv(cv::DECOMP_SVD);
+    cv::Mat hessian_E_inv = hessian_E.inv(cv::DECOMP_SVD);
 
 
     /*for(int ii = 0; ii<6; ii++)
