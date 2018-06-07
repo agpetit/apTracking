@@ -457,7 +457,7 @@ int main(int argc, char **argv)
                 zmin = 1000;
                 zmax = 0;
 
-                tracker.loadImagePoseMesh(image, cMo, vertices, normals, triangles);
+                tracker.loadImagePoseMeshControlPoints(image, cMo, vertices, normals, triangles);
 
                 vpColVector CoM(4);
                 vpColVector CoMCam(4);
@@ -520,18 +520,18 @@ int main(int argc, char **argv)
                 vpImageConvert::convert(image,Id);
                 vpImageConvert::convert(image,Icol);
 
-                if (im > 3)
-                {
-                    for (int k = 0; k < vertices.size(); k++)
-                    {
-                        vertices[k].x /= 2.0;
-                        vertices[k].y /= 2.0;
-                        vertices[k].z /= 2.0;
-                    }
-                     // d_positions.setValue(vect);
-                      std::cout << " change positions "  << std::endl;
+                // if (im > 3)
+                // {
+                //     for (int k = 0; k < vertices.size(); k++)
+                //     {
+                //         vertices[k].x /= 2.0;
+                //         vertices[k].y /= 2.0;
+                //         vertices[k].z /= 2.0;
+                //     }
+                //      // d_positions.setValue(vect);
+                //       std::cout << " change positions "  << std::endl;
 
-                }
+                // }
 
 
                 //if (im == 0)
@@ -539,8 +539,8 @@ int main(int argc, char **argv)
                // else mgr->update(vertices, normals, triangles);
                 t0= vpTime::measureTimeMs();
 
-                zmin -= 5;
-                zmax += 5;
+                zmin -= 0.05;
+                zmax += 0.05;
 
                 std::cout << " zmin " << zmin << " " << zmax << " cmocamz " << CoMCam[2] << std::endl;
 

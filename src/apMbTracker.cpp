@@ -1054,17 +1054,30 @@ void apMbTracker::loadImagePoseMeshControlPoints( cv::Mat &mat, vpHomogeneousMat
 
              while (stream.peek()!=';')
              {
+
+                 vpColVector vertex(4);
+                 vpColVector vertexcam(4);
+                 vertex[3] = 1;
+
+                 stream >> vertex[0];
+                 stream >> vertex[1];
+                 stream >> vertex[2];
+
+                 vertexcam = cMo * vertex;
+
+
                  point3d controlpoint;
 
-                 stream >> controlpoint.x;
-                 stream >> controlpoint.y;
-                 stream >> controlpoint.z;
+                 controlpoint.x = vertexcam[0];
+                 controlpoint.y = vertexcam[1];
+                 controlpoint.z = vertexcam[2];
 
-                 //std::cout << " normals " <<  normal.x << " " <<  normal.y << " " <<  normal.z << std::endl;
+                 std::cout << " CP " <<  controlpoint.x << " " <<  controlpoint.y << " " <<  controlpoint.z << std::endl;
 
                  controlpoints.push_back(controlpoint);
 
              }
+	     std::cout << "NUMBER OF CONTROLPOINTS: " << controlpoints.size() << std::endl;
          }
 
 
@@ -10459,20 +10472,21 @@ int length = 0;
             for (int j = 0; j< points[scaleLevel].size(); j++)
             {
             point3d p3d;
-            vpPointSite site = points[scaleLevel][k]->s;
+            vpPointSite site = points[scaleLevel][j]->s;
 
 
             vpColVector vertexop(4);
 
-            vertexop[0] = points[scaleLevel][k]->cpointo.get_oX();
-            vertexop[1] = points[scaleLevel][k]->cpointo.get_oY();
-            vertexop[2] = points[scaleLevel][k]->cpointo.get_oZ();
+            vertexop[0] = points[scaleLevel][j]->cpointo.get_oX();
+            vertexop[1] = points[scaleLevel][j]->cpointo.get_oY();
+            vertexop[2] = points[scaleLevel][j]->cpointo.get_oZ();
             vertexop[3] = 1;
 
             double i0, j0;
 
+            vpMeterPixelConversion::convertPoint(cam, controlpoints[k].x/controlpoints[k].z, controlpoints[k].y/controlpoints[k].z, j0,i0);
 
-            vpMeterPixelConversion::convertPoint(cam, vertexop[0], vertexop[1], j0,i0);
+	    std::cout << site.i << " " << site.j << " i0 " << i0 << " j0 " << j0 << " " << controlpoints[k].x << " " << cam.get_u0() << std::endl;
 
             if (sqrt((i0 - site.i_1)*(i0 - site.i_1) + (j0 - site.j_1)*(j0 - site.j_1)) < 20 && site.suppress==0)
             {
@@ -10487,6 +10501,7 @@ int length = 0;
             //vertex = opMo*vertexop;
             }
 
+	    std::cout << " mean corr " << meancorri << std::endl;
             meancorri /= (double)kk;
             meancorrj /= (double)kk;
 
@@ -10510,19 +10525,13 @@ int length = 0;
 
         messageStr += ";";
 
-        for (int k = 0; k < points[scaleLevel].size(); k++)
+        for (int k = 0; k < correspondences.size(); k++)
         {
-            vpPointSite site = points[scaleLevel][k]->s;
+            point2d p2d = correspondences[k].second;
 
-            point2d p2d;
-            p2d.i = site.i;
-            p2d.j = site.j;
-
-            if (site.suppress==0){
             save2dpoint(messagePoint2d,p2d);
             messageStr += messagePoint2d;
             length += messagePoint2d.length();
-            }
 
         }
         zmq::message_t message(length);
