@@ -10469,6 +10469,10 @@ int length = 0;
             double meancorri = 0;
             double meancorrj = 0;
 
+            double i0, j0;
+
+            vpMeterPixelConversion::convertPoint(cam, controlpoints[k].x/controlpoints[k].z, controlpoints[k].y/controlpoints[k].z, j0,i0);
+
             for (int j = 0; j< points[scaleLevel].size(); j++)
             {
             point3d p3d;
@@ -10482,13 +10486,10 @@ int length = 0;
             vertexop[2] = points[scaleLevel][j]->cpointo.get_oZ();
             vertexop[3] = 1;
 
-            double i0, j0;
-
-            vpMeterPixelConversion::convertPoint(cam, controlpoints[k].x/controlpoints[k].z, controlpoints[k].y/controlpoints[k].z, j0,i0);
-
 	    std::cout << site.i << " " << site.j << " i0 " << i0 << " j0 " << j0 << " " << controlpoints[k].x << " " << cam.get_u0() << std::endl;
 
-            if (sqrt((i0 - site.i_1)*(i0 - site.i_1) + (j0 - site.j_1)*(j0 - site.j_1)) < 20 && site.suppress==0)
+            //if (sqrt((i0 - site.i_1)*(i0 - site.i_1) + (j0 - site.j_1)*(j0 - site.j_1)) < 20 && site.suppress==0)
+            if (sqrt((controlpoints[k].x - vertexop[0])*(controlpoints[k].x - vertexop[0]) + (controlpoints[k].y - vertexop[1])*(controlpoints[k].y - vertexop[1]) + (controlpoints[k].z - vertexop[2])*(controlpoints[k].z - vertexop[2])) < 0.05 && site.suppress==0)
             {
 
             meancorri += site.i;
@@ -10500,14 +10501,22 @@ int length = 0;
 
             //vertex = opMo*vertexop;
             }
+            point2d p2d;
+
 
 	    std::cout << " mean corr " << meancorri << std::endl;
+            if (kk>0){
             meancorri /= (double)kk;
             meancorrj /= (double)kk;
 
-            point2d p2d;
             p2d.i = (int)meancorri;
             p2d.j = (int)meancorrj;
+            }
+            else
+            {
+                p2d.i = (int)i0;
+                p2d.j = (int)j0;
+            }
 
             correspondence.first = controlpoints[k];
             correspondence.second = p2d;
