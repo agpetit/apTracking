@@ -442,6 +442,9 @@ int main(int argc, char **argv)
     double zmax;
     double zmid;
 
+    vpImage<vpRGBa> Itex0;
+    vpImage<unsigned char> Itex0l;
+
     // Main tracking loop
     try
     {
@@ -550,7 +553,8 @@ int main(int argc, char **argv)
 
                 std::cout << " cMo proj " << cMo << std::endl;
 
-                mgr->updateRTT(Inormd,Ior,&cMo, zmin, zmax);
+                mgr->updateRTTCol(Itex0, Inormd,Ior,&cMo, zmin, zmax);
+                vpImageConvert::convert(Itex0,Itex0l);
 
                 t1= vpTime::measureTimeMs();
                 timerender = t1-t0;
@@ -586,7 +590,7 @@ int main(int argc, char **argv)
             try{
                 t0= vpTime::measureTimeMs();
 
-                tracker.trackDef(Id,Icol,Inormd,Ior,Ior,zmin,zmax);
+                tracker.trackDef(Id,Icol,Inormd,Ior,Itex0l,zmin,zmax);
                 t1= vpTime::measureTimeMs();
                 {
                 meantime += (t1-t0);

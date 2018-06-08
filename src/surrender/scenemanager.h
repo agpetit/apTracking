@@ -76,6 +76,8 @@ namespace luxifer
         void updateRTT(vpImage<vpRGBa> &I1, vpImage<unsigned char> &I0, vpHomogeneousMatrix *CMo);
         void updateRTT(vpImage<vpRGBa> &I1, vpImage<unsigned char> &I0, vpHomogeneousMatrix *CMo, const double znear, const double zfar);
         void updateRTTCol(vpImage<vpRGBa> &I2, vpImage<vpRGBa> &I1, vpImage<unsigned char> &I0, vpHomogeneousMatrix *CMo);
+        void updateRTTCol(vpImage<vpRGBa> &I2, vpImage<vpRGBa> &I1, vpImage<unsigned char> &I0, vpHomogeneousMatrix *CMo, const double znear, const double zfar);
+
         void updateRTTColAR(vpImage<vpRGBa> &I2,vpHomogeneousMatrix *CMo);
 
 

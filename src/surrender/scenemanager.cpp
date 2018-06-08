@@ -700,6 +700,24 @@ namespace luxifer
         for(int y = 0 ; y < I2.getHeight() / 2 ; ++y)
             std::swap_ranges(I2[y], I2[y] + I2.getWidth(), I2[I2.getHeight() - 1 - y]);
     }
+    void SceneManager::updateRTTCol(vpImage<vpRGBa> &I2, vpImage<vpRGBa> &I1, vpImage<unsigned char> &I0, vpHomogeneousMatrix *CMo, const double znear, const double zfar)
+    {
+        updateCameraParameters(*CMo, znear, zfar);
+
+        render();
+
+        copyTextureToMemory(normal_buffer, I1.bitmap, GL_RGBA, GL_UNSIGNED_BYTE);
+        copyTextureToMemory(edge_buffer, I0.bitmap, GL_RED, GL_UNSIGNED_BYTE);
+        copyTextureToMemory(color_buffer, I2.bitmap, GL_RGBA, GL_UNSIGNED_BYTE);
+
+        // OpenGL textures are upside down so we have to flip them
+        for(int y = 0 ; y < I0.getHeight() / 2 ; ++y)
+            std::swap_ranges(I0[y], I0[y] + I0.getWidth(), I0[I0.getHeight() - 1 - y]);
+        for(int y = 0 ; y < I1.getHeight() / 2 ; ++y)
+            std::swap_ranges(I1[y], I1[y] + I1.getWidth(), I1[I1.getHeight() - 1 - y]);
+        for(int y = 0 ; y < I2.getHeight() / 2 ; ++y)
+            std::swap_ranges(I2[y], I2[y] + I2.getWidth(), I2[I2.getHeight() - 1 - y]);
+    }
 
     void SceneManager::updateRTTColAR(vpImage<vpRGBa> &I2, vpHomogeneousMatrix *CMo)
     {

@@ -380,6 +380,7 @@ private:
   void buildCorrespondencesEdges2D(std::vector<point2d> &trackededges, std::vector<int> &suppress);
   void exportCorrespondencesEdges2D(std::vector<std::vector<point2d>> &trackededgesIm, std::vector<std::vector<int>> &suppressIm);
   void exportCorrespondencesEdgesMean(const vpImage<unsigned char> &I);
+  void exportCorrespondencesKLT(const vpImage<unsigned char> &I);
   //void reInitModel(const vpImage<unsigned char>& I, const char* cad_name, const vpHomogeneousMatrix& _cMo);
   //void reInitConfigModel(const vpImage<unsigned char>& I, const char* cad_name, const char* config_name, const vpHomogeneousMatrix& _cMo);
 
@@ -433,7 +434,10 @@ private:
   std::vector<apControlPoint *>* getPpoint(const unsigned int _level);
   void setScales(const std::vector<bool>& _scales);
   void computeError(vpColVector &error);
+  void computeError(vpColVector &error, vpHomogeneousMatrix &_cMo);
   void setGroundTruth(std::string input, std::string output, const int firstframe);
+  void setTruePose(vpMatrix &truepose){truePose = truepose;}
+
   
   /*!
     Return the scales levels used for the tracking. 
@@ -472,6 +476,7 @@ private:
   void trackControlPointsMH(const vpImage<unsigned char> &I);
   void trackControlPointsLinesMH(const vpImage<unsigned char> &I);
   void trackKltControlPoints(const vpImage<unsigned char> &I);
+  void trackKltControlPointsFromSynth(const vpImage<unsigned char> &I, const vpImage<unsigned char> &Itex);
   void updateControlPoints();
   void extractControlPoints(const vpImage<unsigned char> &I, const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char> &Ior,const vpImage<unsigned char> &Itex, const double dist);
   void extractControlPoints(const vpImage<unsigned char> &I, const vpImage<vpRGBa>& Inormd, const vpImage<unsigned char> &Ior,const vpImage<unsigned char> &Itex, const double distmin, const double distmax);

@@ -238,7 +238,7 @@ int main(int argc, char **argv)
     s_path = "/home/soft/apTracking/mbt-co/build2/";
     gdtpath = "/home/soft/apTracking/mbt-co/build2/ADRH_orbitingTrajectory.txt";
     trueposepath = "/home/soft/apTracking/mbt-co/build2/truepose_x7_.txt";
-    posepath = "/home/soft/apTracking/mbt-co/build2/pose";//atlantis.txt";
+    posepath = "poseerror";//atlantis.txt";
     covariancepath = "/home/soft/apTracking/mbt-co/build2/covariance";
     timepath = "time";
 
@@ -275,7 +275,9 @@ int main(int argc, char **argv)
       modelFile = object + vpIoTools::path("/")+ object + vpIoTools::path(".obj");
       initFile = object + vpIoTools::path("/") + object;
 
-      std::string filep = vpIoTools::path("mh_ccd_klt_prev_x1_f1_h2.txt");
+      //std::string filep = vpIoTools::path("mh_ccd_klt_prev_x1_f1_h2.txt");
+
+      std::string filep = vpIoTools::path("_1.txt");
 
 
       posepath = posepath + object + filep;
@@ -533,7 +535,7 @@ int main(int argc, char **argv)
 
               apHOGDetector HOGDetector;
 
-              std::string pos_dir, pos, neg_dir, neg, path_pose;
+               std::string pos_dir, pos, neg_dir, neg, path_pose, path_pose_gt;
 
                pos_dir = "/home/antoine/soft/Liver/";
                pos = "Train/pos.lst";
@@ -541,6 +543,75 @@ int main(int argc, char **argv)
                neg = "Train/neg.lst";
 
                path_pose = "/home/antoine/soft/Liver/Train/posLiver4/poses.txt";
+               path_pose_gt = "/home/antoine/soft/Liver/Test/images/poses.txt";
+
+
+               std::ifstream file;
+
+               std::string line;
+
+               file.open(path_pose_gt.c_str(), std::ifstream::in);
+               double dvalue0,dvalue1,dvalue2,dvalue3,dvalue4,dvalue5,dvalue6,dvalue7,dvalue8,dvalue9,dvalue10,dvalue11;
+
+               vpMatrix truePose(700,6);
+
+               for (int i = 0; i < 700; i++)
+               {
+
+
+                   std::string filename4;
+                   getline(file, line);
+
+                   //std::cout << line << std::endl;
+
+                   file >> filename4;
+                   file >> dvalue0;
+                   file >> dvalue1;
+                   file >> dvalue2;
+                   file >> dvalue3;
+                   file >> dvalue4;
+                   file >> dvalue5;
+                   file >> dvalue6;
+                   file >> dvalue7;
+                   file >> dvalue8;
+                   file >> dvalue9;
+                   file >> dvalue10;
+                   file >> dvalue11;
+
+
+                   vpTranslationVector tr;
+                   vpRotationMatrix Rot;
+
+                   tr[0] = dvalue0;
+                   tr[1] = dvalue1;
+                   tr[2] = dvalue2;
+
+                   Rot[0][0] = dvalue3;
+                   Rot[0][1] = dvalue4;
+                   Rot[0][2] = dvalue5;
+                   Rot[1][0] = dvalue6;
+                   Rot[1][1] = dvalue7;
+                   Rot[1][2] = dvalue8;
+                   Rot[2][0] = dvalue9;
+                   Rot[2][1] = dvalue10;
+                   Rot[2][2] = dvalue11;
+
+                   vpHomogeneousMatrix cMo, cMoTrans;
+                   cMo.buildFrom(tr,Rot);
+
+                   vpRxyzVector rottrue;
+                   rottrue.buildFrom(Rot);
+
+                   truePose[i][0] = tr[0];
+                   truePose[i][1] = tr[1];
+                   truePose[i][2] = tr[2];
+
+                   truePose[i][3] = rottrue[0];
+                   truePose[i][4] = rottrue[1];
+                   truePose[i][5] = rottrue[2];
+               }
+
+               tracker.setTruePose(truePose);
 
               // Automatic initialization of the tracker
               if (opt_detect)
@@ -705,7 +776,7 @@ int main(int argc, char **argv)
     tracker.cMoprec = cMo;
     tracker.setIprecRGB(Icol);
     tracker.getPose(cMo);
-    tracker.setGroundTruth(gdtpath, trueposepath, start_image);
+    tracker.setGroundTruth(gdtpath, trueposepath, start_image + 2);
     //tracker.initKltTracker(Id);
     std::cout << " ok " << std::endl;
 
@@ -856,8 +927,8 @@ int main(int argc, char **argv)
             std::cout << " disp " << im-start_image << std::endl;
 
             tracker.itert = im-start_image;
-            /*if(im-start_image>0)
-            tracker.displayRend(Icol,Inormd,Ior,vpColor::green, 1);*/
+            if(im-start_image>0)
+            tracker.displayRend(Icol,Inormd,Ior,vpColor::green, 1);
             vpDisplay::flush(Icol);
             vpDisplay::getImage(Icol,Ioverlaycol);
 
@@ -869,10 +940,10 @@ int main(int argc, char **argv)
 
                     //if (im < 20)
                     {
-                    reader.acquire(Id);
-                    readerN.acquire(IdN);
+                    //reader.acquire(Id);
+                    //readerN.acquire(IdN);
                     //if(tracker.getUseRGB())
-                    readerRGB.acquire(Icol);
+                    //readerRGB.acquire(Icol);
 
                     vpImageConvert::convert(IdN,idn);
                     vpImageConvert::convert(Id,id);
@@ -934,7 +1005,7 @@ int main(int argc, char **argv)
                     tracker.getCovarianceMatrix(covMat);
                     tracker.getCovarianceMatrixME(covMatME);
                 }
-                if (useKalmanFilter && tracker.itert > 80)
+                if (useKalmanFilter && tracker.itert > 10)
                 {
                     tracker.getPose(cMo);
                     tracker.display(Id,cMo,mcam,vpColor::red,1);
@@ -961,13 +1032,17 @@ int main(int argc, char **argv)
                 vpTRACE("Error in tracking") ;
                 throw;
             }
+
+            cMct = cMo*oMct;
             // Display 3D model
             tracker.getPose(cMo);
-            //tracker.computeError(error);
+            tracker.computeError(error,cMct);
             tracker.display(Id,cMo,mcam,vpColor::green,1);
 
             std::cout<<" cMo out" << cMo <<std::endl;
             std::cout<<" cMo filt" << cMoFilt <<std::endl;
+            std::cout<<" error " << error <<std::endl;
+
 
             cMo.extract(tr);
             cMo.extract(R);
@@ -975,12 +1050,18 @@ int main(int argc, char **argv)
             pose.resize(im+1,7,false);
             covariance.resize(im+1,25,false);
             timep.resize(im+1,9,false);
-            pose[im][0] = tr[0];
+            /*pose[im][0] = tr[0];
             pose[im][1] = tr[1];
             pose[im][2] = tr[2];
             pose[im][3] = Rxyz[0];
             pose[im][4] = Rxyz[1];
-            pose[im][5] = Rxyz[2];
+            pose[im][5] = Rxyz[2];*/
+            pose[im][0] = error[0];
+            pose[im][1] = error[1];
+            pose[im][2] = error[2];
+            pose[im][3] = error[3];
+            pose[im][4] = error[4];
+            pose[im][5] = error[5];
             pose[im][6] = im;
             timep[im][0] = timetrack;
             timep[im][1] = timerender;
@@ -1024,7 +1105,7 @@ int main(int argc, char **argv)
             //covariance[im][1] = covMat[2][2] + covMat[3][3] + covMat[4][4];
 
             std::cout << " im " << im << std::endl;
-            //pose.saveMatrix(posepath,pose,false,"");
+            pose.saveMatrix(posepath,pose,false,"");
             //covariance.saveMatrix(covariancepath,covariance,false,"");
             timep.saveMatrix(timepath,timep,false,"");
             /*mgr->updateRTT(Inormd,Ior,&cMo2);

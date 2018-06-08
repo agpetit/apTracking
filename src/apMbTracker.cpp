@@ -5935,7 +5935,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                 std::cout << " pseudo inverse 4 " << (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).inverseByLU()  << std::endl;
 
 
-                if (itert < 80)
+                if (itert < 10)
                 {v = -3*lambda * ((1 * diagHsd) + Hsd).inverseByLU() * (LTG);
                  //v = -4*lambda * (wghtME*LTL +  weight_P*Hsd).pseudoInverse() * (wghtME*LTR + weight_P*LTG);
                  v = -4*lambda * (weight_me* wghtME*LTL + 0.25*weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).pseudoInverse() * (weight_me* wghtME*LTR - 0.25*weight_ccd * wghtCCD * LTCIR + weight_P*LTG);
@@ -8972,6 +8972,8 @@ void apMbTracker::trackDef(const vpImage<unsigned char> &I, const vpImage<
                 initPyramid(IRGB, IRGBpyramid);
         }
 
+        double dist = (distmin + distmax)/2;
+
         for (int lvl = (scales.size() - 1); lvl >= 0; lvl -= 1) {
                 if (scales[lvl]) {
                         vpHomogeneousMatrix cMo_1 = cMo;
@@ -8984,6 +8986,7 @@ void apMbTracker::trackDef(const vpImage<unsigned char> &I, const vpImage<
                                         case POINTS_MH:
                                                 extractControlPoints(*Ipyramid[lvl], Inormd, Ior, Itex,
                                                                 distmin, distmax);
+                                                extractKltControlPointsFAST(*Ipyramid[lvl],Inormd, Ior, Itex, dist);
                                                 break;
                                         }
                                 } catch (...) {
@@ -9003,6 +9006,7 @@ void apMbTracker::trackDef(const vpImage<unsigned char> &I, const vpImage<
                                         case POINTS_MH:
                                         case CCD_MH:
                                                 trackControlPointsMH(*Ipyramid[lvl]);
+                                                trackKltControlPointsFromSynth(*Ipyramid[lvl],Itex);
                                                 break;
                                         case CCD_MH_KLT:
                                                 trackControlPointsMH(*Ipyramid[lvl]);
@@ -9021,10 +9025,12 @@ void apMbTracker::trackDef(const vpImage<unsigned char> &I, const vpImage<
                                         double t4 = vpTime::measureTimeMs();
                                         switch (trackingType) {
                                         case POINTS_SH:
-                                                exportCorrespondencesEdgesMean(*Ipyramid[lvl]);
+                                                //exportCorrespondencesEdgesMean(*Ipyramid[lvl]);
+                                            exportCorrespondencesKLT(*Ipyramid[lvl]);
                                                 break;
                                         case POINTS_MH:
-                                                exportCorrespondencesEdgesMean(*Ipyramid[lvl]);
+                                                //exportCorrespondencesEdgesMean(*Ipyramid[lvl]);
+                                                exportCorrespondencesKLT(*Ipyramid[lvl]);
                                                 break;
                                         /*case CCD_SH:
                                                 exportCorrespondencesEdgesCCD(*Ipyramid[lvl], *IRGBpyramid[lvl]);
@@ -10251,7 +10257,7 @@ void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 	     kltTracker.getFeature((int)i, id, x, y);
 	           kltPoints[scaleLevel][id].icpoint_curr = vpImagePoint(static_cast<double>(y),static_cast<double>(x));
 	}*/
-	 if (kltPoints[scaleLevel].size()>2)
+         /*if (kltPoints[scaleLevel].size()>2)
 	   for (unsigned int i = 0; i < kltPoints[scaleLevel].size(); i++){
              {
 	    	 vpFeaturePoint featurepoint;
@@ -10285,7 +10291,7 @@ void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 	      //std::cout << " error " << (kltPoints[scaleLevel][id0].icpoint0.get_u()-kltPoints[scaleLevel][id0].icpoint_curr.get_u())*(kltPoints[scaleLevel][id0].icpoint0.get_u()-kltPoints[scaleLevel][id0].icpoint_curr.get_u()) + (kltPoints[scaleLevel][id0].icpoint0.get_v()-kltPoints[scaleLevel][id0].icpoint_curr.get_v())*(kltPoints[scaleLevel][id0].icpoint0.get_v()-kltPoints[scaleLevel][id0].icpoint_curr.get_v()) << std::endl;
 	         }
 	     }
-              }
+              }*/
         //   std::cout << "ok 1 " << std::endl;
 	//kltTracker.initTracking(frame_);
 }
@@ -10561,6 +10567,81 @@ vpImagePoint ip;
 
 }
 
+void apMbTracker::exportCorrespondencesKLT(const vpImage<unsigned char> &I) {
+
+std::vector <std::pair <point3d,point2d>> correspondences;
+
+string messageStr;
+string messagePoint3d;
+string messagePoint2d;
+
+int length = 0;
+
+vpImagePoint ip;
+
+
+//#pragma omp parallel for
+        for (int k = 0; k < controlpoints.size(); k++)
+        {
+            std::pair <point3d,point2d> correspondence;
+
+            int kk = 0;
+            double meancorri = 0;
+            double meancorrj = 0;
+
+            double i0, j0;
+
+            vpMeterPixelConversion::convertPoint(cam, controlpoints[k].x/controlpoints[k].z, controlpoints[k].y/controlpoints[k].z, j0,i0);
+
+            float x,y;
+            long id;
+            kltTracker.getFeature((int)k, id, x, y);
+            point2d p2d;
+
+            p2d.i = (int)y;
+            p2d.j = (int)x;
+
+            ip.set_i(p2d.i);
+            ip.set_j(p2d.j);
+
+            vpDisplay::displayCross(I,ip,4,vpColor::blue,4);
+
+
+            correspondence.first = controlpoints[k];
+            correspondence.second = p2d;
+
+
+            {
+            correspondences.push_back(correspondence);
+
+            save3dpoint(messagePoint3d,controlpoints[k]);
+            messageStr += messagePoint3d;
+            length += messagePoint3d.length();
+            }
+
+        }
+
+        messageStr += ";";
+
+        for (int k = 0; k < correspondences.size(); k++)
+        {
+            point2d p2d = correspondences[k].second;
+
+            save2dpoint(messagePoint2d,p2d);
+            messageStr += messagePoint2d;
+            length += messagePoint2d.length();
+
+        }
+        zmq::message_t message(length);
+
+        memcpy(message.data(), messageStr.c_str(), length);
+        //std::cout << " message correspondences " << messageStr << std::endl;
+
+        bool status = m_socketPub->send(message);
+        std::cout << "Problem with communication" <<  messageStr.length() << std::endl;
+
+}
+
 void apMbTracker::buildCorrespondencesEdges2D(std::vector<point2d> &trackededges, std::vector<int> &suppress) {
 
 trackededges.resize(0);
@@ -10729,6 +10810,75 @@ for( ; iter != kltPoints[scaleLevel].end(); iter++){
       }
 //   std::cout << "ok 1 " << std::endl;
    }
+//kltTracker.initTracking(frame_);
+}
+
+void apMbTracker::trackKltControlPointsFromSynth(const vpImage<unsigned char> &I, const vpImage<unsigned char> &Itex) {
+
+
+float x, y;
+long id=0;
+vpImagePoint iP0T;
+/*if (predictKLT)
+        for (int j = 0; j < kltPoints[scaleLevel].size();j++)
+        {
+            vpFeaturePoint featurepoint;
+            if (kltPoints[scaleLevel][j].cpoint.oP[0] !=0)
+            {
+                //vpDisplay::displayCross(I,kltPoints[scaleLevel][i].icpoint_curr,4,vpColor::blue,4);
+                kltPoints[scaleLevel][j].cpointo.changeFrame(cMo);
+                kltPoints[scaleLevel][j].cpointo.projection();
+                //std::cout << " cpointo " << kltPoints[scaleLevel][j].cpointo.oP << std::endl;
+            vpFeatureBuilder::create(featurepoint,kltPoints[scaleLevel][j].cpointo);
+            double x0 = featurepoint.get_x();
+            double y0 = featurepoint.get_y();
+            vpMeterPixelConversion::convertPoint(cam, x0, y0, iP0T);
+
+            for (unsigned int i = 0; i < static_cast<unsigned int>(kltTracker.getNbFeatures()); i++){
+            kltTracker.getFeature((int)i, id, x, y);
+            if (j == id)
+            {
+                //kltTracker.getFeatures()[j].x = iP0T.get_u();
+                //kltTracker.getFeatures()[j].y = iP0T.get_v();
+            }
+            }
+        }
+        }*/
+//getchar();
+
+for (int j = 0; j < kltPoints[scaleLevel].size();j++)
+{
+        kltTracker.suppressFeature(j);
+
+}
+
+
+//#pragma omp parallel for
+        for (int k = 0; k < controlpoints.size(); k++)
+        {
+
+            double i0, j0;
+
+            vpMeterPixelConversion::convertPoint(cam, controlpoints[k].x/controlpoints[k].z, controlpoints[k].y/controlpoints[k].z, j0,i0);
+
+            kltTracker.addFeature(k, j0, i0);
+        }
+
+
+cv::Mat frame_,frame_synth;
+vpImageConvert::convert(I, frame_);
+vpImageConvert::convert(Itex, frame_synth);
+kltTracker.track(frame_synth);
+kltTracker.track(frame_);
+
+id = 0;
+std::map<int, apKltControlPoint>::const_iterator iter = kltPoints[scaleLevel].begin();
+/*for( ; iter != kltPoints[scaleLevel].end(); iter++){
+     int id(iter->first);
+     kltTracker.getFeature((int)i, id, x, y);
+           kltPoints[scaleLevel][id].icpoint_curr = vpImagePoint(static_cast<double>(y),static_cast<double>(x));
+}*/
+
 //kltTracker.initTracking(frame_);
 }
 
@@ -13692,7 +13842,7 @@ void apMbTracker::setGroundTruth(std::string input, std::string output,
 		truePose[time - 1][4] = truepose[4];
 		truePose[time - 1][5] = truepose[5];*/
 		truePose[timek][3] = RxyzV[0];
-		truePose[timek][4] = RxyzV[1];
+                truePose[timek][4] = RxyzV[1];
 		truePose[timek][5] = RxyzV[2];
 		timek++;
 		}
@@ -13705,21 +13855,21 @@ void apMbTracker::computeError(vpColVector &error) {
 	vpRotationMatrix R, RV;
 	vpRxyzVector Rxyz, RxyzV;
 	vpPoseVector truepose;
-	truepose[0] = truePose[frame + firstFrame - 1][0];
-	truepose[1] = truePose[frame + firstFrame - 1][1];
-	truepose[2] = truePose[frame + firstFrame - 1][2];
-	truepose[3] = truePose[frame + firstFrame - 1][3];
-	truepose[4] = truePose[frame + firstFrame - 1][4];
-	truepose[5] = truePose[frame + firstFrame - 1][5];
+        truepose[0] = truePose[/*frame +*/ firstFrame - 1][0];
+        truepose[1] = truePose[/*frame +*/ firstFrame - 1][1];
+        truepose[2] = truePose[/*frame +*/ firstFrame - 1][2];
+        truepose[3] = truePose[/*frame +*/ firstFrame - 1][3];
+        truepose[4] = truePose[/*frame +*/ firstFrame - 1][4];
+        truepose[5] = truePose[/*frame +*/ firstFrame - 1][5];
 	cMoV.buildFrom(truepose);
 	cMo.extract(tr);
 	cMoV.extract(trV);
 	cMo.extract(R);
 	cMoV.extract(RV);
 	Rxyz.buildFrom(R);
-	RxyzV.buildFrom(RV);
+        RxyzV.buildFrom(RV);
 
-	std::cout << " cMoVraie " << cMoV << std::endl;
+        std::cout << " cMoVraie " << cMoV << std::endl;
 
 	/*error[0] = tr[0] - trV[0];
 	error[1] = tr[1] - trV[1];
@@ -13734,4 +13884,42 @@ void apMbTracker::computeError(vpColVector &error) {
 	error[4] = Rxyz[1] - truepose[4];
 	error[5] = Rxyz[2] - truepose[5];
 }
+
+void apMbTracker::computeError(vpColVector &error, vpHomogeneousMatrix &_cMo) {
+        vpTranslationVector tr, trV;
+        vpRotationMatrix R, RV;
+        vpRxyzVector Rxyz, RxyzV;
+        vpPoseVector truepose;
+        truepose[0] = truePose[/*frame +*/ firstFrame - 1][0];
+        truepose[1] = truePose[/*frame +*/ firstFrame - 1][1];
+        truepose[2] = truePose[/*frame +*/ firstFrame - 1][2];
+        truepose[3] = truePose[/*frame +*/ firstFrame - 1][3];
+        truepose[4] = truePose[/*frame +*/ firstFrame - 1][4];
+        truepose[5] = truePose[/*frame +*/ firstFrame - 1][5];
+        cMoV.buildFrom(truepose);
+        _cMo.extract(tr);
+        cMoV.extract(trV);
+        _cMo.extract(R);
+        cMoV.extract(RV);
+        Rxyz.buildFrom(R);
+        RxyzV.buildFrom(RV);
+
+        std::cout << " cMoVraie " << cMoV << std::endl;
+
+        /*error[0] = tr[0] - trV[0];
+        error[1] = tr[1] - trV[1];
+        error[2] = tr[2] - trV[2];
+        error[3] = Rxyz[0] - RxyzV[0];
+        error[4] = Rxyz[1] - RxyzV[1];
+        error[5] = Rxyz[2] - RxyzV[2];*/
+        error[0] = tr[0] - truepose[0];
+        error[1] = tr[1] - truepose[1];
+        error[2] = tr[2] - truepose[2];
+        error[3] = Rxyz[0] - truepose[3];
+        error[4] = Rxyz[1] - truepose[4];
+        error[5] = Rxyz[2] - truepose[5];
+}
+
+
+
 
