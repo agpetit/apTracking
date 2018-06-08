@@ -756,7 +756,7 @@ void apHOGDetector::detect(vpImage<unsigned char> &_I, std::string &_path, vpHom
 
         std::cout << "cmo inverse " << (cMo.inverse())[1][3] << std::endl;
 
-        if ((cMo.inverse())[1][3] > 600)
+        if ((cMo.inverse())[1][3] > 200)
         {
 
         test_itL( imgS, Size( widthT, heightT ),i, locations, weights);

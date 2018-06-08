@@ -10228,7 +10228,7 @@ void apMbTracker::display(const vpImage<vpRGBa>& I,
 void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 		vpRGBa>& Inormd, const vpImage<unsigned char> &Ior, const vpColor& col,
 		const unsigned int thickness) {
-	vpImagePoint p0;
+        vpImagePoint p0;
 
 	/*for (unsigned int i = 0; i < scales.size(); i += 1) {
 	 if (scales[i]) {*/
@@ -10239,7 +10239,7 @@ void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 				p0.set_j(l);
 				vpDisplay::displayCross(I, p0, 2, col, thickness);
 			}
-		}
+                }
 	/*break; //displaying model on one clase only
 	 }
 	 }*/
@@ -10253,7 +10253,7 @@ void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 	}*/
 	 if (kltPoints[scaleLevel].size()>2)
 	   for (unsigned int i = 0; i < kltPoints[scaleLevel].size(); i++){
-	     {
+             {
 	    	 vpFeaturePoint featurepoint;
 
 	         if(kltPoints[scaleLevel][i].cpoint.oP[0] !=0)
@@ -10285,8 +10285,8 @@ void apMbTracker::displayRend(const vpImage<vpRGBa>& I, const vpImage<
 	      //std::cout << " error " << (kltPoints[scaleLevel][id0].icpoint0.get_u()-kltPoints[scaleLevel][id0].icpoint_curr.get_u())*(kltPoints[scaleLevel][id0].icpoint0.get_u()-kltPoints[scaleLevel][id0].icpoint_curr.get_u()) + (kltPoints[scaleLevel][id0].icpoint0.get_v()-kltPoints[scaleLevel][id0].icpoint_curr.get_v())*(kltPoints[scaleLevel][id0].icpoint0.get_v()-kltPoints[scaleLevel][id0].icpoint_curr.get_v()) << std::endl;
 	         }
 	     }
-	      }
-	//   std::cout << "ok 1 " << std::endl;
+              }
+        //   std::cout << "ok 1 " << std::endl;
 	//kltTracker.initTracking(frame_);
 }
 
@@ -10459,6 +10459,8 @@ string messagePoint2d;
 
 int length = 0;
 
+vpImagePoint ip;
+
 
 //#pragma omp parallel for
         for (int k = 0; k < controlpoints.size(); k++)
@@ -10517,6 +10519,12 @@ int length = 0;
                 p2d.i = (int)i0;
                 p2d.j = (int)j0;
             }
+
+            ip.set_i(p2d.i);
+            ip.set_j(p2d.j);
+
+            vpDisplay::displayCross(I,ip,4,vpColor::blue,4);
+
 
             correspondence.first = controlpoints[k];
             correspondence.second = p2d;

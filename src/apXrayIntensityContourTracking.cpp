@@ -285,8 +285,8 @@ int main(int argc, char **argv)
 
       //configFile2 = object + vpIoTools::path("/") + object + vpIoTools::path("2.lua");
 
-    opath = vpIoTools::path("out6") + vpIoTools::path("/image%06d.png");
-    opath1 = vpIoTools::path("out6") + vpIoTools::path("/imageKalman%06d.png");
+    opath = vpIoTools::path("out60") + vpIoTools::path("/image%06d.png");
+    opath1 = vpIoTools::path("out60") + vpIoTools::path("/imageKalman%06d.png");
 
 
     // Path the views of hierarchical graph are saved
@@ -851,14 +851,16 @@ int main(int argc, char **argv)
             cMct = cMo*oMct;
             std::cout << "cMct " << cMct << std::endl;
 
+
             vpDisplay::display(Icol);
             std::cout << " disp " << im-start_image << std::endl;
 
             tracker.itert = im-start_image;
-            if(im-start_image>0)
-            tracker.displayRend(Icol,Inormd,Ior,vpColor::green, 1);
+            /*if(im-start_image>0)
+            tracker.displayRend(Icol,Inormd,Ior,vpColor::green, 1);*/
             vpDisplay::flush(Icol);
             vpDisplay::getImage(Icol,Ioverlaycol);
+
 
             // Acquire images
             try{
@@ -876,13 +878,16 @@ int main(int argc, char **argv)
                     vpImageConvert::convert(Id,id);
                     vpImageConvert::convert(Icol,icol);
 
+
                     cv::flip(idn,idnflip,0);
                     cv::flip(id,idflip,0);
                     cv::flip(icol,icolflip,0);
 
+
                     vpImageConvert::convert(idnflip,IdNFlip);
                     vpImageConvert::convert(idflip,IdFlip);
                     vpImageConvert::convert(icolflip,IcolFlip);
+
 
                     }
                         Icol1 = Icol;
@@ -902,6 +907,9 @@ int main(int argc, char **argv)
                 break;
             }
             //vpImageIo::read(Id,"imagePig3.png");
+
+            std::cout << "cMct " << cMct << std::endl;
+
             vpDisplay::display(IdN);
 
             //tracker.setPose(cMo);
