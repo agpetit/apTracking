@@ -310,10 +310,6 @@ private:
 
     double sigmag;
     double sigmap;
-
-            int itert;
-
-
   
   apMbTracker();
   virtual ~apMbTracker();

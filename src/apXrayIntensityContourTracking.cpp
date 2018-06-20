@@ -304,8 +304,8 @@ int main(int argc, char **argv)
     std::string plot0 = object + vpIoTools::path("ccdColx3plotfile0.dat");
     std::string plot1 = object + vpIoTools::path("ccdColx3plotfile1.dat");
 
-	char *plotfile0 = (char *)plot0.c_str();
-	char *plotfile1 = (char *)plot1.c_str();
+    char *plotfile0 = (char *)plot0.c_str();
+    char *plotfile1 = (char *)plot1.c_str();
 
     apMbTracker tracker;
     // Set tracking and rendering parameters
@@ -321,7 +321,7 @@ int main(int argc, char **argv)
     tracker.getSegmentationParameters(seg);
     tracker.getLearningParameters(learn);
 
-    // OpenCVGrabber to grab images from USB Camera
+    //OpenCVGrabber to grab images from USB Camera
     //vpOpenCVGrabber grabber;
 
     SceneViewer viewer;
@@ -336,16 +336,16 @@ int main(int argc, char **argv)
     vpImage<vpRGBa> Ioverlay;
     vpImage<vpRGBa> Ioverlaycol;
 
-        std::cout << " reader " << ipath.c_str() << std::endl;
+    std::cout << " reader " << ipath.c_str() << std::endl;
 
-    //VideoReader to read images from disk
+    //VideoReader to read images from disk -- Subracted image
     vpVideoReader reader;
     reader.setFileName(ipath.c_str());
     reader.setFirstFrameIndex(start_image);
     reader.open(Id);
     reader.acquire(Id);
 
-    //VideoReader to read images from disk
+    //VideoReader to read images from disk -- Native image
     vpVideoReader readerN;
     readerN.setFileName(ipathN.c_str());
     readerN.setFirstFrameIndex(start_image);
@@ -362,8 +362,6 @@ int main(int argc, char **argv)
         readerRGB.open(Icol);
         readerRGB.acquire(Icol);
     }
-
-
 
     cv::Mat id, idflip;
     cv::Mat icol, icolflip;
@@ -422,175 +420,45 @@ int main(int argc, char **argv)
         }
     }
 
-    vpHomogeneousMatrix cMo, cMct, cMo2, cMoFilt;
+    vpHomogeneousMatrix cMo, cMct, cMoFilt;
 
-       // pose real image liver1.png -222.375 154.59 379.542 [0.989822 -3.09578e-17 0.142311,0.136547 0.281733 -0.949727,-0.0400937 0.959493 0.278865
+    // pose cMct liverarterial2
 
-       cMct[0][3] =-209.9189609;
-       cMct[1][3] = 201.4935037;
-       cMct[2][3] = 390.7839107;
-       cMct[0][0] = 0.9958088264;
-       cMct[0][1] = 0.08254072254;
-       cMct[0][2] = 0.03939508347;
-       cMct[1][0] = 0.01511400765;
-       cMct[1][1] = 0.2763081441;
-       cMct[1][2] = -0.9609501357;
-       cMct[2][0] = -0.09020270353;
-       cMct[2][1] = 0.9575182186;
-       cMct[2][2] = 0.2739020766;
+    cMct[0][0] =0.9707461703;
+    cMct[0][1] =-0.2400005999;
+    cMct[0][2] = 0.007207701924;
+    cMct[0][3] =-118.935300;
+    cMct[1][0] = 0.03417684341;
+    cMct[1][1] =0.1678255873;
+    cMct[1][2] = 0.985224089 ;
+    cMct[1][3] = -303.1761337;
+    cMct[2][0] = -0.2376635332;
+    cMct[2][1] = -0.9561555736;
+    cMct[2][2] = 0.1711187519;
+    cMct[2][3] = 855.7857378;
 
+    apHOGDetector HOGDetector;
 
-       /*cMct[0][3] =-149.9189609;
-       cMct[1][3] = 200.4935037;
-       cMct[2][3] = 440.7839107;
-       cMct[0][0] = 0.9958088264;
-       cMct[0][1] = 0.08254072254;
-       cMct[0][2] = 0.03939508347;
-       cMct[1][0] = 0.01511400765;
-       cMct[1][1] = 0.2763081441;
-       cMct[1][2] = -0.9609501357;
-       cMct[2][0] = -0.09020270353;
-       cMct[2][1] = 0.9575182186;
-       cMct[2][2] = 0.2739020766;*/
+    std::string pos_dir, pos, neg_dir, neg, path_pose, path_pose_gt;
 
-       // pose real image liver2.png -222.375 154.59 379.542 [0.989822 -3.09578e-17 0.142311,0.136547 0.281733 -0.949727,-0.0400937 0.959493 0.278865
-
-       /*0.9216657489  -0.3875581562  0.01819937037  -27.08472031
-       -0.0003092703658  -0.04764536662  -0.9988638197  288.357135
-       0.3879851763  0.9206133542  -0.04403458774  459.7173749*/
-
-       cMct[0][0] = 0.9216657489;
-       cMct[0][1] =-0.3875581562;
-       cMct[0][2] = 0.01819937037;
-       cMct[0][3] = -27.08472031;
-       cMct[1][0] = -0.0003092703658;
-       cMct[1][1] = -0.04764536662;
-       cMct[1][2] = -0.9988638197;
-       cMct[1][3] = 288.357135;
-       cMct[2][0] = 0.3879851763;
-       cMct[2][1] = 0.9206133542;
-       cMct[2][2] = -0.04403458774;
-       cMct[2][3] = 459.7173749;
-
-
-       // pose cMct liverarterial
-
-       /*0.9727540217  -0.2313178327  0.01557545484  -102.8474708
-       0.001544650804  -0.06076014755  -0.9981489679  286.2505651
-       0.2318372463  0.9709801039  -0.05875412225  472.1949346
-       0  0  0  1*/
-
-       cMct[0][0] = 0.9727540217;
-       cMct[0][1] =-0.2313178327;
-       cMct[0][2] = 0.01557545484;
-       cMct[0][3] = -102.8474708;
-       cMct[1][0] = 0.001544650804;
-       cMct[1][1] = -0.06076014755;
-       cMct[1][2] = -0.9981489679;
-       cMct[1][3] = 286.2505651;
-       cMct[2][0] = 0.2318372463;
-       cMct[2][1] = 0.9709801039 ;
-       cMct[2][2] = -0.05875412225;
-       cMct[2][3] = 472.1949346;
-
-       // pose cMct liverarterial2
-
-       /*0.9975085117  -0.06574516179  0.02563329375  -164.6963909
-       0.004403865048  -0.3049865928  -0.9523383771  332.0290646
-       0.07043377305  0.9500841341  -0.3039573124  487.3573959*/
-
-       cMct[0][0] = 0.9975085117;
-       cMct[0][1] =-0.06574516179;
-       cMct[0][2] =0.02563329375 ;
-              cMct[0][3] =-164.6963909;
-              cMct[1][0] = 0.004403865048;
-              cMct[1][1] =-0.3049865928;
-              cMct[1][2] = -0.9523383771;
-              cMct[1][3] = 332.0290646;
-              cMct[2][0] = 0.07043377305;
-              cMct[2][1] = 0.9500841341;
-              cMct[2][2] = -0.3039573124;
-              cMct[2][3] = 487.3573959;
-
-
-              /*0.9707461703  -0.2400005999  0.007207701924  -118.9353003
-              0.03417684341  0.1678255873  0.985224089  -303.1761337
-              -0.2376635332  -0.9561555736  0.1711187519  855.7857378*/
-
-              cMct[0][0] =0.9707461703;
-              cMct[0][1] =-0.2400005999;
-              cMct[0][2] = 0.007207701924;
-                     cMct[0][3] =-118.935300;
-                     cMct[1][0] = 0.03417684341;
-                     cMct[1][1] =0.1678255873;
-                     cMct[1][2] = 0.985224089 ;
-                     cMct[1][3] = -303.1761337;
-                     cMct[2][0] = -0.2376635332;
-                     cMct[2][1] = -0.9561555736;
-                     cMct[2][2] = 0.1711187519;
-                     cMct[2][3] = 855.7857378;
-
-
-
-
-              apHOGDetector HOGDetector;
-
-               std::string pos_dir, pos, neg_dir, neg, path_pose, path_pose_gt;
-
-               pos_dir = "/home/antoine/soft/Liver/";
-               pos = "Train/pos.lst";
-               neg_dir = "/home/antoine/soft/Liver/";
-               neg = "Train/neg.lst";
-
-               path_pose = "/home/antoine/soft/Liver/Train/posLiver4/poses.txt";
-               path_pose_gt = "/home/antoine/soft/Liver/Test/images/poses.txt";
-
-
+    pos_dir = "/home/antoine/soft/Liver/";
+    pos = "Train/pos.lst";
+    neg_dir = "/home/antoine/soft/Liver/";
+    neg = "Train/neg.lst";
+    path_pose = "/home/antoine/soft/Liver/Train/posLiver4/poses.txt";
+    path_pose_gt = "/home/antoine/soft/Liver/Test/images/poses.txt";
 
               // Automatic initialization of the tracker
-              if (opt_detect)
-              {
+        if (opt_detect)
+        {
+            if(opt_learn)
+            {
+            HOGDetector.train(pos_dir, pos, neg_dir, neg);
+            }
 
-                if(opt_learn)
-                {
-                  HOGDetector.train(pos_dir, pos, neg_dir, neg);
-                }
+            HOGDetector.detect(IdN, path_pose, cMct);
 
-                  HOGDetector.detect(IdN, path_pose, cMct);
-
-              }
-
-              //001_test.png -192.168 286.001 360 1 -8.15615e-22 -3.67321e-06 -3.67321e-06 -9.95799e-17 -1 4.49838e-22 1 -9.95799e-17
-
-              /*cMct[0][0] =1;
-              cMct[0][1] =-8.15615e-22;
-              cMct[0][2] = -3.67321e-06;
-                     cMct[0][3] =-192.168;
-                     cMct[1][0] = -3.67321e-06;
-                     cMct[1][1] =-9.95799e-17 ;
-                     cMct[1][2] = -1 ;
-                     cMct[1][3] = 286.001;
-                     cMct[2][0] = 4.49838e-22;
-                     cMct[2][1] = 1;
-                     cMct[2][2] = -9.95799e-17 ;
-                     cMct[2][3] = 360;*/
-
-
-        vpRxyzVector vdelta(-0.0,-0.0,-0.0);
-        vpTranslationVector tdelta(0,0,-0);
-
-        vpRxyzVector vdelta1(-0.0,0.0,-0.0);
-        vpTranslationVector tdelta1(0,0,0);
-
-        vpRotationMatrix Rdelta;
-        Rdelta.buildFrom(vdelta);
-        vpHomogeneousMatrix Mdelta;
-        Mdelta.buildFrom(tdelta,Rdelta);
-
-        vpRotationMatrix Rdelta1;
-        Rdelta1.buildFrom(vdelta1);
-        vpHomogeneousMatrix Mdelta1;
-        Mdelta1.buildFrom(tdelta1,Rdelta1);
+        }
 
         cout << "detection time "<< endl;
 
@@ -604,14 +472,7 @@ int main(int argc, char **argv)
             Icol1[i][j].R = 0.2126*Icol[i][j].R + 0.7152*Icol[i][j].G + 0.0722*Icol[i][j].B;
             Icol1[i][j].G = Icol1[i][j].R;
             Icol1[i][j].B = Icol1[i][j].R;
-
-            /*Icol1[i][j].R = Icol2[359-i][j].R;
-            Icol1[i][j].G = 0;//Icol2[359-i][j].G;
-            Icol1[i][j].B = 0;//Icol2[359-i][j].B;
-            Id[i][j] = 0.2126*Icol2[359-i][j].R + 0.7152*Icol2[359-i][j].G + 0.0722*Icol2[359-i][j].B;*/
-
         }
-    //Icol = Icol1;
 
     vpHomogeneousMatrix oMct;
 
@@ -635,28 +496,15 @@ int main(int argc, char **argv)
     ctMo1[2][2] = 1;
     ctMo1[2][3] = 967.5;
 
-    vpRxyzVector vdelta2(-0.0,0.0,M_PI);
-    vpTranslationVector tdelta2(0,0,0);
+    vpRxyzVector o1ro1(0.0,0.0,M_PI);
+    vpTranslationVector o1to1(0,0,0);
 
-    vpRotationMatrix Rdelta2;
-    Rdelta2.buildFrom(vdelta2);
-    vpHomogeneousMatrix Mdelta2;
-    Mdelta2.buildFrom(tdelta2,Rdelta2);
+    vpRotationMatrix o1Ro1;
+    o1Ro1.buildFrom(o1ro1);
+    vpHomogeneousMatrix o1Mo1;
+    o1Mo1.buildFrom(o1to1,o1Ro1);
 
-    ctMo1 = ctMo1*Mdelta2;
-
-    /*oMo1[0][0] = 1;
-    oMo1[0][1] =  0;
-    oMo1[0][2] =  0;
-    oMo1[0][3] = 12.50376; //-11.3281
-    oMo1[1][0] = 0;
-    oMo1[1][1] = 1;
-    oMo1[1][2] =  0;
-    oMo1[1][3] = -109.75430; //110.901
-    oMo1[2][0] = 0;
-    oMo1[2][1] = 0;
-    oMo1[2][2] = 1;
-    oMo1[2][3] = 663.00940; //675.028*/
+    ctMo1 = ctMo1*o1Mo1;
 
     oMo1[0][0] = 1;
     oMo1[0][1] =  0;
@@ -672,30 +520,41 @@ int main(int argc, char **argv)
     oMo1[2][3] = 675.028;
 
     o1Mo = oMo1.inverse();
-
     ctMo = ctMo1*o1Mo;
-
     oMct = ctMo.inverse();
 
-    Roct.buildFrom(oMct);
-    qoct.buildFrom(Roct);
-    vpRxyzVector rxyz;
-    rxyz.buildFrom(Roct);
-
-    std::cout << "ctmo " << oMct.inverse() << " q oct " <<  oMct <<  std::endl;
+    /*oRct.buildFrom(oMct);
+    oqct.buildFrom(Roct);
+    vpRxyzVector orct;
+    orct.buildFrom(Roct);*/
 
     cMo = cMct*oMct.inverse();
 
+    vpRxyzVector vdelta(-0.0,-0.0,-0.0);
+    vpTranslationVector tdelta(0,0,-0);
+
+    vpRxyzVector vdelta1(-0.0,0.0,-0.0);
+    vpTranslationVector tdelta1(0,0,0);
+
+    vpRotationMatrix Rdelta;
+    Rdelta.buildFrom(vdelta);
+    vpHomogeneousMatrix Mdelta;
+    Mdelta.buildFrom(tdelta,Rdelta);
+
+    vpRotationMatrix Rdelta1;
+    Rdelta1.buildFrom(vdelta1);
+    vpHomogeneousMatrix Mdelta1;
+    Mdelta1.buildFrom(tdelta1,Rdelta1);
+
     cMo = Mdelta*cMo*Mdelta1;
+
 
     cMct = cMo*oMct;
 
     tracker.setPose(cMo);
 
     std::ifstream file;
-
     std::string line;
-
     file.open(path_pose_gt.c_str(), std::ifstream::in);
     double dvalue0,dvalue1,dvalue2,dvalue3,dvalue4,dvalue5,dvalue6,dvalue7,dvalue8,dvalue9,dvalue10,dvalue11;
 
@@ -703,12 +562,8 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < 700; i++)
     {
-
-
         std::string filename4;
         getline(file, line);
-
-        //std::cout << line << std::endl;
 
         file >> filename4;
         file >> dvalue0;
@@ -798,40 +653,9 @@ int main(int argc, char **argv)
     tracker.setFirstFrame(start_image + 2);
     //tracker.setGroundTruth(gdtpath, trueposepath, start_image + 2);
     //tracker.initKltTracker(Id);
-    std::cout << " ok " << std::endl;
-
-    //vpDisplay::getClick(Id);
-    /*cMo2 = cMo;
-    tracker2.setPose(cMo2);*/
-
-    //Init pose for Trakmark sequence
-
-    /*cMo.buildFrom(11.7759940348,5.8999979250,5.5547190835,-2.6525344080,-0.0000000000,1.6833495227 );
-       cMo.buildFrom( -0.768532741,  6.24302505,  13.54560648,  -2.683611579,  0.003069081378,  1.629208268 );
-       cMo=cMo.inverse();*/
 
     tracker.init(Id,cMo);
     tracker.initComm();
-
-    /*-0.9725939864  0.07627547874  -0.2196428671  -0.04488710902
-    -0.05719987694  -0.994120001  -0.09194344866  -0.1764133453
-    -0.2253643978  -0.07686010028  0.9712380827  6.745699447*/
-
-    /*cMo[0][3] = -0.04488710902;
-    cMo[1][3] = -0.1764133453;
-    cMo[2][3] = 6.745699447;
-    cMo[0][0] = -0.9725939864;
-    cMo[0][1] = 0.07627547874;
-    cMo[0][2] = -0.2196428671;
-    cMo[1][0] = -0.05719987694;
-    cMo[1][1] = -0.994120001;
-    cMo[1][2] = -0.09194344866;
-    cMo[2][0] = -0.2253643978;
-    cMo[2][1] = -0.07686010028;
-    cMo[2][2] = 0.9712380827;
-    oMct = cMo.inverse()*cMct;
-
-    std::cout << " cMo " << cMo << " cMct " <<  cMct << " oMct " << oMct << std::endl;*/
 
    // getchar();
     if (opt_display)
@@ -866,13 +690,6 @@ int main(int argc, char **argv)
 
     fstream fout("out/tracking.txt", std::ios_base::out);
 
-    cMo2 = cMo;
-
-    vpImage<double> Igrad, Igradx, Igrady;
-    Igrad.resize(height,width);
-    Igradx.resize(height,width);
-    Igrady.resize(height,width);
-
     int sample = 1;
     double meantime =0;
     int meant = 1;
@@ -887,8 +704,6 @@ int main(int argc, char **argv)
     double t0,t1;
     vpImage<vpRGBa> Icol2(height,width);
     Icol2 = Icol;
-
-    vpHomogeneousMatrix cMobj;
 
     std::cout << " cmct " << cMct << std::endl;
 
@@ -942,11 +757,9 @@ int main(int argc, char **argv)
             cMct = cMo*oMct;
             std::cout << "cMct " << cMct << std::endl;
 
-
             vpDisplay::display(Icol);
             std::cout << " disp " << im-start_image << std::endl;
 
-            tracker.itert = im-start_image;
             if(im-start_image>0)
             tracker.displayRend(Icol,Inormd,Ior,vpColor::green, 1);
             vpDisplay::flush(Icol);
@@ -1011,11 +824,10 @@ int main(int argc, char **argv)
 
                 //tracker.trackXray(Id, tr[2]);
                 tracker.IdN = IdN;
-                if (tracker.itert>0)
+                if (im-start_image>0)
                 tracker.trackXrayIntensityContour(Id,Icol,Inormd,Ior,Ior,tr[2]);
 
                 //tracker.displayKltPoints(Id);
-                //tracker.track(Id, Igrad, Igradx, Igrady, Inormd, Ior, Ior, tr[2]);
                 {
                     tracker.getCovarianceMatrix(covMat);
                     tracker.getCovarianceMatrixME(covMatME);
@@ -1025,7 +837,7 @@ int main(int argc, char **argv)
                     tracker.getCovarianceMatrix(covMat);
                     tracker.getCovarianceMatrixME(covMatME);
                 }
-                if (useKalmanFilter && tracker.itert > 20)
+                if (useKalmanFilter && im-start_image > 20)
                 {
                     tracker.getPose(cMo);
                     tracker.display(Id,cMo,mcam,vpColor::red,1);
@@ -1057,7 +869,7 @@ int main(int argc, char **argv)
             cMct = cMo*oMct;
             // Display 3D model
             tracker.computeError(error,cMo);
-            tracker.display(Id,cMo,mcam,vpColor::green,1);
+            tracker.display(IdN,cMo,mcam,vpColor::green,1);
 
             std::cout<<" cMo out" << cMo <<std::endl;
             std::cout<<" cMo filt" << cMoFilt <<std::endl;
@@ -1128,12 +940,6 @@ int main(int argc, char **argv)
             pose.saveMatrix(posepath,pose,false,"");
             //covariance.saveMatrix(covariancepath,covariance,false,"");
             timep.saveMatrix(timepath,timep,false,"");
-            /*mgr->updateRTT(Inormd,Ior,&cMo2);
-            tracker2.setPose(cMo2);
-            cMo2.extract(tr2);
-            tracker2.track(Id,Icol,Inormd,Ior,Ior,tr2[2]);
-            tracker2.getPose(cMo2);
-            tracker2.display(Id,cMo2,mcam,vpColor::red,1);*/
 
             vpDisplay::flush(IdN);
             vpDisplay::getImage(IdN,Ioverlay);
