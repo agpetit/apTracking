@@ -230,6 +230,7 @@ class apMbTracker: public vpMbTracker, public apControlPointTracker
 
     std::vector<vpRobust*> robustlines;
 
+
     unsigned int scaleLevel;
 
   	std::vector<double> residus;//residus associés aux différentes poses obtenues
@@ -299,6 +300,7 @@ private:
     vpImage<unsigned char> Iorprec;
     vpImage<unsigned char> Itexprec;
     vpImage<unsigned char> IdN;
+    vpImage<unsigned char> IdiffI;
 
     double timeextract;
     double timeextractklt;
@@ -437,6 +439,7 @@ private:
   void computeError(vpColVector &error, vpHomogeneousMatrix &_cMo);
   void setGroundTruth(std::string input, std::string output, const int firstframe);
   void setTruePose(vpMatrix &truepose){truePose = truepose;}
+  void setFirstFrame(int _firstFrame){firstFrame = _firstFrame;}
 
   
   /*!

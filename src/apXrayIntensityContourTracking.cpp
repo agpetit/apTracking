@@ -287,8 +287,8 @@ int main(int argc, char **argv)
 
       //configFile2 = object + vpIoTools::path("/") + object + vpIoTools::path("2.lua");
 
-    opath = vpIoTools::path("out60") + vpIoTools::path("/image%06d.png");
-    opath1 = vpIoTools::path("out60") + vpIoTools::path("/imageKalman%06d.png");
+    opath = vpIoTools::path("out6_1") + vpIoTools::path("/image%06d.png");
+    opath1 = vpIoTools::path("out6_1") + vpIoTools::path("/imageKalman%06d.png");
 
 
     // Path the views of hierarchical graph are saved
@@ -546,72 +546,6 @@ int main(int argc, char **argv)
                path_pose_gt = "/home/antoine/soft/Liver/Test/images/poses.txt";
 
 
-               std::ifstream file;
-
-               std::string line;
-
-               file.open(path_pose_gt.c_str(), std::ifstream::in);
-               double dvalue0,dvalue1,dvalue2,dvalue3,dvalue4,dvalue5,dvalue6,dvalue7,dvalue8,dvalue9,dvalue10,dvalue11;
-
-               vpMatrix truePose(700,6);
-
-               for (int i = 0; i < 700; i++)
-               {
-
-
-                   std::string filename4;
-                   getline(file, line);
-
-                   //std::cout << line << std::endl;
-
-                   file >> filename4;
-                   file >> dvalue0;
-                   file >> dvalue1;
-                   file >> dvalue2;
-                   file >> dvalue3;
-                   file >> dvalue4;
-                   file >> dvalue5;
-                   file >> dvalue6;
-                   file >> dvalue7;
-                   file >> dvalue8;
-                   file >> dvalue9;
-                   file >> dvalue10;
-                   file >> dvalue11;
-
-
-                   vpTranslationVector tr;
-                   vpRotationMatrix Rot;
-
-                   tr[0] = dvalue0;
-                   tr[1] = dvalue1;
-                   tr[2] = dvalue2;
-
-                   Rot[0][0] = dvalue3;
-                   Rot[0][1] = dvalue4;
-                   Rot[0][2] = dvalue5;
-                   Rot[1][0] = dvalue6;
-                   Rot[1][1] = dvalue7;
-                   Rot[1][2] = dvalue8;
-                   Rot[2][0] = dvalue9;
-                   Rot[2][1] = dvalue10;
-                   Rot[2][2] = dvalue11;
-
-                   vpHomogeneousMatrix cMo, cMoTrans;
-                   cMo.buildFrom(tr,Rot);
-
-                   vpRxyzVector rottrue;
-                   rottrue.buildFrom(Rot);
-
-                   truePose[i][0] = tr[0];
-                   truePose[i][1] = tr[1];
-                   truePose[i][2] = tr[2];
-
-                   truePose[i][3] = rottrue[0];
-                   truePose[i][4] = rottrue[1];
-                   truePose[i][5] = rottrue[2];
-               }
-
-               tracker.setTruePose(truePose);
 
               // Automatic initialization of the tracker
               if (opt_detect)
@@ -711,19 +645,31 @@ int main(int argc, char **argv)
 
     ctMo1 = ctMo1*Mdelta2;
 
+    /*oMo1[0][0] = 1;
+    oMo1[0][1] =  0;
+    oMo1[0][2] =  0;
+    oMo1[0][3] = 12.50376; //-11.3281
+    oMo1[1][0] = 0;
+    oMo1[1][1] = 1;
+    oMo1[1][2] =  0;
+    oMo1[1][3] = -109.75430; //110.901
+    oMo1[2][0] = 0;
+    oMo1[2][1] = 0;
+    oMo1[2][2] = 1;
+    oMo1[2][3] = 663.00940; //675.028*/
 
     oMo1[0][0] = 1;
     oMo1[0][1] =  0;
     oMo1[0][2] =  0;
-    oMo1[0][3] = 12.50376;
+    oMo1[0][3] = 11.3281;
     oMo1[1][0] = 0;
     oMo1[1][1] = 1;
     oMo1[1][2] =  0;
-    oMo1[1][3] = -109.75430;
+    oMo1[1][3] = -110.901;
     oMo1[2][0] = 0;
     oMo1[2][1] = 0;
     oMo1[2][2] = 1;
-    oMo1[2][3] = 663.00940;
+    oMo1[2][3] = 675.028;
 
     o1Mo = oMo1.inverse();
 
@@ -744,8 +690,81 @@ int main(int argc, char **argv)
 
     cMct = cMo*oMct;
 
-
     tracker.setPose(cMo);
+
+    std::ifstream file;
+
+    std::string line;
+
+    file.open(path_pose_gt.c_str(), std::ifstream::in);
+    double dvalue0,dvalue1,dvalue2,dvalue3,dvalue4,dvalue5,dvalue6,dvalue7,dvalue8,dvalue9,dvalue10,dvalue11;
+
+    vpMatrix truePose(700,6);
+
+    for (int i = 0; i < 700; i++)
+    {
+
+
+        std::string filename4;
+        getline(file, line);
+
+        //std::cout << line << std::endl;
+
+        file >> filename4;
+        file >> dvalue0;
+        file >> dvalue1;
+        file >> dvalue2;
+        file >> dvalue3;
+        file >> dvalue4;
+        file >> dvalue5;
+        file >> dvalue6;
+        file >> dvalue7;
+        file >> dvalue8;
+        file >> dvalue9;
+        file >> dvalue10;
+        file >> dvalue11;
+
+
+        vpTranslationVector tr;
+        vpRotationMatrix Rot;
+
+        tr[0] = dvalue0;
+        tr[1] = dvalue1;
+        tr[2] = dvalue2;
+
+        Rot[0][0] = dvalue3;
+        Rot[0][1] = dvalue4;
+        Rot[0][2] = dvalue5;
+        Rot[1][0] = dvalue6;
+        Rot[1][1] = dvalue7;
+        Rot[1][2] = dvalue8;
+        Rot[2][0] = dvalue9;
+        Rot[2][1] = dvalue10;
+        Rot[2][2] = dvalue11;
+
+        vpHomogeneousMatrix cMo1;
+        cMo1.buildFrom(tr,Rot);
+
+        cMo1 *= oMct.inverse();
+
+        /*vpRxyzVector rottrue;
+        rottrue.buildFrom(Rot);*/
+
+        vpPoseVector posetrue;
+        posetrue.buildFrom(cMo1);
+
+
+        truePose[i][0] = posetrue[0];
+        truePose[i][1] = posetrue[1];
+        truePose[i][2] = posetrue[2];
+
+        truePose[i][3] = posetrue[3];
+        truePose[i][4] = posetrue[4];
+        truePose[i][5] = posetrue[5];
+    }
+
+    tracker.setTruePose(truePose);
+
 
 
     // Manual initialization of the tracker
@@ -776,7 +795,8 @@ int main(int argc, char **argv)
     tracker.cMoprec = cMo;
     tracker.setIprecRGB(Icol);
     tracker.getPose(cMo);
-    tracker.setGroundTruth(gdtpath, trueposepath, start_image + 2);
+    tracker.setFirstFrame(start_image + 2);
+    //tracker.setGroundTruth(gdtpath, trueposepath, start_image + 2);
     //tracker.initKltTracker(Id);
     std::cout << " ok " << std::endl;
 
@@ -1005,7 +1025,7 @@ int main(int argc, char **argv)
                     tracker.getCovarianceMatrix(covMat);
                     tracker.getCovarianceMatrixME(covMatME);
                 }
-                if (useKalmanFilter && tracker.itert > 10)
+                if (useKalmanFilter && tracker.itert > 20)
                 {
                     tracker.getPose(cMo);
                     tracker.display(Id,cMo,mcam,vpColor::red,1);
@@ -1033,10 +1053,10 @@ int main(int argc, char **argv)
                 throw;
             }
 
+            tracker.getPose(cMo);
             cMct = cMo*oMct;
             // Display 3D model
-            tracker.getPose(cMo);
-            tracker.computeError(error,cMct);
+            tracker.computeError(error,cMo);
             tracker.display(Id,cMo,mcam,vpColor::green,1);
 
             std::cout<<" cMo out" << cMo <<std::endl;
@@ -1131,7 +1151,8 @@ int main(int argc, char **argv)
             //if(im%5==0)
             {
             vpImageIo::write(Ioverlaycol, filename4);
-            vpImageIo::write(Icol2, filename5);
+            if (im-start_image>0)
+            vpImageIo::write(tracker.IdiffI, filename5);
             }
 
             im++;

@@ -5502,6 +5502,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
         vpTranslationVector t0;
 
         cMct = cMo*oMct;
+
         /*cMct[0][3] *= 100.0;
         cMct[1][3] *= 100.0;
         cMct[2][3] *= 100.0;*/
@@ -5521,7 +5522,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
         nerrorG = Lsd.getRows();
         vpColVector errorT(nerror+nerrorG);
         vpDisplayX displayo;
-        //displayo.init(Idiff, 10, 10, "display");
+        displayo.init(Ig, 10, 10, "display");
         double mu = 0.000;
         vpMatrix diagHsd(6,6);
         vpMatrix diagLTL(6,6);
@@ -5691,6 +5692,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
             cMct[1][3] *= 100.0;
             cMct[2][3] *= 100.0;*/
 
+
             double t00= vpTime::measureTimeMs();
             R0[0][0] = cMct[0][0];
             R0[0][1] = cMct[0][1];
@@ -5709,6 +5711,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
             t0 = R0.inverse()*t0;
 
             cMo0.buildFrom(t0,R0);
+
             string messageStr;
             messageStr = std::to_string(cMo0[0][3]) + " " + std::to_string(cMo0[1][3]) + " " + std::to_string(cMo0[2][3]) + " "
                     + std::to_string(cMo0[0][0]) + " " + std::to_string(cMo0[0][1]) + " " + std::to_string(cMo0[0][2]) + " "
@@ -5778,11 +5781,11 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
        sI.interaction(Lsd);
        sI.error(sId, errorG);
 
-       vpImageTools::imageDifference(Ig,Igdgroundtruth,Idiff);
-       //vpDisplay::display(Idiff);
-       //vpDisplay::flush(Idiff);
+       vpImageTools::imageDifference(Ig,Igdgroundtruth,IdiffI);
+       vpDisplay::display(Ig);
+       vpDisplay::flush(Ig);
 
-       //vpImageIo::write(Idiff, "Idiff.png");
+       vpImageIo::write(Idiff, "Idiff.png");
 
 
        if (iter >1){
@@ -5896,7 +5899,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                 //CCDTracker.updateParametersRobust(LTCIL, LTCIR, robustCCD);
                 CCDTracker.updateParameters(LTCIL,LTCIR);
 
-                std::cout << " v2 " << v << " cmo " << cMo << std::endl;
+               // std::cout << " v2 " << v << " cmo " << cMo << std::endl;
 
                 //		double t1 = vpTime::measureTimeMs();
                 //std::cout << " timeupdate " << t1 -t0 << std::endl;
@@ -5920,7 +5923,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
 
                 double weight_P = 0.0000000004;
 
-                std::cout << " hessian " <<  weight_P*Hsd << std::endl;
+                /*std::cout << " hessian " <<  weight_P*Hsd << std::endl;
                 std::cout << " ltcil " << weight_ccd* wghtCCD*LTCIL << std::endl;
 
                 std::cout << " ltl " << weight_me* wghtME*LTL << std::endl;
@@ -5930,12 +5933,14 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                 std::cout << " pseudo inverse 1 " << (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).pseudoInverse()  << std::endl;
 
                 std::cout << " pseudo inverse 2 " << (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).pseudoInverse((LTL.getRows()) * DBL_EPSILON)  << std::endl;
-
                 std::cout << " pseudo inverse 3 " << (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).pseudoInverse((LTL.getRows()) * DBL_EPSILON)  << std::endl;
-                std::cout << " pseudo inverse 4 " << (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).inverseByLU()  << std::endl;
+                std::cout << " pseudo inverse 4 " << (weight_me* wghtME*LTL + weight_ccd* wghtCCD * LTCIL).inverseByLU()  << std::endl;*/
 
+                //Synthetic
+                //if (itert < 10)
 
-                if (itert < 10)
+                //Real arterial
+                 if (itert < 20)
                 {v = -3*lambda * ((1 * diagHsd) + Hsd).inverseByLU() * (LTG);
                  //v = -4*lambda * (wghtME*LTL +  weight_P*Hsd).pseudoInverse() * (wghtME*LTR + weight_P*LTG);
                  v = -4*lambda * (weight_me* wghtME*LTL + 0.25*weight_ccd* wghtCCD * LTCIL + weight_P*Hsd).pseudoInverse() * (weight_me* wghtME*LTR - 0.25*weight_ccd * wghtCCD * LTCIR + weight_P*LTG);
@@ -6008,7 +6013,7 @@ void apMbTracker::computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I,
                 v[2] /= 100;*/
                 //v = -lambda * (LTL + weight_ccd * LTCIL).pseudoInverse(LTL.getRows() * DBL_EPSILON) * (LTR - weight_ccd * LTCIR);
                 cMo = vpExponentialMap::direct(v).inverse() * cMo;
-                //std::cout << " ltr " <<  weight_me* wghtME*LTR << " ltg " <<0.000001* LTG << " itert " << itert <<  std::endl;
+                std::cout << " velocity " <<  v <<  std::endl;
         }
                 iter++;
         }
@@ -13904,20 +13909,15 @@ void apMbTracker::computeError(vpColVector &error, vpHomogeneousMatrix &_cMo) {
         Rxyz.buildFrom(R);
         RxyzV.buildFrom(RV);
 
-        std::cout << " cMoVraie " << cMoV << std::endl;
+        std::cout << " cMoVraie " << cMoV << " cMo " << _cMo << std::endl;
 
-        /*error[0] = tr[0] - trV[0];
+        error[0] = tr[0] - trV[0];
         error[1] = tr[1] - trV[1];
         error[2] = tr[2] - trV[2];
         error[3] = Rxyz[0] - RxyzV[0];
         error[4] = Rxyz[1] - RxyzV[1];
-        error[5] = Rxyz[2] - RxyzV[2];*/
-        error[0] = tr[0] - truepose[0];
-        error[1] = tr[1] - truepose[1];
-        error[2] = tr[2] - truepose[2];
-        error[3] = Rxyz[0] - truepose[3];
-        error[4] = Rxyz[1] - truepose[4];
-        error[5] = Rxyz[2] - truepose[5];
+        error[5] = Rxyz[2] - RxyzV[2];
+
 }
 
 
