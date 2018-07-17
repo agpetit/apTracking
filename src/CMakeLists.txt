@@ -52,11 +52,7 @@ set(CMAKE_MODULE_PATH
 #ADD_DEFINITIONS( -Wall -msse -msse2 -ffast-math -funroll-loops -mfpmath=sse)
 ADD_DEFINITIONS( -Wall -msse -msse2 -ffast-math -funroll-loops -mfpmath=sse -fomit-frame-pointer)
 
-find_package(Qt5)
-FIND_PACKAGE(Qt5Widgets)
-find_package(Qt5Core)
-find_package(Qt5Gui)
-find_package(Qt5OpenGL)
+find_package(Qt5 COMPONENTS Core Widgets Gui OpenGL REQUIRED)
 
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)

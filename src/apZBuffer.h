@@ -15,7 +15,11 @@
 #include <visp/vpParseArgv.h>
 #include <visp/vpImage.h>
 #include <visp/vpDisplayX.h>
+#if defined(__APPLE__)
+#include <OpenGL/gl.h>
+#else
 #include <GL/gl.h>
+#endif 
 //#include <GL/glu.h>
 #include <visp/vpMatrix.h>
 #include <visp/vpDisplay.h>

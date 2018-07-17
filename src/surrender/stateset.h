@@ -1,7 +1,11 @@
 #ifndef STATESET_H
 #define STATESET_H
 
+#if defined(__APPLE__)
+#include <OpenGL/gl.h>
+#else
 #include <GL/gl.h>
+#endif 
 #include <osg/Uniform>
 #include <osg/StateSet>
 #include <osg/Material>
