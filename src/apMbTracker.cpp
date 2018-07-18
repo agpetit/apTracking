@@ -8587,7 +8587,7 @@ void apMbTracker::computeVVSCCDMHPrevSpace(const vpImage<unsigned char>& _I,
 void apMbTracker::track(const vpImage<unsigned char> &I, const vpImage<
 		vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd, const vpImage<
 		unsigned char>& Ior, const vpImage<unsigned char>& Itex,
-		const double dist) {
+        const double dist, bool printLog) {
 	initPyramid(I, Ipyramid);
 	initPyramid(Iprec, Ipyramidprec);
 	switch (trackingType) {
@@ -8641,7 +8641,8 @@ void apMbTracker::track(const vpImage<unsigned char> &I, const vpImage<
 				}
 
 				double t1 = vpTime::measureTimeMs();
-				std::cout << "timeextract " << t1 - t0 << std::endl;
+                if(printLog)
+                    std::cout << "timeextract " << t1 - t0 << std::endl;
 				timeextract = t1 - t0;
 				double t2 = vpTime::measureTimeMs();
 				try {
@@ -8674,7 +8675,8 @@ void apMbTracker::track(const vpImage<unsigned char> &I, const vpImage<
 					throw;
 				}
 				double t3 = vpTime::measureTimeMs();
-				std::cout << "timetrack " << t3 - t2 << std::endl;
+                if(printLog)
+                    std::cout << "timetrack " << t3 - t2 << std::endl;
 				timetrack = t3-t2;
 
 				try {
@@ -8738,7 +8740,8 @@ void apMbTracker::track(const vpImage<unsigned char> &I, const vpImage<
 						break;
 					}
 					double t5 = vpTime::measureTimeMs();
-					std::cout << "timeVVS " << t5 - t4 << std::endl;
+                    if(printLog)
+                        std::cout << "timeVVS " << t5 - t4 << std::endl;
 					timevvs = t5-t4;
 				} catch (...) {
 					vpTRACE("Error in computeVVS");
