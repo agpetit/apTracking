@@ -48,7 +48,7 @@ namespace luxifer
 
         /** \brief load a 3D model
           */
-        void load(const std::string &filename);
+        void load(const std::string &filename, const std::string &shaderLocationPath = std::string());
 
         void load(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
 

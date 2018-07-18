@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-PROJECT(apTracking)
+PROJECT(APTracking)
 
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -16,7 +16,7 @@ ENDIF(VISP_FOUND)
 LINK_DIRECTORIES(${VISP_LINK_DIRECTORIES})
 
 # Find OpenMP
-if(APPLE)
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
         set(OpenMP_C "${CMAKE_C_COMPILER}")
         set(OpenMP_C_FLAGS "-fopenmp=libomp -Wno-unused-command-line-argument")
@@ -227,7 +227,7 @@ SET(TRACKER_COMMON_SOURCES
     ${APTRACKING_SOURCE_DIR}/apHOGDetector.cpp
 )
 
-add_library(apTrackerLib SHARED
+add_library(APTrackerLib SHARED
     ${TRACKER_COMMON_HEADERS}
     ${QT_HEADERS}
     ${SURRENDER_HEADERS}
@@ -236,7 +236,7 @@ add_library(apTrackerLib SHARED
     ${SURRENDER_SOURCES}
 )
 
-target_link_libraries(apTrackerLib
+target_link_libraries(APTrackerLib
     ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
     Qt5::Widgets

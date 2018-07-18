@@ -131,7 +131,7 @@ namespace luxifer
     }
 
 
-    void SceneManager::load(const std::string &filename)
+    void SceneManager::load(const std::string &filename, const std::string &shaderLocationPath)
     {
         pContext->makeCurrent();
         clear();
@@ -221,8 +221,8 @@ namespace luxifer
         color_program->setName("Color program");
         color_program->addShader(color_vshader);
         color_program->addShader(color_fshader);
-        color_vshader->loadShaderSourceFromFile("Materials/colors.vert");
-        color_fshader->loadShaderSourceFromFile("Materials/colors.frag");
+        color_vshader->loadShaderSourceFromFile(shaderLocationPath+"Materials/colors.vert");
+        color_fshader->loadShaderSourceFromFile(shaderLocationPath+"Materials/colors.frag");
         color_cam_grp->getOrCreateStateSet()->setAttributeAndModes(color_program, StateAttribute::ON | StateAttribute::OVERRIDE);
 
         // Make a camera to compute local normals for local lighting effects (spots, raytracing, ...)
@@ -241,8 +241,8 @@ namespace luxifer
         normal_program->setName("Normal program");
         normal_program->addShader(normal_vshader);
         normal_program->addShader(normal_fshader);
-        normal_vshader->loadShaderSourceFromFile("Materials/normals.vert");
-        normal_fshader->loadShaderSourceFromFile("Materials/normals.frag");
+        normal_vshader->loadShaderSourceFromFile(shaderLocationPath+"Materials/normals.vert");
+        normal_fshader->loadShaderSourceFromFile(shaderLocationPath+"Materials/normals.frag");
         normal_cam_grp->getOrCreateStateSet()->setAttributeAndModes(normal_program, StateAttribute::ON | StateAttribute::OVERRIDE);
         u_fNear = new osg::Uniform("fNear", 0.0f);
         u_fFar = new osg::Uniform("fFar", 0.0f);
@@ -267,8 +267,8 @@ namespace luxifer
         compositor_program->addShader(compositor_fshader);
         //compositor_vshader1->loadShaderSourceFromFile("Materials/GaussianFilter.vert");
         //compositor_fshader1->loadShaderSourceFromFile("Materials/GaussianFilter.frag");
-        compositor_vshader->loadShaderSourceFromFile("Materials/EdgeGradmap.vert");
-        compositor_fshader->loadShaderSourceFromFile("Materials/EdgeGradmap.frag");
+        compositor_vshader->loadShaderSourceFromFile(shaderLocationPath+"Materials/EdgeGradmap.vert");
+        compositor_fshader->loadShaderSourceFromFile(shaderLocationPath+"Materials/EdgeGradmap.frag");
 
         fsaa_program = new Program;
         ref_ptr<Shader> fsaa_vshader = new Shader(Shader::VERTEX);
@@ -276,8 +276,8 @@ namespace luxifer
         fsaa_program->setName("FSAA program");
         fsaa_program->addShader(fsaa_vshader);
         fsaa_program->addShader(fsaa_fshader);
-        fsaa_vshader->loadShaderSourceFromFile("Materials/FSAA.vert");
-        fsaa_fshader->loadShaderSourceFromFile("Materials/FSAA.frag");
+        fsaa_vshader->loadShaderSourceFromFile(shaderLocationPath+"Materials/FSAA.vert");
+        fsaa_fshader->loadShaderSourceFromFile(shaderLocationPath+"Materials/FSAA.frag");
     }
 
     void SceneManager::load(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles)
