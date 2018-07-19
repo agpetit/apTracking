@@ -488,8 +488,8 @@ namespace luxifer
         (*color_cam)();
 
         // Post processes
-        /*postprocess(normal_buffer_big, normal_buffer, fsaa_program);
-        postprocess(normal_buffer, edge_buffer, compositor_program);*/
+        postprocess(normal_buffer_big, normal_buffer, fsaa_program);
+        postprocess(normal_buffer, edge_buffer, compositor_program);
 
         emit updated();
     }

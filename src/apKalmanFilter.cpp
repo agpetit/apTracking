@@ -123,25 +123,25 @@ void apKalmanFilter::predictPose()
     cMoEst_0 = cMoEst;
 }
 
-void apKalmanFilter::estimatePose(vpHomogeneousMatrix &cMoMes, vpMatrix &covMes)
+void apKalmanFilter::estimatePose(vpHomogeneousMatrix &cMoMes, vpMatrix &covMes, bool printLog)
 {
+    cMoInnov = cMoMes*(cMoPred.inverse());
+    K = PPred*H.transpose()*((H*PPred*H.transpose() + covMes).pseudoInverse());
+    //Kv = PvPred*((PvPred + R).pseudoInverse());
+    Kv = PvPred*((PvPred + covMes).pseudoInverse());
+    vpMatrix Iv(6,6);
+    Iv.setIdentity();
+    vMes = vpExponentialMap::inverse((cMoInnov));
 
-cMoInnov = cMoMes*(cMoPred.inverse());
-K = PPred*H.transpose()*((H*PPred*H.transpose() + covMes).pseudoInverse());
-//Kv = PvPred*((PvPred + R).pseudoInverse());
-Kv = PvPred*((PvPred + covMes).pseudoInverse());
-vpMatrix Iv(6,6);
-Iv.setIdentity();
-vMes = vpExponentialMap::inverse((cMoInnov));
+    if(printLog)
+        std::cout << " Kv " << Kv << std::endl;
+    vEst = vPred + (Kv)*(vMes-vPred);
+    //vEst = vPred + (H_0)*K*(vMes-vPred);
+    //cMoEst = vpExponentialMap::direct(Kv*(vMes-vPred)).inverse()*cMoPred;
+    //cMoEst = vpExponentialMap::direct(K*vpExponentialMap::inverse(cMoInnov.inverse())).inverse()*cMoPred;
+    cMoEst = vpExponentialMap::direct(vEst)*cMoEst;
+    //cMoEst = cMoMes;
 
-std::cout << " Kv " << Kv << std::endl;
-vEst = vPred + (Kv)*(vMes-vPred);
-//vEst = vPred + (H_0)*K*(vMes-vPred);
-//cMoEst = vpExponentialMap::direct(Kv*(vMes-vPred)).inverse()*cMoPred;
-//cMoEst = vpExponentialMap::direct(K*vpExponentialMap::inverse(cMoInnov.inverse())).inverse()*cMoPred;
-cMoEst = vpExponentialMap::direct(vEst)*cMoEst;
-//cMoEst = cMoMes;
-
-//PEst = (I-K*H)*PPred;
-PvEst = (Iv-Kv)*PvPred;
+    //PEst = (I-K*H)*PPred;
+    PvEst = (Iv-Kv)*PvPred;
 }

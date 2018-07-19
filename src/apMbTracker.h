@@ -356,7 +356,7 @@ private:
   void initCircle(const vpPoint&, const vpPoint&, const vpPoint&, double, int, const string&){};
   //void initCylinder(const vpPoint&, vpPoint, double, unsigned int){};
   void initCylinder(const vpPoint&, const vpPoint&, double, int, const string&){};
-  void track(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd, const vpImage<unsigned char>& Ior, const vpImage<unsigned char>& Itex, const double dist, bool printLog = false);
+  void track(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd, const vpImage<unsigned char>& Ior, const vpImage<unsigned char>& Itex, const double dist, bool printLog = true);
   //void trackHyb(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double dist, const double m, apOgre ogre_);
   void trackDef(const vpImage<unsigned char>& I, const vpImage<vpRGBa> &IRGB, const vpImage<vpRGBa> &Inormd,const vpImage<unsigned char>& Ior,const vpImage<unsigned char>& Itex, const double distmin, const double distmax);
   void trackDef2D(const vpImage<unsigned char> &I, const vpImage<vpRGBa> &IRGB,  std::vector<point2d> &positions, std::vector<point2dd> &normals, std::vector<point2d> &trackededges, std::vector<int> &suppress);

@@ -88,6 +88,7 @@ namespace luxifer
     public slots:
         void render();
         void renderAR();
+        double getFOV() { return fov; }
         void setFOV(const double fov);
         void setAspectRatio(const double aspect_ratio);
         void setImageSize(const size_t image_w, const size_t image_h);

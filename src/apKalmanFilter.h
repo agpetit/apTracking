@@ -76,7 +76,7 @@ public:
 	virtual ~apKalmanFilter();
 	void predictPose();
 	inline void getPredPose(vpHomogeneousMatrix &cMoPred_){cMoPred_ = cMoPred_0;}
-	void estimatePose(vpHomogeneousMatrix &cMoMes, vpMatrix &covMes);
+    void estimatePose(vpHomogeneousMatrix &cMoMes, vpMatrix &covMes, bool printLog = true);
 
 };
 
