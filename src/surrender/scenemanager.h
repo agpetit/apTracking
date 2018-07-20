@@ -19,7 +19,7 @@
 #include <osg/LightSource>
 #include "modelloader.h"
 
-#ifdef ENABLE_LIBRARY_COMPILE
+#if ENABLE_LIBRARY_COMPILE
 #include <config.h>
 #endif // DENABLE_LIBRARY_COMPILE
 
@@ -52,7 +52,7 @@ namespace luxifer
 
         /** \brief load a 3D model
           */
-#ifdef ENABLE_LIBRARY_COMPILE
+#if ENABLE_LIBRARY_COMPILE
         void load(const std::string &filename, const std::string &shaderLocationPath = aptracking::config::ShaderLocation);
 #else
         void load(const std::string &filename, const std::string &shaderLocationPath = std::string());

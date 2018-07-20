@@ -1,6 +1,10 @@
 #ifndef APTRACKING_CONFIG_H_
 #define APTRACKING_CONFIG_H_
 
+#cmakedefine ENABLE_ZMQ
+
+#cmakedefine ENABLE_LIBRARY_COMPILE
+
 namespace aptracking
 {
 namespace config

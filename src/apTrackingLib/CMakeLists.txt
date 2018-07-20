@@ -45,6 +45,7 @@ ENDIF(OPENMP_FOUND)
 set(CMAKE_MODULE_PATH 
 	${CMAKE_SOURCE_DIR}/CMakeModules
     "${APTRACKING_SOURCE_DIR}/cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   )
 
 ADD_DEFINITIONS( -Wall -msse -msse2 -ffast-math -funroll-loops -mfpmath=sse -fomit-frame-pointer)
@@ -80,6 +81,17 @@ if(OPENMP_FOUND)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif(OPENMP_FOUND)
 
+
+set(ENABLE_ZMQ FALSE)
+option(OPTION_ENABLE_ZMQ "Enable ZMQ Support")
+if(OPTION_ENABLE_ZMQ)
+    find_package(ZeroMQ REQUIRED)
+    find_package(CPPZMQ REQUIRED)
+    if(ZeroMQ_FOUND AND CPPZMQ_FOUND)
+        set(ENABLE_ZMQ TRUE)
+    endif()
+endif()
+
 find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 
 LINK_DIRECTORIES(${GLEW_LIBRARY_DIR})
@@ -100,7 +112,9 @@ INCLUDE_DIRECTORIES(
     ${Qt5OpenGL_INCLUDE_DIRS}
   )
 
-set(APTRACKING_DEFINITIONS -std=gnu++0x -DENABLE_LIBRARY_COMPILE)
+set(ENABLE_LIBRARY_COMPILE TRUE)
+
+set(APTRACKING_DEFINITIONS -std=gnu++0x )
 add_definitions(${APTRACKING_DEFINITIONS})
 
 SET(QT_HEADERS
@@ -184,7 +198,7 @@ SET(TRACKER_COMMON_HEADERS
     ${APTRACKING_SOURCE_DIR}/p_helper.h
     ${APTRACKING_SOURCE_DIR}/zhelpers.h
     ${APTRACKING_SOURCE_DIR}/vibe-background.h
-    
+
 )
 
 SET(TRACKER_COMMON_SOURCES
@@ -252,10 +266,13 @@ target_link_libraries(${PROJECT_NAME}
     ${QtGui_location}
     ${QtOpenGL_location}
     ${GLEW_LIBRARY}
-    ${LUA_LIBRARIES} -lzmq ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
+    ${LUA_LIBRARIES} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
     ${OpenCV_LIBS}
     ${VISP_LIBRARIES}
 )
+if(ENABLE_ZMQ)
+    target_link_libraries(${PROJECT_NAME} ${ZeroMQ_LIBRARY})
+endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>")
 target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>")
@@ -269,7 +286,7 @@ configure_file (
   )
 
 configure_file (
-  "${CMAKE_SOURCE_DIR}/apTrackingLibConfig.cmake.in"
+  "${CMAKE_SOURCE_DIR}/cmake/apTrackingLibConfig.cmake.in"
   "${PROJECT_BINARY_DIR}/apTrackingLibConfig.cmake"
   @ONLY
   )
@@ -286,3 +303,5 @@ install (DIRECTORY "${APTRACKING_SOURCE_DIR}/surrender" DESTINATION include FILE
 
 install (FILES "${PROJECT_BINARY_DIR}/config.h" DESTINATION include )
 install (FILES "${PROJECT_BINARY_DIR}/apTrackingLibConfig.cmake" DESTINATION cmake )
+file(GLOB_RECURSE DEPLOY_FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Find*.cmake")
+install (FILES ${DEPLOY_FILES} DESTINATION cmake)

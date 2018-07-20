@@ -76,7 +76,10 @@
 
 #include "structures.h"
 
+#ifdef ENABLE_ZMQ
 #include <zmq.hpp>
+#endif // ENABLE_ZMQ
+
 using namespace cv;
 
 struct apKLTTrackerParameters
@@ -274,11 +277,11 @@ class apMbTracker: public vpMbTracker, public apControlPointTracker
         std::vector<point3d> controlpoints;
 
 private:
-
+#ifdef ENABLE_ZMQ
     zmq::context_t     m_context{1};
     zmq::socket_t      *m_socketSub;
     zmq::socket_t      *m_socketPub;
-  
+#endif // ENABLE_ZMQ
  public:
 
     //Covariance matrix
@@ -338,18 +341,12 @@ private:
   void loadConfigFile(const std::string& _filename);
   void loadConfigFile(const char* filename);
   void loadModel(const char* cad_name);
-  void receiveImage(vpImage<vpRGBa> &Icol);
-  void sendPose();
-  void loadPointsNormals2d(std::vector<std::vector<point2d>> points2d, std::vector<std::vector<point2dd>> normals2d);
-  void loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
-  void loadImagePoseMeshControlPoints( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
   void savepair(std::string &message, const std::pair<point3d, point2d> &pair);
   void save3dpoint(std::string &message, const point3d &point3d);
   void save2dpoint(std::string &message, const point2d &point2d);
   //void loadLines(const vpImage<unsigned char>& I, vector<Vec4i>& Lines, const vpMatrix &Zc, const vpHomogeneousMatrix &cMo);
   //void resetLines();
 
-  void initComm();
   void init(const vpImage<unsigned char>&){};
   void init(const vpImage<unsigned char>& I, const vpHomogeneousMatrix &cMo);
   void initKltTracker(const vpImage<unsigned char>& I);
@@ -376,11 +373,22 @@ private:
   void resetTracker();
   void buildControlPoints2D(const vpImage<unsigned char> &I, std::vector<point2d> &points2d, std::vector<point2dd> &normals);
   void buildCorrespondencesEdges2D(std::vector<point2d> &trackededges, std::vector<int> &suppress);
+  //void reInitModel(const vpImage<unsigned char>& I, const char* cad_name, const vpHomogeneousMatrix& _cMo);
+  //void reInitConfigModel(const vpImage<unsigned char>& I, const char* cad_name, const char* config_name, const vpHomogeneousMatrix& _cMo);
+
+#ifdef ENABLE_ZMQ
+  void initComm();
+  void receiveImage(vpImage<vpRGBa> &Icol);
+  void sendPose();
+  void loadImagePoseMesh( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
+  void loadImagePoseMeshControlPoints( cv::Mat &mat, vpHomogeneousMatrix &cMo, std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
+  void loadPointsNormals2d(std::vector<std::vector<point2d>> points2d, std::vector<std::vector<point2dd>> normals2d);
+  void computeVVSPhotometric(const vpImage<unsigned char>& _I);
+  void computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void exportCorrespondencesEdges2D(std::vector<std::vector<point2d>> &trackededgesIm, std::vector<std::vector<int>> &suppressIm);
   void exportCorrespondencesEdgesMean(const vpImage<unsigned char> &I);
   void exportCorrespondencesKLT(const vpImage<unsigned char> &I);
-  //void reInitModel(const vpImage<unsigned char>& I, const char* cad_name, const vpHomogeneousMatrix& _cMo);
-  //void reInitConfigModel(const vpImage<unsigned char>& I, const char* cad_name, const char* config_name, const vpHomogeneousMatrix& _cMo);
+#endif // ENABLE_ZMQ
 
   /*!
     Enable to display the points along the control points with a color corresponding to their state.
@@ -449,7 +457,6 @@ private:
   void computeVVS(const vpImage<unsigned char>& _I);
   //void computeVVSHyb(const vpImage<unsigned char>& _I, apOgre ogre_);
   void computeVVSMH(const vpImage<unsigned char>& _I);
-  void computeVVSPhotometric(const vpImage<unsigned char>& _I);
   void computeVVSCorr(const vpImage<unsigned char>& I, const vpImage<double>& Igrad, const vpImage<double>& Igradx, const vpImage<double>& Igrady);
   void computeVVSHybrid(const vpImage<unsigned char>& I, const vpImage<double>& Igrad, const vpImage<double>& Igradx, const vpImage<double>& Igrady);
   void computeVVSPointsLinesMH(const vpImage<unsigned char>& _I);
@@ -459,7 +466,6 @@ private:
   void computeVVSCCD(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void computeVVSCCDPrev(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void computeVVSCCDMH(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
-  void computeVVSCCDMHPhotometric(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void computeVVSCCDMHPrev(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void computeVVSCCDMHPrevSpace(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
   void computeVVSPointsLinesCCDMHPrev(const vpImage<unsigned char>& _I, const vpImage<vpRGBa>& _IRGB);
