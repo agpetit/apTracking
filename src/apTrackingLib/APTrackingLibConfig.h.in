@@ -3,14 +3,12 @@
 
 #cmakedefine ENABLE_ZMQ
 
-#cmakedefine ENABLE_LIBRARY_COMPILE
-
 namespace aptracking
 {
 namespace config
 {
 
-const std::string ShaderLocation = "@APTRACKING_SHADER_DIR@" ;
+const std::string ShaderLocation = "@APTRACKING_SHADER_DIR@/" ;
 
 } // namespace config
 

@@ -20,7 +20,7 @@
 #include "modelloader.h"
 
 #if ENABLE_LIBRARY_COMPILE
-#include <config.h>
+#include <APTrackingLibConfig.h>
 #endif // DENABLE_LIBRARY_COMPILE
 
 class vpHomogeneousMatrix;

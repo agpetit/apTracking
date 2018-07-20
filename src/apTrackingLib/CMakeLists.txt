@@ -48,7 +48,7 @@ set(CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   )
 
-ADD_DEFINITIONS( -Wall -msse -msse2 -ffast-math -funroll-loops -mfpmath=sse -fomit-frame-pointer)
+ADD_DEFINITIONS( -Wall -msse -msse2 -ffast-math -funroll-loops -mfpmath=sse -fomit-frame-pointer )
 
 find_package(Qt5 COMPONENTS Core Widgets Gui OpenGL REQUIRED)
 
@@ -114,7 +114,7 @@ INCLUDE_DIRECTORIES(
 
 set(ENABLE_LIBRARY_COMPILE TRUE)
 
-set(APTRACKING_DEFINITIONS -std=gnu++0x )
+set(APTRACKING_DEFINITIONS -std=gnu++0x -DENABLE_LIBRARY_COMPILE)
 add_definitions(${APTRACKING_DEFINITIONS})
 
 SET(QT_HEADERS
@@ -281,8 +281,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${TRACKER_COMMON
 set(APTRACKING_SHADER_DIR ${PROJECT_BINARY_DIR}/..)
 
 configure_file (
-  "${CMAKE_SOURCE_DIR}/config.h.in"
-  "${PROJECT_BINARY_DIR}/config.h"
+  "${CMAKE_SOURCE_DIR}/APTrackingLibConfig.h.in"
+  "${PROJECT_BINARY_DIR}/APTrackingLibConfig.h"
   )
 
 configure_file (
@@ -301,7 +301,7 @@ install(TARGETS ${PROJECT_NAME}
 
 install (DIRECTORY "${APTRACKING_SOURCE_DIR}/surrender" DESTINATION include FILES_MATCHING PATTERN "*.h")
 
-install (FILES "${PROJECT_BINARY_DIR}/config.h" DESTINATION include )
+install (FILES "${PROJECT_BINARY_DIR}/APTrackingLibConfig.h" DESTINATION include )
 install (FILES "${PROJECT_BINARY_DIR}/apTrackingLibConfig.cmake" DESTINATION cmake )
 file(GLOB_RECURSE DEPLOY_FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Find*.cmake")
 install (FILES ${DEPLOY_FILES} DESTINATION cmake)

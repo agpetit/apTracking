@@ -97,6 +97,6 @@ if(ZeroMQ_FOUND AND CPPZMQ_FOUND)
 endif()
 
 set(APTrackingLib_DEFINITIONS
-    "-std=gnu++0x "
+    "-std=gnu++0x -DENABLE_LIBRARY_COMPILE"
 ) 
     
