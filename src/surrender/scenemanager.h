@@ -19,6 +19,10 @@
 #include <osg/LightSource>
 #include "modelloader.h"
 
+#ifdef ENABLE_LIBRARY_COMPILE
+#include <config.h>
+#endif // DENABLE_LIBRARY_COMPILE
+
 class vpHomogeneousMatrix;
 class apRend;
 
@@ -48,7 +52,11 @@ namespace luxifer
 
         /** \brief load a 3D model
           */
+#ifdef ENABLE_LIBRARY_COMPILE
+        void load(const std::string &filename, const std::string &shaderLocationPath = aptracking::config::ShaderLocation);
+#else
         void load(const std::string &filename, const std::string &shaderLocationPath = std::string());
+#endif // ENABLE_LIBRARY_COMPILE
 
         void load(std::vector<point3d> &vertices, std::vector<point3d> &normals, std::vector<triangle> &triangles);
 

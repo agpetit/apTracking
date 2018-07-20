@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-PROJECT(APTracking)
+PROJECT(APTrackingLib)
 
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -85,21 +85,23 @@ find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 LINK_DIRECTORIES(${GLEW_LIBRARY_DIR})
 
 
-  INCLUDE_DIRECTORIES(
+INCLUDE_DIRECTORIES(
+    ${APTRACKING_SOURCE_DIR}/../../build 
+    ${APTRACKING_SOURCE_DIR}/.. 
     ${OPENGL_INCLUDE_DIR}
-	${CMAKE_SOURCE_DIR}/src 
 	${OpenCV_INCLUDE_DIRS}
 	${VISP_INCLUDE_DIR}
     ${OPENSCENEGRAPH_INCLUDE_DIRS}
     ${GLEW_INCLUDE_DIR}
     ${LUA_INCLUDE_DIR}
-${Qt5Widgets_INCLUDE_DIRS}
-${Qt5Core_INCLUDE_DIRS}
-${Qt5Gui_INCLUDE_DIRS}
-${Qt5OpenGL_INCLUDE_DIRS}
+    ${Qt5Widgets_INCLUDE_DIRS}
+    ${Qt5Core_INCLUDE_DIRS}
+    ${Qt5Gui_INCLUDE_DIRS}
+    ${Qt5OpenGL_INCLUDE_DIRS}
   )
 
-ADD_DEFINITIONS( -std=gnu++0x)
+set(APTRACKING_DEFINITIONS -std=gnu++0x -DENABLE_LIBRARY_COMPILE)
+add_definitions(${APTRACKING_DEFINITIONS})
 
 SET(QT_HEADERS
     ${APTRACKING_SOURCE_DIR}/surrender/sceneviewer.h
@@ -181,6 +183,8 @@ SET(TRACKER_COMMON_HEADERS
     ${APTRACKING_SOURCE_DIR}/apHOGDetector.h
     ${APTRACKING_SOURCE_DIR}/p_helper.h
     ${APTRACKING_SOURCE_DIR}/zhelpers.h
+    ${APTRACKING_SOURCE_DIR}/vibe-background.h
+    
 )
 
 SET(TRACKER_COMMON_SOURCES
@@ -227,7 +231,7 @@ SET(TRACKER_COMMON_SOURCES
     ${APTRACKING_SOURCE_DIR}/apHOGDetector.cpp
 )
 
-add_library(APTrackerLib SHARED
+add_library(${PROJECT_NAME} SHARED
     ${TRACKER_COMMON_HEADERS}
     ${QT_HEADERS}
     ${SURRENDER_HEADERS}
@@ -236,7 +240,7 @@ add_library(APTrackerLib SHARED
     ${SURRENDER_SOURCES}
 )
 
-target_link_libraries(APTrackerLib
+target_link_libraries(${PROJECT_NAME}
     ${OPENGL_LIBRARIES}
     ${OPENSCENEGRAPH_LIBRARIES}
     Qt5::Widgets
@@ -253,3 +257,32 @@ target_link_libraries(APTrackerLib
     ${VISP_LIBRARIES}
 )
 
+target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>")
+target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>")
+set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${TRACKER_COMMON_HEADERS}" )
+
+set(APTRACKING_SHADER_DIR ${PROJECT_BINARY_DIR}/..)
+
+configure_file (
+  "${CMAKE_SOURCE_DIR}/config.h.in"
+  "${PROJECT_BINARY_DIR}/config.h"
+  )
+
+configure_file (
+  "${CMAKE_SOURCE_DIR}/apTrackingLibConfig.cmake.in"
+  "${PROJECT_BINARY_DIR}/apTrackingLibConfig.cmake"
+  @ONLY
+  )
+
+install(TARGETS ${PROJECT_NAME}
+        COMPONENT ${PROJECT_NAME}_libraries
+        EXPORT ${PROJECT_NAME}Targets
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        PUBLIC_HEADER DESTINATION "include/")
+
+install (DIRECTORY "${APTRACKING_SOURCE_DIR}/surrender" DESTINATION include FILES_MATCHING PATTERN "*.h")
+
+install (FILES "${PROJECT_BINARY_DIR}/config.h" DESTINATION include )
+install (FILES "${PROJECT_BINARY_DIR}/apTrackingLibConfig.cmake" DESTINATION cmake )
