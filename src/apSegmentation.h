@@ -33,6 +33,10 @@
 //#include "apLibMotion.h"
 #include "apSegMotionCol.h"
 
+#if defined(WIN32)
+#include <visp/vpDisplayGDI.h>
+typedef vpDisplayGDI vpDisplayX;
+#endif
 
 #include <math.h>
 #include <cv.h>
@@ -41,7 +45,7 @@ using namespace std;
 using namespace cv;
 
 
-class VISP_EXPORT apSegmentation
+class apSegmentation
 {
 public :
 	typedef enum

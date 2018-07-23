@@ -93,7 +93,7 @@ struct apCCDParameters
 
 };
 
-class VISP_EXPORT apCCDTracker
+class apCCDTracker
 {
 public:
 	std::vector< std::vector<apControlPoint*> > pointsCCD;

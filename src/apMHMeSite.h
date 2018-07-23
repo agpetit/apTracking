@@ -20,7 +20,7 @@
 #ifndef APMHMESITE_H_
 #define APMHMESITE_H_
 
-class VISP_EXPORT apMHMeSite //: public vpMeSite
+class apMHMeSite //: public vpMeSite
 
 {
 public:

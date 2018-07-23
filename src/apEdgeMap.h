@@ -22,7 +22,7 @@
 #include <iostream>
 using namespace std;
 
-class VISP_EXPORT apEdgeMap
+class apEdgeMap
 {
 protected :
 	vpImage<double> Iuf;

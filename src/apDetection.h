@@ -12,7 +12,7 @@
 #include <visp/vpMath.h>
 //#include "apViews.h"
 
-class VISP_EXPORT apDetection
+class apDetection
 {
 public :
 	typedef enum

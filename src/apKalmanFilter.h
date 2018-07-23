@@ -46,7 +46,7 @@ struct apKalmanParameters
   double sigmaQR;
 };
 
-class VISP_EXPORT apKalmanFilter {
+class apKalmanFilter {
 public:
 	vpHomogeneousMatrix cMoPred;
 	vpHomogeneousMatrix cMoPred_0;

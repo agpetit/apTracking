@@ -976,7 +976,7 @@ ctParticle apDetector::computeModeProb(int nbParticles)
 	ctParticle pFilt;
 	ctParticle prcl;
 	double wght;
-	double normFactPart[nbParticles];
+	std::vector<double> normFactPart(nbParticles);
 	//std::vector<ctParticle>  particleVect;
 	double nFP;
 	float u_cum, u_filt , v_cum, v_filt;

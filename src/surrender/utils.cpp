@@ -1,3 +1,7 @@
+#if defined(WIN32)
+#include <algorithm>
+#endif
+
 #include "utils.h"
 #include <osg/Camera>
 #include <osg/Group>
@@ -240,8 +244,8 @@ namespace luxifer
                                         * osg::Matrixd::rotate(pat->getAttitude())
                                         * osg::Matrixd::scale(pat->getScale())
                                         * osg::Matrixd::translate(pat->getPosition());
-                bound.radius() *= max(pat->getScale().x(),
-                                      max(pat->getScale().y(),
+                bound.radius() *= std::max(pat->getScale().x(),
+                                      std::max(pat->getScale().y(),
                                           pat->getScale().z()));
                 bound.center() = bound.center() * mat;
             }
@@ -252,7 +256,7 @@ namespace luxifer
                 {
                     const osg::Matrixd mat = mt->getMatrix();
                     const osg::Vec3d &s = mat.getScale();
-                    bound.radius() *= max(s.x(), max(s.y(), s.z()));
+                    bound.radius() *= std::max(s.x(), std::max(s.y(), s.z()));
                     bound.center() = bound.center() * mat;
                 }
             }

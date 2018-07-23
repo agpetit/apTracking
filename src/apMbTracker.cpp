@@ -462,187 +462,6 @@ void apMbTracker::computeVVS(const vpImage<unsigned char>& _I) {
 	//    std::cout << "error: " << (residu_1 - r) << std::endl;
 }
 
-void loadImage( cv::Mat & mat, const char * data_str )
-{
-    std::stringstream ss;
-    ss << data_str;
-
-    boost::archive::text_iarchive tia( ss );
-    tia >> mat;
-}
-
-void desserializeuc(std::istream &in,cv::Mat &s)
-{
-    std::string tmpDelim;
-    uchar *buff = (uchar *)(s.data);
-    bool read = true;
-    while (read)
-    {
-      in >> tmpDelim;
-      if (tmpDelim == "[") continue;
-      if (tmpDelim.find(']') != std::string::npos)
-        break;
-      else
-      {
-        *buff = atoi(tmpDelim.c_str());
-        buff++;
-      }
-
-    }
-          //std::cout << " img " << s << std::endl;
-}
-
-void desserializec(std::istream &in,cv::Mat &s)
-{
-    std::string tmpDelim;
-     char *buff = (char *)(s.data);
-    bool read = true;
-    while (read)
-    {
-      in >> tmpDelim;
-      if (tmpDelim == "[") continue;
-      if (tmpDelim.find(']') != std::string::npos)
-        break;
-      else
-      {
-        *buff = atoi(tmpDelim.c_str());
-        buff++;
-      }
-    }
-}
-
-void desserializeus(std::istream &in,cv::Mat &s)
-{
-    std::string tmpDelim;
-    ushort *buff = (ushort *)(s.data);
-    bool read = true;
-    while (read)
-    {
-      in >> tmpDelim;
-      if (tmpDelim == "[") continue;
-      if (tmpDelim.find(']') != std::string::npos)
-        break;
-      else
-      {
-        *buff = atoi(tmpDelim.c_str());
-        buff++;
-      }
-    }
-}
-
-void desserializes(std::istream &in,cv::Mat &s)
-{
-    std::string tmpDelim;
-    ushort *buff = (ushort *)(s.data);
-    bool read = true;
-    while (read)
-    {
-      in >> tmpDelim;
-      if (tmpDelim == "[") continue;
-      if (tmpDelim.find(']') != std::string::npos)
-        break;
-      else
-      {
-        *buff = atoi(tmpDelim.c_str());
-        buff++;
-      }
-    }
-}
-
-void desserializei(std::istream &in,cv::Mat &s)
-{
-    std::string tmpDelim;
-    short *buff = (short *)(s.data);
-    bool read = true;
-    while (read)
-    {
-      in >> tmpDelim;
-      if (tmpDelim == "[") continue;
-      if (tmpDelim.find(']') != std::string::npos)
-        break;
-      else
-      {
-        *buff = atoi(tmpDelim.c_str());
-        buff++;
-      }
-    }
-}
-
-void desserializef(std::istream &in,cv::Mat &s)
-{
-    std::string tmpDelim;
-    float *buff = (float *)(s.data);
-    bool read = true;
-    while (read)
-    {
-      in >> tmpDelim;
-      if (tmpDelim == "[") continue;
-      if (tmpDelim.find(']') != std::string::npos)
-        break;
-      else
-      {
-        *buff = atof(tmpDelim.c_str());
-        buff++;
-      }
-    }
-}
-
-void desserialized(std::istream &in,cv::Mat &s)
-{
-  std::string tmpDelim;
-  double *buff = (double *)(s.data);
-  bool read = true;
-  while (read)
-  {
-    in >> tmpDelim;
-    if (tmpDelim == "[") continue;
-    if (tmpDelim.find(']') != std::string::npos)
-      break;
-    else
-    {
-      *buff = atof(tmpDelim.c_str());
-      buff++;
-    }
-  }
-}
-
-
-void desserialize(std::istream &in, cv::Mat &s)
-{
-  int rows, cols, type;
-
-  in >> rows >> cols >> type;
-
-  //std::cout << " rows " << rows << " cols " << cols << " type " << type << std::endl;
-  s.create(rows, cols, type);
-  //std::cout << " rows " << rows << " cols " << cols << " type " << type << std::endl;
-
-  switch (s.depth())
-  {
-    case CV_8U:
-      desserializeuc(in,s);
-      break;
-    case CV_8S:
-      desserializec(in,s);
-      break;
-    case CV_16U:
-      desserializeus(in,s);
-      break;
-    case CV_16S:
-      desserializes(in,s);
-      break;
-    case CV_32S:
-      desserializei(in,s);
-      break;
-    case CV_32F:
-      desserializef(in,s);
-      break;
-    case CV_64F:
-      desserialized(in,s);
-      break;
-  }
-}
-
 /*void
  apMbTracker::computeVVSHyb(const vpImage<unsigned char>& _I, 	apOgre ogre_)
  {
@@ -13775,6 +13594,189 @@ void apMbTracker::trackXray(const vpImage<unsigned char> &I, double dist) {
     cleanPyramid(Ipyramidprec);
     Iprec = I;
 }
+
+
+void loadImage(cv::Mat & mat, const char * data_str)
+{
+    std::stringstream ss;
+    ss << data_str;
+
+    boost::archive::text_iarchive tia(ss);
+    tia >> mat;
+}
+
+void desserializeuc(std::istream &in, cv::Mat &s)
+{
+    std::string tmpDelim;
+    uchar *buff = (uchar *)(s.data);
+    bool read = true;
+    while (read)
+    {
+        in >> tmpDelim;
+        if (tmpDelim == "[") continue;
+        if (tmpDelim.find(']') != std::string::npos)
+            break;
+        else
+        {
+            *buff = atoi(tmpDelim.c_str());
+            buff++;
+        }
+
+    }
+    //std::cout << " img " << s << std::endl;
+}
+
+void desserializec(std::istream &in, cv::Mat &s)
+{
+    std::string tmpDelim;
+    char *buff = (char *)(s.data);
+    bool read = true;
+    while (read)
+    {
+        in >> tmpDelim;
+        if (tmpDelim == "[") continue;
+        if (tmpDelim.find(']') != std::string::npos)
+            break;
+        else
+        {
+            *buff = atoi(tmpDelim.c_str());
+            buff++;
+        }
+    }
+}
+
+void desserializeus(std::istream &in, cv::Mat &s)
+{
+    std::string tmpDelim;
+    ushort *buff = (ushort *)(s.data);
+    bool read = true;
+    while (read)
+    {
+        in >> tmpDelim;
+        if (tmpDelim == "[") continue;
+        if (tmpDelim.find(']') != std::string::npos)
+            break;
+        else
+        {
+            *buff = atoi(tmpDelim.c_str());
+            buff++;
+        }
+    }
+}
+
+void desserializes(std::istream &in, cv::Mat &s)
+{
+    std::string tmpDelim;
+    ushort *buff = (ushort *)(s.data);
+    bool read = true;
+    while (read)
+    {
+        in >> tmpDelim;
+        if (tmpDelim == "[") continue;
+        if (tmpDelim.find(']') != std::string::npos)
+            break;
+        else
+        {
+            *buff = atoi(tmpDelim.c_str());
+            buff++;
+        }
+    }
+}
+
+void desserializei(std::istream &in, cv::Mat &s)
+{
+    std::string tmpDelim;
+    short *buff = (short *)(s.data);
+    bool read = true;
+    while (read)
+    {
+        in >> tmpDelim;
+        if (tmpDelim == "[") continue;
+        if (tmpDelim.find(']') != std::string::npos)
+            break;
+        else
+        {
+            *buff = atoi(tmpDelim.c_str());
+            buff++;
+        }
+    }
+}
+
+void desserializef(std::istream &in, cv::Mat &s)
+{
+    std::string tmpDelim;
+    float *buff = (float *)(s.data);
+    bool read = true;
+    while (read)
+    {
+        in >> tmpDelim;
+        if (tmpDelim == "[") continue;
+        if (tmpDelim.find(']') != std::string::npos)
+            break;
+        else
+        {
+            *buff = atof(tmpDelim.c_str());
+            buff++;
+        }
+    }
+}
+
+void desserialized(std::istream &in, cv::Mat &s)
+{
+    std::string tmpDelim;
+    double *buff = (double *)(s.data);
+    bool read = true;
+    while (read)
+    {
+        in >> tmpDelim;
+        if (tmpDelim == "[") continue;
+        if (tmpDelim.find(']') != std::string::npos)
+            break;
+        else
+        {
+            *buff = atof(tmpDelim.c_str());
+            buff++;
+        }
+    }
+}
+
+
+void desserialize(std::istream &in, cv::Mat &s)
+{
+    int rows, cols, type;
+
+    in >> rows >> cols >> type;
+
+    //std::cout << " rows " << rows << " cols " << cols << " type " << type << std::endl;
+    s.create(rows, cols, type);
+    //std::cout << " rows " << rows << " cols " << cols << " type " << type << std::endl;
+
+    switch (s.depth())
+    {
+    case CV_8U:
+        desserializeuc(in, s);
+        break;
+    case CV_8S:
+        desserializec(in, s);
+        break;
+    case CV_16U:
+        desserializeus(in, s);
+        break;
+    case CV_16S:
+        desserializes(in, s);
+        break;
+    case CV_32S:
+        desserializei(in, s);
+        break;
+    case CV_32F:
+        desserializef(in, s);
+        break;
+    case CV_64F:
+        desserialized(in, s);
+        break;
+    }
+}
+
 
 #endif // ENABLE_ZMQ
 

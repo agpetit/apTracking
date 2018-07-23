@@ -2470,9 +2470,9 @@ void apSegMotionCol::computeSpatialEnergy(vpImage<unsigned char> &I, vpImage<vpR
 	vpRGBa col0,col1;
 	int height = I.getHeight();
 	int width = I.getWidth();
-	double esmoothh[width*height];
-	double esmoothv[width*height];
-	int k,l;
+	std::vector<double> esmoothh(width*height);
+    std::vector<double> esmoothv(width*height);
+    int k,l;
 
     #pragma omp parallel for private(esmoothH,esmoothV,meandistv,count,k,l,meandisth,col0,col1,distColV,distColH,meandistV,meandistH) shared(esmoothh,esmoothv)
 	for (int i = 0; i < height; i++)

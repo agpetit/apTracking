@@ -31,7 +31,7 @@
 
 using namespace std;
 
-class VISP_EXPORT apMHMeLine : public apMHMeTracker
+class apMHMeLine : public apMHMeTracker
 {
 
  private:

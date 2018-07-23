@@ -1,11 +1,22 @@
 #ifndef FBO_H
 #define FBO_H
 
+//Mac
 #if defined(__APPLE__)
 #include <OpenGL/gl.h>
 #else
+//Windows
+#if defined(WIN32)
+//#define _WINSOCKAPI_    // stops windows.h including winsock.h
+#include <WinSock2.h>
+#include <windows.h>
+#include <GL/gl.h>
+#else
+//Linux
 #include <GL/gl.h>
 #endif 
+#endif
+
 #include <cstddef>
 
 namespace luxifer

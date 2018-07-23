@@ -25,10 +25,10 @@ void apRANSAC::RANSACFunction (std::vector<std::vector<CvPoint2D32f> > &trajecto
 
 	while ( nb_inlier < threshold_inlier && ransac_iter < MAX_RANSAC_ITER)
 	{
-		int label_motion[NBPOINTSTOTRACK];
+		std::vector<int> label_motion(NBPOINTSTOTRACK);
 		int size = 0; int nb_iter = 0;
-		int idxMaxPointToBuildP[PointsToBuildP];
-		int sizePointToBuildP[PointsToBuildP];
+        std::vector<int> idxMaxPointToBuildP(PointsToBuildP);
+        std::vector<int> sizePointToBuildP(PointsToBuildP);
 		int size_max = 0;
 		nbFrame = HISTORYOFPOSITION ;
 
@@ -36,14 +36,14 @@ void apRANSAC::RANSACFunction (std::vector<std::vector<CvPoint2D32f> > &trajecto
 
 		while (size < 10 && nb_iter < nb_iter_rech_model)
 			{
-				int idxPointToBuildP[PointsToBuildP];
+				std::vector<int> idxPointToBuildP(PointsToBuildP);
 				for (int k = 0; k < PointsToBuildP; k++) idxPointToBuildP[k] = -1;
 
 				int size_temp = 999;
 				for (int k = 0; k < PointsToBuildP; k++)
 				{
 					int temp = cvRandInt( &rng ) % nbPointToTrack;
-					while (isTaken(temp, idxPointToBuildP, k))
+					while (isTaken(temp, idxPointToBuildP.data(), k))
 							temp = cvRandInt( &rng ) % nbPointToTrack;
 					idxPointToBuildP[k] = temp;
 					sizePointToBuildP[k] = BORN_MAX(nb_trajectory[idxPointToBuildP[k]], nbFrame);
@@ -198,8 +198,8 @@ void apRANSAC::RANSACFunctionHomography (std::vector<std::vector<CvPoint2D32f> >
 
 	int size = 3;
 	int nb_iter = 0;
-	int idxMaxPointToBuildP[PointsToBuildP];
-	int sizePointToBuildP[PointsToBuildP];
+	std::vector<int> idxMaxPointToBuildP(PointsToBuildP);
+    std::vector<int> sizePointToBuildP(PointsToBuildP);
 	int size_max = 0;
 	CvRNG rng;
 
@@ -572,14 +572,14 @@ void apRANSAC::RANSACFunction_V2( std::vector<std::vector<CvPoint2D32f> > &traje
 
 	while ( nb_inlier < threshold_inlier && ransac_iter < MAX_RANSAC_ITER)
 	{
-		int idxModel [PointsToBuildP];
+        std::vector<int> idxModel(PointsToBuildP);
 		int hist[1];
-		getSubSet(nb_trajectory, idxModel, hist);
+		getSubSet(nb_trajectory, idxModel.data(), hist);
 		vpMatrix *P;
 		if (hist[0] > 0)
 		{
 
-			computePMatrix( idxModel, trajectory, nb_trajectory, hist[0], P);
+			computePMatrix( idxModel.data(), trajectory, nb_trajectory, hist[0], P);
 			nb_inlier  = computeInlier(trajectory, nb_trajectory, hist[0], *P);
 		}
 		ransac_iter++;
@@ -601,13 +601,13 @@ void apRANSAC::getSubSet ( int *nb_trajectory, int *idxModel , int *size ){
 	CvRNG rng;
 	int nb_iter_rech_model = 50;
 	int nb_iter = 0;
-	int idxMaxPointToBuildP[PointsToBuildP];
-	int sizePointToBuildP[PointsToBuildP];
+    std::vector<int> idxMaxPointToBuildP(PointsToBuildP);
+    std::vector<int> sizePointToBuildP(PointsToBuildP);
 	int size_max = 0;
 
 	while (size_max < MINIMAL_SIZE_MODEL && nb_iter < nb_iter_rech_model)
 	{
-		int idxPointToBuildP[PointsToBuildP];
+        std::vector<int> idxPointToBuildP(PointsToBuildP);
 		int size_temp = 999;
 
 		for (int k = 0; k < PointsToBuildP; k++) 
@@ -617,7 +617,7 @@ void apRANSAC::getSubSet ( int *nb_trajectory, int *idxModel , int *size ){
 		
 		{
 			int temp = cvRandInt( &rng ) % NBPOINTSTOTRACK;
-			while (isTaken(temp, idxPointToBuildP, k))
+			while (isTaken(temp, idxPointToBuildP.data(), k))
 					temp = cvRandInt( &rng ) % NBPOINTSTOTRACK;
 			idxPointToBuildP[k] = temp;
 			sizePointToBuildP[k] = BORN_MAX(nb_trajectory[idxPointToBuildP[k]], HISTORYOFPOSITION);

@@ -56,6 +56,7 @@ find_package(Qt5 COMPONENTS Core Widgets Gui OpenGL REQUIRED)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_definitions(${Qt5Widgets_DEFINITIONS})
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS}")
 
 get_target_property(QtCore_location Qt5::Core LOCATION)
@@ -110,6 +111,7 @@ INCLUDE_DIRECTORIES(
     ${Qt5Core_INCLUDE_DIRS}
     ${Qt5Gui_INCLUDE_DIRS}
     ${Qt5OpenGL_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIR}
   )
 
 set(ENABLE_LIBRARY_COMPILE TRUE)
@@ -262,9 +264,6 @@ target_link_libraries(${PROJECT_NAME}
     ${Qt5Core_LIBRARIES}
     ${Qt5Gui_LIBRARIES}
     ${Qt5OpenGL_LIBRARIES}
-    ${QtCore_location}
-    ${QtGui_location}
-    ${QtOpenGL_location}
     ${GLEW_LIBRARY}
     ${LUA_LIBRARIES} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_SERIALIZATION_LIBRARY}
     ${OpenCV_LIBS}
@@ -277,6 +276,7 @@ endif()
 target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>")
 target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>")
 set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${TRACKER_COMMON_HEADERS}" )
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE) 
 
 set(APTRACKING_SHADER_DIR ${PROJECT_BINARY_DIR}/..)
 

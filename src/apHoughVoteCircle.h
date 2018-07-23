@@ -44,7 +44,7 @@ struct triple
   int vote;
 };
 
-class VISP_EXPORT apHoughVoteCircle
+class apHoughVoteCircle
 {
 
 public :

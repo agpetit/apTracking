@@ -66,18 +66,14 @@
 #include "apLearn.h"
 #include "apSegmentation.h"
 
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
 #include <fstream>
-#include "serialization.h"
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 
 
 #include "structures.h"
 
 #ifdef ENABLE_ZMQ
 #include <zmq.hpp>
+#include "serialization.h"
 #endif // ENABLE_ZMQ
 
 using namespace cv;
@@ -497,8 +493,8 @@ private:
   void initFaceFromCorners(vpMbtPolygon&){};
   void initFaceFromLines(vpMbtPolygon&){};
   void testTracking(){};
-  vpColVector getError() const {};
-  vpColVector getRobustWeights() const {};
+  vpColVector getError() const { return vpColVector(); };
+  vpColVector getRobustWeights() const { return vpColVector(); };
   void computeVVSInit(){};
   void computeVVSInteractionMatrixAndResidu(){};
   void initPyramid(const vpImage<unsigned char>& _I, std::vector<const vpImage<unsigned char>* >& _pyramid);

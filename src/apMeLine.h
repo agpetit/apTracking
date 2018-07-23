@@ -16,7 +16,7 @@
 #include <visp/vpMeTracker.h>
 #include "apMHMeTracker.h"
 
-class VISP_EXPORT apMeLine : public apMHMeTracker//: public vpMbtMeLine
+class apMeLine : public apMHMeTracker//: public vpMbtMeLine
 {
 
 private:

@@ -7,7 +7,6 @@
 #else
 #include <GL/glu.h>
 #endif 
-#include <GL/glut.h>
 
 namespace luxifer
 {

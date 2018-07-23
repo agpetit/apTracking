@@ -41,7 +41,7 @@ struct couple
   int vote;
 };
 
-class VISP_EXPORT apHoughVote
+class apHoughVote
 {
 
 public :

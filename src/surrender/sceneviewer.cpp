@@ -1,5 +1,6 @@
-#include "sceneviewer.h"
 #include "scenemanager.h"
+#include "sceneviewer.h"
+
 
 namespace luxifer
 {

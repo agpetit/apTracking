@@ -20,7 +20,7 @@
 #include <visp/vpTracker.h>
 
 
-class VISP_EXPORT apControlPointTracker : public vpTracker
+class apControlPointTracker : public vpTracker
 {
 public:
 

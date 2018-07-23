@@ -6,7 +6,6 @@
  */
 
 #include "apSegmentation.h"
-#include "GL/glut.h"
 //#include "minE.cpp"
 
 apSegmentation::apSegmentation() {

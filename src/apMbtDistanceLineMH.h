@@ -35,7 +35,7 @@
 using namespace cv;
 
 
-class VISP_EXPORT apMbtDistanceLineMH
+class apMbtDistanceLineMH
 {
   
   public:

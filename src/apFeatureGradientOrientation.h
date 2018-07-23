@@ -147,7 +147,7 @@ public:
 
 
   vpMatrix  interaction(const int select = FEATURE_ALL);
-  vpMatrix interaction(unsigned int select = FEATURE_ALL){};
+  vpMatrix interaction(unsigned int select = FEATURE_ALL) { return vpMatrix(); };
   void      interaction(vpMatrix &L, vpImage<unsigned char> &Iv);
 
   vpColVector error(const vpBasicFeature &s_star,

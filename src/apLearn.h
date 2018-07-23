@@ -12,7 +12,7 @@
 #include <visp/vpMath.h>
 #include "apDetection.h"
 
-class VISP_EXPORT apLearn
+class apLearn
 {
 public:
 

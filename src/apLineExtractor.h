@@ -31,7 +31,7 @@
 
 #include <iostream>
 
-class VISP_EXPORT apLineExtractor
+class apLineExtractor
 {
 
 protected :

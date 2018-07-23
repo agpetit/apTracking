@@ -911,7 +911,7 @@ int apMHMeLine::findLinesByKmean(const vpImage< unsigned char> &I,int display_mo
 	std::vector< std::vector<apMHMeSite> > site_vect;
 	apMHMeSite Pk;
 	apMHMeSite Pk0;
-	apMHMeSite *Pk1[n_hyp];
+	std::vector<apMHMeSite> Pk1(n_hyp);
 	apMHMeSite Pk2;
 
 	int i1, i2 ;
@@ -1640,7 +1640,7 @@ int apMHMeLine::findLinesByKmean_2(const vpImage< unsigned char> &I,int display_
 	std::vector< std::vector<apMHMeSite> > site_vect;
 	apMHMeSite Pk;
 	apMHMeSite Pk0;
-	apMHMeSite *Pk1[n_hyp];
+    std::vector<apMHMeSite> Pk1(n_hyp);
 	apMHMeSite Pk2;
 	int i1, i2 ;
 	i1 = i2 = 0;
@@ -2425,7 +2425,7 @@ int apMHMeLine::findLinesByKmean_3(const vpImage< unsigned char> &I,int display_
 	//apMHMeSite Pk;
 	apMHMeSite Pk;
 	apMHMeSite Pk0;
-	apMHMeSite *Pk1[n_hyp];
+    std::vector<apMHMeSite> Pk1(n_hyp);
 	apMHMeSite Pk2;
 	  vpImagePoint ip;
 	int i1, i2 ;

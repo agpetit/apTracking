@@ -30,7 +30,7 @@ using namespace std;
 class vpDisplay;
 class vpMatrix;
 
-class VISP_EXPORT apZBuffer : public vpMatrix
+class apZBuffer : public vpMatrix
 {
 protected :
 	vpMatrix ZCoord;

@@ -17,6 +17,10 @@
 #include "minE.h"
 #include "ml.h"
 
+#if defined(WIN32)
+#include <visp/vpDisplayGDI.h>
+typedef vpDisplayGDI vpDisplayX;
+#endif
 
 struct apEnergyParameters
 {

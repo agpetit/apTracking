@@ -19,7 +19,7 @@
 #include "apMHMeSite.h"
 
 
-class VISP_EXPORT apMHMeTracker : public vpTracker
+class apMHMeTracker : public vpTracker
 {
 public:
 

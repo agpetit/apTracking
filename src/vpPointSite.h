@@ -74,7 +74,7 @@
 
   - sample step.
  */
-class VISP_EXPORT vpPointSite
+class vpPointSite
 {
 public:
   typedef enum

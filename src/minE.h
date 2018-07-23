@@ -24,7 +24,7 @@
 #include "graph.h"
 #include "visp/vpConfig.h"
 
-class VISP_EXPORT minE
+class minE
 {
 public:
 //int *mask;

@@ -29,7 +29,7 @@
 #include <visp/vpCameraParameters.h>
 
 
-class VISP_EXPORT apControlPoint : public apControlPointTracker
+class apControlPoint : public apControlPointTracker
 {
   private:
     //vpPointSite PExt[2] ;

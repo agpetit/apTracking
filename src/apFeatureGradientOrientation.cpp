@@ -352,6 +352,7 @@ vpMatrix  apFeatureGradientOrientation::interaction(const int /* select */)
   /*static vpMatrix L  ;
   interaction(L) ;
   return L ;*/
+    return vpMatrix();
 }
 
 
@@ -365,6 +366,7 @@ vpMatrix  apFeatureGradientOrientation::interaction(const int /* select */)
 vpList< vpFeatureLine > apFeatureGradientOrientation::getFeatureLines()
 {
 	//return Orilines;
+    return vpList< vpFeatureLine >();
 }
 
 void

@@ -19,7 +19,7 @@
 #include <visp/vpMath.h>
 #include <visp/vpImageFilter.h>
 
-class VISP_EXPORT apImageFilter: public vpImageFilter
+class apImageFilter: public vpImageFilter
 {
 public:
 

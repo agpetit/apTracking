@@ -766,8 +766,8 @@ void apPFilter::likelihoodViewOCOpt(vpImage<vpRGBa> *dTOI, vpImage<vpRGBa> *dTOI
 
 		float err_curr = 0;
 		ctParticle *prcl;
-
-		double err[particleVect.size()];
+        const std::size_t particleVectSize = particleVect.size();
+		std::vector<double> err(particleVectSize);
 		//std::cout << "orientation " << orientation << " surface " << surface << std::endl;
 		nb_prcl_out = 0; //nb de particules pas enti�rement dans l'image
 

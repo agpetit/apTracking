@@ -1,9 +1,9 @@
-#ifdef __WIN32__
+#ifdef WIN32
 #include <GL/glew.h>
 #endif
 #define GL_GLEXT_PROTOTYPES
 #include "fbo.h"
-#include <GL/glext.h>
+
 #include <GL/glu.h>
 #include "logs.h"
 

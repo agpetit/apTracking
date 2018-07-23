@@ -30,14 +30,14 @@ void minE::minEnergy(double *Edatab, double *Edataf, double *EsmoothH, double *E
 
     int mrows, ncols, count, i, j, temp;
     
-	Energy::Var alpha[resolution];     //
+	std::vector<Energy::Var> alpha(resolution);     //
 
     Energy *e = new Energy();
     
     mrows = I.getHeight();
     ncols = I.getWidth();
 
-    int mask[resolution];
+    std::vector<int> mask(resolution);
     //add  variables
 
 

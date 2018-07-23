@@ -13,7 +13,7 @@
 #include <visp/vpMatrix.h>
 #include <visp/vpImage.h>
 
-class VISP_EXPORT apRend
+class apRend
 {
 public:
   double edgeR_th;

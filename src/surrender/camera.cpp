@@ -1,5 +1,12 @@
+
+#if defined(WIN32)
+#define _USE_MATH_DEFINES
+#include <cmath>
+#endif
+
 #include <GL/glew.h>
 #include "camera.h"
+
 #include <osg/Group>
 #include <osg/Switch>
 #include <osg/Transform>
@@ -14,6 +21,7 @@
 #include <GL/glu.h>
 #include <algorithm>
 #include "utils.h"
+
 
 using namespace osg;
 
@@ -759,7 +767,7 @@ namespace luxifer
             {
                 ++n;
                 if (n == 1)
-                    cur.first = std::max(minimalz, it->first);
+                    cur.first = std::max<double>(minimalz, it->first);
             }
             else
             {

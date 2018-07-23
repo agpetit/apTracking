@@ -155,7 +155,7 @@ public:
   void      interactionOr(vpMatrix &L);
   void      interactionOr1(vpMatrix &L);
   void      interactionTh(vpMatrix &L);
- vpMatrix interaction(unsigned int k){};
+  vpMatrix interaction(unsigned int k) { return vpMatrix(); };
   void print(unsigned int k) const{};
 
   vpColVector error(const vpBasicFeature &s_star,

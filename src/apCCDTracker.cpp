@@ -21,7 +21,7 @@ apCCDTracker::apCCDTracker() {
 apCCDTracker::~apCCDTracker() {
 	// TODO Auto-generated destructor stub
 #pragma omp parallel for
-    for (unsigned int i = 0; i < pointsCCD.size(); ++i)
+    for (int i = 0; i < pointsCCD.size(); ++i)
     {
         for (int k = 0; k < pointsCCD[i].size(); k++)
         {
@@ -103,7 +103,7 @@ void apCCDTracker::clearCCDTracker()
     image_prev.release();
 
 #pragma omp parallel for
-    for (unsigned int i = 0; i < pointsCCD.size(); ++i)
+    for (int i = 0; i < pointsCCD.size(); ++i)
     {
         for (int k = 0; k < pointsCCD[i].size(); k++)
         {
@@ -2169,8 +2169,8 @@ void apCCDTracker::updateParameters(vpMatrix &LTCIL, vpColVector &LTCIR)
         cv::Mat tmp_cov(3,3,CV_64F,_tmp_cov_data);// = cv::Mat::zeros(3,3,CV_64F);
         double _tmp_cov_inv_data[9];
         cv::Mat tmp_cov_inv(3,3,CV_64F,_tmp_cov_inv_data);// = cv::Mat::zeros(3,3,CV_64F);
-        double _tmp_jacobian_data[3 * ccdParameters.phi_dim];
-        cv::Mat tmp_jacobian(ccdParameters.phi_dim,3,CV_64F,_tmp_jacobian_data);// = cv::Mat::zeros(ccdParameters.phi_dim,3,CV_64F);
+        std::vector<double> _tmp_jacobian_data(3 * ccdParameters.phi_dim);
+        cv::Mat tmp_jacobian(ccdParameters.phi_dim,3,CV_64F,_tmp_jacobian_data.data());// = cv::Mat::zeros(ccdParameters.phi_dim,3,CV_64F);
         double _tmp_pixel_diff[3];
         cv::Mat tmp_pixel_diff(3,1,CV_64F,_tmp_pixel_diff);// = cv::Mat::zeros(3, 1, CV_64F);
 
@@ -2362,8 +2362,8 @@ void apCCDTracker::updateParametersPrev(vpMatrix &LTCIL, vpColVector &LTCIR)
         cv::Mat tmp_cov(3,3,CV_64F,_tmp_cov_data);// = cv::Mat::zeros(3,3,CV_64F);
         double _tmp_cov_inv_data[9];
         cv::Mat tmp_cov_inv(3,3,CV_64F,_tmp_cov_inv_data);// = cv::Mat::zeros(3,3,CV_64F);
-        double _tmp_jacobian_data[3 * ccdParameters.phi_dim];
-        cv::Mat tmp_jacobian(ccdParameters.phi_dim,3,CV_64F,_tmp_jacobian_data);// = cv::Mat::zeros(ccdParameters.phi_dim,3,CV_64F);
+        std::vector<double> _tmp_jacobian_data(3 * ccdParameters.phi_dim);
+        cv::Mat tmp_jacobian(ccdParameters.phi_dim,3,CV_64F,_tmp_jacobian_data.data());// = cv::Mat::zeros(ccdParameters.phi_dim,3,CV_64F);
         double _tmp_pixel_diff[3];
         cv::Mat tmp_pixel_diff(3,1,CV_64F,_tmp_pixel_diff);// = cv::Mat::zeros(3, 1, CV_64F);
         double _residu1[1];
